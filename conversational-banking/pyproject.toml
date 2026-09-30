@@ -17,6 +17,8 @@ dependencies = [
     "google-cloud-aiplatform[evaluation,agent-engines]>=1.156.0,<2.0.0",
     "protobuf>=6.31.1,<7.0.0",
     "mcp>=1.0.0",
+    "uvicorn>=0.30.0",
+    "fastapi>=0.110.0",
 ]
 requires-python = ">=3.11,<3.14"
 
@@ -96,5 +98,10 @@ asyncio_default_fixture_loop_scope = "session"
 
 [tool.hatch.build.targets.wheel]
 packages = ["app","frontend"]
+
+[[tool.uv.index]]
+name = "default"
+url = "https://pypi.org/simple"
+default = true
 
 

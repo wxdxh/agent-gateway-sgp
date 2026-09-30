@@ -62,7 +62,8 @@ agentgateway/
 ├── 05-register-mcp.sh              # Agent Registry 도구 등록 및 시스템 API Allowlist 등록
 ├── 06-deploy-agent.sh              # Vertex AI Agent Runtime에 에이전트 배포
 ├── 07-create-sgp-policy.sh         # 자연어 제약 조건 시맨틱 거버넌스 정책 생성
-├── 08-test.sh                      # Playground 검증 가이드 및 Cloud Logging 조회 스크립트
+├── 08-test.sh                      # 대화형 및 자동화 종합 검증 실행 스크립트
+├── run_tests.py                    # E2E 3-Turn 자동화 검증 및 SGP 감사 로그 확인 Python 스크립트
 ├── 99-cleanup.sh                   # 생성된 클라우드 리소스 일괄 정리 스크립트
 └── deploy-all.sh                   # 전체 배포 파이프라인 일괄 실행 스크립트
 ```

@@ -81,6 +81,8 @@ def attach_reasoning_engine_routes(app: FastAPI) -> None:
         body = await request.json()
         method = resolve_method(body["class_method"], streaming=True)
         kwargs = body.get("input") or {}
+        if "user_id" not in kwargs:
+            kwargs["user_id"] = "user"
         stream = (
             await method(**kwargs)
             if inspect.iscoroutinefunction(method)
@@ -104,6 +106,8 @@ def attach_reasoning_engine_routes(app: FastAPI) -> None:
         body = await request.json()
         method = resolve_method(body["class_method"], streaming=False)
         kwargs = body.get("input") or {}
+        if "user_id" not in kwargs:
+            kwargs["user_id"] = "user"
         if inspect.iscoroutinefunction(method):
             output = await method(**kwargs)
         else:

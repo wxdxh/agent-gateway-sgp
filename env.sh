@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Central environment configuration for Enterprise Agent Governance Codelab
 
+export PATH="${HOME}/google-cloud-sdk/bin:${HOME}/.local/bin:${PATH}"
+
 export PROJECT_ID="${PROJECT_ID:-$(gcloud config get-value project 2>/dev/null)}"
 if [[ -z "${PROJECT_ID}" ]]; then
   echo "Error: PROJECT_ID is not set. Run 'gcloud config set project <PROJECT_ID>' or export PROJECT_ID=<...>"
@@ -11,12 +13,26 @@ export PROJECT_NUM="$(gcloud projects describe "${PROJECT_ID}" --format="value(p
 export LOCATION="${LOCATION:-us-central1}"
 export AGW_SA="serviceAccount:service-${PROJECT_NUM}@gcp-sa-agentgateway.iam.gserviceaccount.com"
 
-# Managed SGP Service Attachment in us-central1 (provided by Google)
-export SERVICE_ATTACHMENT="projects/pb0cccf528857bbf1p-tp/regions/us-central1/serviceAttachments/k8s1-sa-xjw7b6ye-semantic-governanc-semantic-governanc-rokazjz2"
+# Managed SGP Service Attachment (auto-detected from policy engine if empty)
+export SERVICE_ATTACHMENT="${SERVICE_ATTACHMENT:-}"
+
+# VPC Network and Subnet auto-detection (prefers 'default', falls back to active VPC)
+if gcloud compute networks describe default --project="${PROJECT_ID}" &>/dev/null; then
+  DEFAULT_NET="default"
+  DEFAULT_SUBNET="default"
+else
+  DEFAULT_NET="$(gcloud compute networks list --project="${PROJECT_ID}" --format="value(name)" 2>/dev/null | head -n 1)"
+  DEFAULT_SUBNET="$(gcloud compute networks subnets list --project="${PROJECT_ID}" --regions="${LOCATION}" --network="${DEFAULT_NET}" --format="value(name)" 2>/dev/null | head -n 1)"
+fi
+
+export NETWORK_NAME="${NETWORK_NAME:-${DEFAULT_NET}}"
+export SUBNET_NAME="${SUBNET_NAME:-${DEFAULT_SUBNET}}"
 
 echo "=================================================="
 echo " Project ID:     ${PROJECT_ID}"
 echo " Project Number: ${PROJECT_NUM}"
 echo " Location:       ${LOCATION}"
+echo " VPC Network:    ${NETWORK_NAME}"
+echo " VPC Subnet:     ${SUBNET_NAME}"
 echo " Agent GW SA:    ${AGW_SA}"
 echo "=================================================="

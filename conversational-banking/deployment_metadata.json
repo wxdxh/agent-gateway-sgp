@@ -1,4 +1,11 @@
 {
   "remote_agent_runtime_id": "None",
-  "deployment_timestamp": "None"
+  "deployment_timestamp": "None",
+  "pending_operation": {
+    "operation_name": "projects/1080321871308/locations/us-central1/reasoningEngines/378064324431708160/operations/4385505880909545472",
+    "project": "elevate-security-dhwee",
+    "location": "us-central1",
+    "deployment_target": "agent_runtime",
+    "started_at": "2026-09-30T09:59:33.032349+00:00"
+  }
 }

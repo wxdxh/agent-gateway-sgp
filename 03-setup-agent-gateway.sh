@@ -19,7 +19,7 @@ networkConfig:
     domains:
       - policy.internal.
     targetProject: ${PROJECT_ID}
-    targetNetwork: projects/${PROJECT_ID}/global/networks/default
+    targetNetwork: projects/${PROJECT_ID}/global/networks/${NETWORK_NAME}
 YAML_EOF
 
 echo "==> Step 3: Importing Agent Gateway resource..."

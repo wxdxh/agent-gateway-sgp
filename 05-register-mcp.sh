@@ -17,7 +17,12 @@ if [[ -z "${MCP_URL}" ]]; then
 fi
 
 echo "==> Step 5: Extracting tool specification from MCP server..."
-curl -fsS "${MCP_URL}/tools" | python3 -c 'import sys, json; tools=json.load(sys.stdin); json.dump({"tools": tools}, open("'${SCRIPT_DIR}'/toolspec.json", "w"))'
+ID_TOKEN="$(gcloud auth print-identity-token 2>/dev/null || true)"
+if [ -n "${ID_TOKEN}" ]; then
+  curl -fsS -H "Authorization: Bearer ${ID_TOKEN}" "${MCP_URL}/tools" | python3 -c 'import sys, json; tools=json.load(sys.stdin); json.dump({"tools": tools}, open("'${SCRIPT_DIR}'/toolspec.json", "w"))'
+else
+  curl -fsS "${MCP_URL}/tools" | python3 -c 'import sys, json; tools=json.load(sys.stdin); json.dump({"tools": tools}, open("'${SCRIPT_DIR}'/toolspec.json", "w"))'
+fi
 
 echo "==> Step 5: Registering MCP service in Agent Registry..."
 gcloud alpha agent-registry services create banking-mcp-server \
@@ -76,7 +81,15 @@ for entry in "${ENDPOINTS[@]}"; do
       --endpoint="${ep_id}" \
       --region="${LOCATION}" \
       --project="${PROJECT_ID}" \
-      --member="allAuthenticatedUsers" \
+      --member="${AGW_SA}" \
+      --role="roles/iap.egressor" \
+      --quiet >/dev/null || true
+    gcloud alpha iap web add-iam-policy-binding \
+      --resource-type=agent-registry \
+      --endpoint="${ep_id}" \
+      --region="${LOCATION}" \
+      --project="${PROJECT_ID}" \
+      --member="serviceAccount:service-${PROJECT_NUM}@gcp-sa-aiplatform-re.iam.gserviceaccount.com" \
       --role="roles/iap.egressor" \
       --quiet >/dev/null || true
   fi

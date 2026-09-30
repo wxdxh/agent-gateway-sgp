@@ -12,36 +12,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM python:3.12-slim
+FROM python:3.13-slim
 
-# Install uv
+# Install ca-certificates and uv
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=ghcr.io/astral-sh/uv:0.8.13 /uv /uvx /bin/
 
 WORKDIR /code
 
 COPY ./pyproject.toml ./README.md ./uv.lock* ./
-
 COPY ./app ./app
+COPY ./agent-gateway-ca.crt* /usr/local/share/ca-certificates/agent-gateway.crt
 
-RUN uv sync --frozen
+ARG AGENT_GATEWAY_ROOT_CERTIFICATES
+RUN if [ -n "$AGENT_GATEWAY_ROOT_CERTIFICATES" ]; then \
+      printf "%b" "$AGENT_GATEWAY_ROOT_CERTIFICATES" \
+        | awk 'BEGIN {c=0} /BEGIN CERTIFICATE/ {c++} c > 0 { print > "/usr/local/share/ca-certificates/agw-" c ".crt" }'; \
+    fi; \
+    update-ca-certificates
+
+ENV UV_NO_CONFIG=1
+RUN uv sync --frozen --default-index https://pypi.org/simple
 
 ARG AGENT_VERSION=0.0.0
 ENV AGENT_VERSION=${AGENT_VERSION}
 
-# Install the Agent Gateway root CA passed by the platform.
-# Based on https://docs.cloud.google.com/gemini-enterprise-agent-platform/scale/runtime/agent-gateway-runtime-deploy#configure-byoc
-ARG AGENT_GATEWAY_ROOT_CERTIFICATES
-RUN if [ -n "$AGENT_GATEWAY_ROOT_CERTIFICATES" ]; then \
-      mkdir -p /usr/local/share/ca-certificates; \
-      printf "%b" "$AGENT_GATEWAY_ROOT_CERTIFICATES" \
-        | awk 'BEGIN {c=0} /BEGIN CERTIFICATE/ {c++} c > 0 { print > "/usr/local/share/ca-certificates/agw-" c ".crt" }'; \
-      update-ca-certificates; \
-    fi
-
-# If Agent Gateway root CA was provided, configure SSL/TLS trust paths.
-ENV SSL_CERT_FILE=${AGENT_GATEWAY_ROOT_CERTIFICATES:+/etc/ssl/certs/ca-certificates.crt}
-ENV REQUESTS_CA_BUNDLE=${AGENT_GATEWAY_ROOT_CERTIFICATES:+/etc/ssl/certs/ca-certificates.crt}
-ENV GRPC_DEFAULT_SSL_ROOTS_FILE_PATH=${AGENT_GATEWAY_ROOT_CERTIFICATES:+/etc/ssl/certs/ca-certificates.crt}
+ENV GOOGLE_API_USE_MTLS_ENDPOINT=never
+ENV GOOGLE_API_USE_CLIENT_CERTIFICATE=false
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV GRPC_DEFAULT_SSL_ROOTS_FILE_PATH=/etc/ssl/certs/ca-certificates.crt
 
 EXPOSE 8080
 

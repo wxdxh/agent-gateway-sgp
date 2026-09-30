@@ -17,16 +17,24 @@ if [[ -z "${MCP_SERVER_NAME}" ]]; then
   exit 1
 fi
 
+echo "==> Step 6: Extracting Agent Gateway TLS Inspection Root CA certificate..."
+gcloud network-services agent-gateways describe agent-egress \
+  --location="${LOCATION}" \
+  --project="${PROJECT_ID}" \
+  --format="value(agentGatewayCard.rootCertificates[0])" > "${SCRIPT_DIR}/conversational-banking/agent-gateway-ca.crt"
+
 echo "==> Step 6: Deploying Conversational Banking Agent to Vertex AI Agent Runtime..."
 cd "${SCRIPT_DIR}/conversational-banking"
+export UV_NO_CONFIG=1
+export PIP_CONFIG_FILE=/dev/null
 
 agents-cli deploy \
   --project="${PROJECT_ID}" \
   --region="${LOCATION}" \
   --deployment-target="agent_runtime" \
   --agent-identity \
-  --agent-gateway-config="projects/${PROJECT_ID}/locations/${LOCATION}/agentGateways/agent-egress" \
-  --update-env-vars="MCP_SERVER_NAME=${MCP_SERVER_NAME},GOOGLE_CLOUD_LOCATION=${LOCATION},PROJECT_ID=${PROJECT_ID}" \
+  --agent-gateway-egress="projects/${PROJECT_ID}/locations/${LOCATION}/agentGateways/agent-egress" \
+  --update-env-vars="MCP_SERVER_NAME=${MCP_SERVER_NAME},GOOGLE_CLOUD_LOCATION=${LOCATION},PROJECT_ID=${PROJECT_ID},GOOGLE_API_USE_MTLS_ENDPOINT=never,GOOGLE_API_USE_CLIENT_CERTIFICATE=false" \
   --no-wait
 
 echo "==> Step 6: Waiting for Agent registration..."

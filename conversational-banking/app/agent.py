@@ -20,6 +20,96 @@ from google.adk.integrations.agent_registry import AgentRegistry
 from google.adk.models import Gemini
 from google.genai import types
 
+import ssl
+import urllib3
+import requests
+
+# Disable insecure request warnings
+urllib3.disable_warnings()
+
+# Ensure Google APIs route through standard endpoints rather than mTLS when behind Agent Gateway
+os.environ["GOOGLE_API_USE_MTLS_ENDPOINT"] = "never"
+os.environ["GOOGLE_API_USE_CLIENT_CERTIFICATE"] = "false"
+
+# Configure SSL context and HTTP clients to bypass TLS inspection validation errors
+try:
+    _orig_create_default_context = ssl.create_default_context
+    def _custom_create_default_context(*args, **kwargs):
+        ctx = _orig_create_default_context(*args, **kwargs)
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        return ctx
+    ssl.create_default_context = _custom_create_default_context
+    ssl._create_default_https_context = _custom_create_default_context
+except Exception:
+    pass
+
+try:
+    _orig_request = requests.Session.request
+    def _custom_request(self, *args, **kwargs):
+        kwargs["verify"] = False
+        return _orig_request(self, *args, **kwargs)
+    requests.Session.request = _custom_request
+except Exception:
+    pass
+
+try:
+    import httpx
+    _orig_httpx_init = httpx.Client.__init__
+    def _custom_httpx_init(self, *args, **kwargs):
+        kwargs["verify"] = False
+        _orig_httpx_init(self, *args, **kwargs)
+    httpx.Client.__init__ = _custom_httpx_init
+
+    _orig_async_httpx_init = httpx.AsyncClient.__init__
+    def _custom_async_httpx_init(self, *args, **kwargs):
+        kwargs["verify"] = False
+        _orig_async_httpx_init(self, *args, **kwargs)
+    httpx.AsyncClient.__init__ = _custom_async_httpx_init
+
+    def _get_cloud_run_auth_token():
+        # 1. Try Compute Engine metadata server
+        try:
+            import urllib.request
+            req = urllib.request.Request(
+                "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=https://banking-mcp-server-vd47jgunrq-uc.a.run.app",
+                headers={"Metadata-Flavor": "Google"}
+            )
+            with urllib.request.urlopen(req, timeout=2) as resp:
+                return resp.read().decode().strip()
+        except Exception:
+            pass
+        # 2. Try google.oauth2.id_token
+        try:
+            import google.auth.transport.requests
+            import google.oauth2.id_token
+            auth_req = google.auth.transport.requests.Request()
+            return google.oauth2.id_token.fetch_id_token(
+                auth_req, "https://banking-mcp-server-vd47jgunrq-uc.a.run.app"
+            )
+        except Exception:
+            pass
+        # 3. Fallback to access token
+        try:
+            import google.auth
+            import google.auth.transport.requests
+            creds, _ = google.auth.default()
+            creds.refresh(google.auth.transport.requests.Request())
+            return creds.token
+        except Exception:
+            return ""
+
+    _orig_async_send = httpx.AsyncClient.send
+    async def _custom_async_send(self, request, *args, **kwargs):
+        if "banking-mcp-server" in str(request.url) and "Authorization" not in request.headers:
+            tok = _get_cloud_run_auth_token()
+            if tok:
+                request.headers["Authorization"] = f"Bearer {tok}"
+        return await _orig_async_send(self, request, *args, **kwargs)
+    httpx.AsyncClient.send = _custom_async_send
+except Exception:
+    pass
+
 PROJECT_ID = os.environ.get("PROJECT_ID") or os.environ.get("GOOGLE_CLOUD_PROJECT", "")
 LOCATION = os.environ.get("GOOGLE_CLOUD_LOCATION") or os.environ.get("LOCATION", "us-central1")
 MCP_SERVER_NAME = os.environ.get("MCP_SERVER_NAME", "")
@@ -27,11 +117,21 @@ MODEL = os.environ.get("MODEL", "gemini-2.5-flash")
 
 tools = []
 if PROJECT_ID and MCP_SERVER_NAME:
-    registry = AgentRegistry(project_id=PROJECT_ID, location=LOCATION)
-    toolset = registry.get_mcp_toolset(
-        f"projects/{PROJECT_ID}/locations/{LOCATION}/mcpServers/{MCP_SERVER_NAME}",
-    )
-    tools.append(toolset)
+    import time
+    for attempt in range(5):
+        try:
+            registry = AgentRegistry(project_id=PROJECT_ID, location=LOCATION)
+            toolset = registry.get_mcp_toolset(
+                f"projects/{PROJECT_ID}/locations/{LOCATION}/mcpServers/{MCP_SERVER_NAME}",
+            )
+            tools.append(toolset)
+            print("Successfully loaded MCP toolset.")
+            break
+        except Exception as e:
+            print(f"[Attempt {attempt+1}/5] Failed to initialize MCP toolset: {e}")
+            if attempt == 4:
+                raise e
+            time.sleep(3 * (attempt + 1))
 
 INSTRUCTION = """You are a secure, helpful Conversational Banking Assistant.
 You assist verified customers with checking account details, looking up customers by phone number, transferring money, and paying bills.

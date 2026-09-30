@@ -40,3 +40,7 @@ service-account*.json
 
 # Auto-generated artifacts during deploy
 toolspec.json
+*.crt
+*.yaml.tmp
+agent-gateway-vpc-egress.yaml
+agent-egress-sgp-authzpolicy.yaml
