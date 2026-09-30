@@ -65,7 +65,9 @@ agentgateway/
 ├── 08-test.sh                      # 대화형 및 자동화 종합 검증 실행 스크립트
 ├── run_tests.py                    # E2E 3-Turn 자동화 검증 및 SGP 감사 로그 확인 Python 스크립트
 ├── 99-cleanup.sh                   # 생성된 클라우드 리소스 일괄 정리 스크립트
-└── deploy-all.sh                   # 전체 배포 파이프라인 일괄 실행 스크립트
+├── deploy-all.sh                   # 전체 배포 파이프라인 일괄 실행 스크립트
+├── codelab-ko.html                 # 대화형 한국어 Google Cloud Codelab 웹 가이드 (SVG 다이어그램 포함)
+└── index.html                      # GitHub Pages 호스팅용 대화형 Codelab 메인 페이지
 ```
 
 ---
