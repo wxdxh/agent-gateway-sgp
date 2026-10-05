@@ -3,6 +3,7 @@
 > **총 예상 소요 시간**: 약 **55분** (에이전트 런타임 컨테이너 빌드 및 프로비저닝 대기 시간 15~20분 포함)
 > **난이도**: 중급 (Intermediate)
 > **대상 환경**: Google Cloud (`us-central1`), Gemini Enterprise, Agent Gateway, Agent Registry, Cloud Run
+> **웹 버전 가이드 (Cloud Run)**: [https://agent-gateway-codelab-1080321871308.us-central1.run.app](https://agent-gateway-codelab-1080321871308.us-central1.run.app)
 
 ---
 
@@ -72,18 +73,56 @@ export PROJECT_ID="your-gcp-project-id"
 gcloud config set project "${PROJECT_ID}"
 ```
 
-### 2.2 필수 API 활성화 및 IAM 권한 부여 (`01-setup-env.sh`)
-`01-setup-env.sh`를 실행하면 11개 핵심 API를 활성화하고, Agent Gateway 전용 관리형 서비스 에이전트(`service-PROJECT_NUM@gcp-sa-agentgateway.iam.gserviceaccount.com`)를 생성하여 최소 권한 원칙에 따른 3가지 IAM 역할을 부여합니다.
+### 2.2 스크립트 실행 (`01-setup-env.sh`)
 
 ```bash
 ./01-setup-env.sh
 ```
 
-| 부여 IAM 역할 | 권한 목적 |
+### 2.3 🔍 스크립트 내부 구동 원리 (`env.sh` & `01-setup-env.sh`)
+단순히 스크립트를 실행하는 것에 그치지 않고, 스크립트 내부에서 어떤 설정이 수행되는지 이해하는 것이 중요합니다.
+
+#### ① 공통 환경 변수 자동 감지 (`env.sh`)
+모든 단계별 스크립트가 최상단에서 `source env.sh`로 불러오는 파일입니다. 프로젝트 번호(`PROJECT_NUM`)를 기반으로 Google 관리형 Agent Gateway 서비스 계정(`AGW_SA`)을 조합하고, 프로젝트 내 활성 VPC 네트워크와 서브넷을 자동으로 탐지합니다.
+
+```bash
+export PROJECT_ID="${PROJECT_ID:-$(gcloud config get-value project 2>/dev/null)}"
+export PROJECT_NUM="$(gcloud projects describe "${PROJECT_ID}" --format="value(projectNumber)")"
+export LOCATION="${LOCATION:-us-central1}"
+export AGW_SA="serviceAccount:service-${PROJECT_NUM}@gcp-sa-agentgateway.iam.gserviceaccount.com"
+
+# default 네트워크가 있으면 사용하고, 없으면 프로젝트의 첫 번째 VPC/서브넷을 자동 선택
+if gcloud compute networks describe default --project="${PROJECT_ID}" &>/dev/null; then
+  DEFAULT_NET="default"; DEFAULT_SUBNET="default"
+else
+  DEFAULT_NET="$(gcloud compute networks list --project="${PROJECT_ID}" --format="value(name)" | head -n 1)"
+  DEFAULT_SUBNET="$(gcloud compute networks subnets list --project="${PROJECT_ID}" --regions="${LOCATION}" --network="${DEFAULT_NET}" --format="value(name)" | head -n 1)"
+fi
+```
+
+#### ② 필수 API 16종 활성화 및 서비스 ID 프로비저닝 (`01-setup-env.sh`)
+네트워크 보안(`networksecurity`, `networkservices`), 카탈로그(`agentregistry`), 런타임(`aiplatform`, `run`), 관측성(`telemetry`, `logging`) API를 활성화한 뒤, **Network Services 서비스 에이전트 ID**를 명시적으로 생성합니다.
+
+```bash
+# Network Services 관리형 서비스 에이전트(service-PROJECT_NUM@gcp-sa-agentgateway...) 생성
+gcloud beta services identity create \
+  --service=networkservices.googleapis.com \
+  --project="${PROJECT_ID}" || true
+
+# 생성된 Agent Gateway 서비스 에이전트에 3대 핵심 IAM 역할 부여
+for ROLE in "roles/agentgateway.serviceAgent" "roles/aiplatform.user" "roles/modelarmor.user"; do
+  gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+    --member="${AGW_SA}" \
+    --role="${ROLE}" \
+    --condition=None --quiet
+done
+```
+
+| 부여 IAM 역할 | 왜 필요한가요? (미부여 시 증상) |
 | :--- | :--- |
-| `roles/agentgateway.serviceAgent` | 네트워크 어태치먼트 및 확장 정책 제어 권한 |
-| `roles/aiplatform.user` | Gemini Enterprise 기반 SGP 정책 평가 모델 호출 권한 |
-| `roles/modelarmor.user` | 콘텐츠 보안 및 가드레일 필터 연동 권한 |
+| `roles/agentgateway.serviceAgent` | Agent Gateway가 고객 VPC의 Network Attachment에 인터페이스를 연결하고 트래픽을 라우팅하기 위한 필수 권한 |
+| `roles/aiplatform.user` | 게이트웨이가 가로챈 도구 호출을 Gemini Enterprise 기반 SGP 정책 평가 모델로 전달해 추론하기 위한 권한 |
+| `roles/modelarmor.user` | 프롬프트 및 응답 페이로드의 콘텐츠 보안 가드레일(Model Armor) 필터를 호출하기 위한 권한 |
 
 ---
 
@@ -111,22 +150,65 @@ flowchart LR
     PSC ==>|"PSC 비공개 터널"| SA
 ```
 
-### 3.1 네트워킹 자동 구성 스크립트 실행 (`02-setup-networking.sh`)
+### 3.1 스크립트 실행 (`02-setup-networking.sh`)
 
 ```bash
 ./02-setup-networking.sh
 ```
 
-### 3.2 생성 리소스 요약
+### 3.2 🔍 스크립트 내부 구동 원리 (`02-setup-networking.sh`)
 
-| 구분 | 리소스 이름 | 주요 설정 | 역할 |
-| :--- | :--- | :--- | :--- |
-| **Proxy Subnet** | `agent-gateway-proxy-subnet` | `10.11.13.0/24` (`REGIONAL_MANAGED_PROXY`) | 리전 내부 프록시 전용 대역 제공 |
-| **Attachment** | `agent-gateway-na` | `ACCEPT_AUTOMATIC` | Agent Gateway가 고객 VPC로 진입하는 연결점 |
-| **PSC Endpoint** | `sgp-psc-endpoint` | 정적 IP `sgp-psc-ip` 바인딩 | Google 관리형 SGP 엔진과 비공개 전용 연결 |
-| **Cloud DNS** | `policy-internal-zone` | `policy.internal.` A 레코드 | SGP 엔진 도메인을 PSC 내부 IP로 해석 |
+이 스크립트는 **4단계 네트워크 구성 작업**을 순차적으로 수행합니다:
 
-> **✅ 검증 포인트**: 스크립트 실행 후 아래 명령어의 결과가 반드시 `ACCEPTED`여야 합니다.
+#### ① Regional Managed Proxy Subnet 및 Network Attachment 생성
+Agent Gateway(Google 관리형 테넌트에서 실행됨)가 고객 VPC 내부의 프라이빗 리소스(PSC 엔드포인트)와 통신하려면, VPC 내부에 프록시 전용 대역(`REGIONAL_MANAGED_PROXY`)과 진입 인터페이스인 **Network Attachment(`agent-gateway-na`)**가 있어야 합니다.
+
+```bash
+# 1. 리전 내부 Envoy 프록시 전용 대역(10.11.13.0/24) 할당
+gcloud compute networks subnets create proxy-only-subnet \
+  --network="${NETWORK_NAME}" --region="${LOCATION}" \
+  --range="10.11.13.0/24" --purpose=REGIONAL_MANAGED_PROXY --role=ACTIVE
+
+# 2. Agent Gateway가 고객 VPC에 자동으로 연결(ACCEPT_AUTOMATIC)될 수 있는 어태치먼트 생성
+gcloud compute network-attachments create agent-gateway-na \
+  --region="${LOCATION}" --subnets="${SUBNET_NAME}" \
+  --connection-preference=ACCEPT_AUTOMATIC
+```
+
+#### ② SGP 정책 엔진 활성화 및 Service Attachment 동적 조회
+Google이 관리하는 SGP 엔진은 프로젝트별로 고유한 테넌트 **PSC Service Attachment URI**(`projects/.../serviceAttachments/k8s1-sa-...`)를 제공합니다. 스크립트는 엔진을 활성화하고 이 URI를 동적으로 추출합니다.
+
+```bash
+# SGP 정책 엔진을 활성화하고 할당된 PSC Service Attachment 주소를 동적 조회
+gcloud beta ai semantic-governance-policy-engine update --location="${LOCATION}" --project="${PROJECT_ID}" --quiet
+SERVICE_ATTACHMENT="$(gcloud beta ai semantic-governance-policy-engine describe \
+  --location="${LOCATION}" --project="${PROJECT_ID}" --format="value(pscServiceAttachment)")"
+```
+
+#### ③ PSC 정적 IP 예약 및 Forwarding Rule(`sgp-psc-endpoint`) 생성
+고객 서브넷 내부에 고정 IP(`sgp-psc-ip`, 예: `10.10.0.9`)를 예약하고, 해당 IP로 들어오는 패킷을 Google 관리형 SGP 엔진의 `SERVICE_ATTACHMENT`로 직결하는 PSC 엔드포인트를 생성합니다.
+
+```bash
+gcloud compute addresses create sgp-psc-ip \
+  --region="${LOCATION}" --subnet="${SUBNET_NAME}" --purpose=GCE_ENDPOINT
+
+gcloud compute forwarding-rules create sgp-psc-endpoint \
+  --region="${LOCATION}" --network="${NETWORK_NAME}" \
+  --address="sgp-psc-ip" --target-service-attachment="${SERVICE_ATTACHMENT}"
+```
+
+#### ④ Cloud DNS 프라이빗 존(`policy.internal.`) 매핑
+Agent Gateway의 확장 정책은 `https://policy.internal`이라는 고정 도메인 이름으로 SGP 엔진을 호출합니다. 따라서 VPC 내부에서 `policy.internal.` 질의가 `PSC_IP`(`10.10.0.9`)로 응답되도록 프라이빗 DNS 존과 A 레코드를 구성합니다.
+
+```bash
+gcloud dns managed-zones create policy-engine-zone \
+  --dns-name="policy.internal." --visibility=private --networks="${NETWORK_NAME}"
+
+gcloud dns record-sets create policy.internal. \
+  --zone=policy-engine-zone --type=A --ttl=300 --rrdatas="${PSC_IP}"
+```
+
+> **✅ 검증 포인트**: 아래 명령어 실행 시 상태가 `ACCEPTED`로 출력되면 비공개 PSC 터널이 정상 개통된 것입니다.
 > ```bash
 > gcloud compute forwarding-rules describe sgp-psc-endpoint --region=us-central1 --format="value(pscConnectionStatus)"
 > ```
@@ -135,21 +217,79 @@ flowchart LR
 
 ## Step 4. Agent Gateway 및 콘텐츠 인가 정책 구성 (⏱ 5분)
 
-에이전트의 외부 호출을 가로채는 **Agent Gateway(`agent-egress`)**를 배포하고, 모델 및 도구 호출 페이로드를 `policy.internal:443`으로 전달해 실시간 심사를 수행하는 **Content Authz Policy**를 연결합니다.
+에이전트의 외부 호출을 가로채는 **Agent Gateway(`agent-egress`)**를 배포하고, 모델 및 도구 호출 페이로드를 `policy.internal`로 전달해 실시간 심사를 수행하는 **Content Authz Policy**를 연결합니다.
 
-### 4.1 Agent Gateway 배포 실행 (`03-setup-agent-gateway.sh`)
+### 4.1 스크립트 실행 (`03-setup-agent-gateway.sh`)
 
 ```bash
 ./03-setup-agent-gateway.sh
 ```
 
-### 4.2 핵심 구성 리소스 3종
+### 4.2 🔍 스크립트 내부 구동 원리 (`03-setup-agent-gateway.sh`)
 
-| 순서 | 리소스 유형 | 리소스 이름 | 핵심 설정 및 역할 |
-| :---: | :--- | :--- | :--- |
-| **1** | **Authz Extension** | `sgp-authzextension` | 인가 결정 위임 대상인 `policy.internal:443` 등록 및 `fail-open=false`(장애 시 차단) 적용 |
-| **2** | **Egress Gateway** | `agent-egress` | `AGENT_TO_ANYWHERE` 모드로 에이전트 트래픽 제어 및 `policy.internal.` DNS 피어링 수행 |
-| **3** | **Content Authz Policy** | `agent-egress-sgp-authzpolicy` | `:generateContent` 및 `:streamGenerateContent` 요청을 감지해 SGP 확장으로 라우팅 |
+스크립트는 내부적으로 두 개의 선언형 YAML 매니페스트와 한 개의 REST API 호출을 통해 게이트웨이 보안 체인을 완성합니다.
+
+#### ① Egress Agent Gateway 생성 (`agent-gateway-vpc-egress.yaml`)
+- `governedAccessPath: AGENT_TO_ANYWHERE`: 에이전트에서 외부(클라우드 API 및 MCP 서버)로 나가는 모든 이그레스 트래픽을 통제합니다.
+- `networkConfig.egress.networkAttachment`: Step 3에서 만든 `agent-gateway-na`를 통해 고객 VPC로 진입합니다.
+- `dnsPeeringConfig`: 게이트웨이가 고객 VPC의 Cloud DNS를 참조하여 `policy.internal.` 도메인을 PSC IP(`10.10.0.9`)로 해석할 수 있도록 DNS 피어링을 맺습니다.
+
+```yaml
+name: projects/${PROJECT_ID}/locations/${LOCATION}/agentGateways/agent-egress
+protocols:
+  - MCP
+googleManaged:
+  governedAccessPath: AGENT_TO_ANYWHERE
+registries:
+  - //agentregistry.googleapis.com/projects/${PROJECT_ID}/locations/${LOCATION}
+networkConfig:
+  egress:
+    networkAttachment: projects/${PROJECT_ID}/regions/${LOCATION}/networkAttachments/agent-gateway-na
+  dnsPeeringConfig:
+    domains:
+      - policy.internal.
+    targetProject: ${PROJECT_ID}
+    targetNetwork: projects/${PROJECT_ID}/global/networks/${NETWORK_NAME}
+```
+
+#### ② SGP Authorization Extension 등록 (`sgp-authzextension`)
+게이트웨이가 트래픽을 가로챘을 때 외부 심사관(Callout Server)으로 호출할 대상을 `policy.internal`로 지정합니다. 특히 **`"failOpen": false`**로 설정하여, 정책 엔진 장애나 위반 시 트래픽을 무조건 차단(Fail-Closed)하도록 강제합니다.
+
+```bash
+curl -fsS -X POST \
+  "https://networkservices.googleapis.com/v1beta1/projects/${PROJECT_ID}/locations/${LOCATION}/authzExtensions?authzExtensionId=sgp-authzextension" \
+  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "service": "policy.internal",
+    "authority": "policy.internal",
+    "failOpen": false,
+    "loadBalancingScheme": "LOAD_BALANCING_SCHEME_UNSPECIFIED"
+  }'
+```
+
+#### ③ Content Authorization Policy 바인딩 (`agent-egress-sgp-authzpolicy.yaml`)
+`agent-egress` 게이트웨이를 통과하는 트래픽 중 **CEL(Common Expression Language) 조건식**과 일치하는 요청만 골라내어 `sgp-authzextension`으로 보냅니다.
+- `when` 조건식 해설: gRPC가 아닌 일반 HTTP/JSON 요청이면서 경로가 `:generateContent` 또는 `:streamGenerateContent`로 끝나는 모델 추론/도구 결정 트래픽을 정확히 인터셉트합니다.
+
+```yaml
+name: projects/${PROJECT_ID}/locations/${LOCATION}/authzPolicies/agent-egress-sgp-authzpolicy
+target:
+  resources:
+    - "projects/${PROJECT_NUM}/locations/${LOCATION}/agentGateways/agent-egress"
+httpRules:
+  - to:
+      operations:
+        - paths:
+            - prefix: "/"
+    when: '!request.headers["content-type"].startsWith("application/grpc") && (request.path.endsWith(":generateContent") || request.path.endsWith(":streamGenerateContent"))'
+action: CUSTOM
+policyProfile: CONTENT_AUTHZ
+customProvider:
+  authzExtension:
+    resources:
+      - "projects/${PROJECT_NUM}/locations/${LOCATION}/authzExtensions/sgp-authzextension"
+```
 
 ---
 
@@ -157,7 +297,21 @@ flowchart LR
 
 에이전트가 호출할 실제 금융 거래 도구를 제공하는 **Model Context Protocol (MCP)** 서버를 Cloud Run에 배포합니다.
 
-### 5.1 제공되는 4대 뱅킹 도구 명세
+### 5.1 스크립트 실행 (`04-deploy-mcp.sh`)
+
+```bash
+# (선택) 로컬에서 JSON-RPC 2.0 및 도구 동작 단위 테스트
+python3 banking-mcp-server/test_server.py
+
+# Cloud Run에 banking-mcp-server 빌드 및 배포
+./04-deploy-mcp.sh
+```
+
+### 5.2 🔍 스크립트 및 서버 내부 구동 원리 (`banking-mcp-server/server.py` & `04-deploy-mcp.sh`)
+
+#### ① FastAPI 기반 MCP 서버의 2가지 핵심 엔드포인트 (`banking-mcp-server/server.py`)
+- **`GET /tools`**: Step 6에서 Agent Registry에 도구 스키마를 자동 추출·등록할 수 있도록 4개 도구의 이름, 설명, `inputSchema` 배열을 JSON으로 반환합니다.
+- **`POST /mcp`**: 에이전트 런타임이 실시간으로 호출하는 표준 **MCP JSON-RPC 2.0** 엔드포인트입니다. `initialize`, `tools/list`, `tools/call` 메서드를 처리하며 인메모리 원장(`CUSTOMERS` 딕셔너리)에서 잔액 조회 및 차감을 수행합니다.
 
 | 도구 식별자 | 입력 파라미터 | 비즈니스 동작 (에이펙스 자산운용 원장) |
 | :--- | :--- | :--- |
@@ -166,14 +320,19 @@ flowchart LR
 | `transfer_to_phone` | `customer_id`, `target_phone`, `amount` | 전화번호 기반 간편 송금 실행 및 거래 고유번호(`TXN-...`) 발급 |
 | `pay_bill` | `customer_id`, `biller_name`, `account_number`, `amount` | 기관·가맹점 청구서 납부 및 계좌 잔액 차감 |
 
-### 5.2 로컬 단위 테스트 및 Cloud Run 배포 (`04-deploy-mcp.sh`)
+#### ② Cloud Run 배포 및 게이트웨이 호출 권한 부여 (`04-deploy-mcp.sh`)
+Cloud Run에 컨테이너를 배포한 뒤 배포된 URL(`MCP_URL`)을 `.env.runtime` 파일에 기록하고, Agent Gateway 서비스 계정(`AGW_SA`)에 `roles/run.servicesInvoker` 권한을 부여하여 게이트웨이가 MCP 서버로 패킷을 전달할 수 있게 합니다.
 
 ```bash
-# 1. 로컬에서 JSON-RPC 2.0 및 도구 동작 단위 테스트
-python3 banking-mcp-server/test_server.py
+gcloud run deploy banking-mcp-server --source=. --region="${LOCATION}" --allow-unauthenticated --quiet
 
-# 2. Cloud Run에 banking-mcp-server 빌드 및 배포
-./04-deploy-mcp.sh
+# 배포된 URL을 후속 스크립트에서 참조할 수 있도록 .env.runtime에 저장
+export MCP_URL="$(gcloud run services describe banking-mcp-server --region="${LOCATION}" --format="value(status.url)")"
+echo "export MCP_URL=\"${MCP_URL}\"" >> "${SCRIPT_DIR}/.env.runtime"
+
+# Agent Gateway 서비스 에이전트에 Cloud Run 호출 권한 부여
+gcloud run services add-iam-policy-binding banking-mcp-server \
+  --region="${LOCATION}" --member="${AGW_SA}" --role="roles/run.servicesInvoker"
 ```
 
 ---
@@ -182,40 +341,100 @@ python3 banking-mcp-server/test_server.py
 
 배포된 뱅킹 MCP 서버의 스키마를 **Google Cloud Agent Registry**에 등록하고, 제로 트러스트(Default-Deny) 환경에서 에이전트가 정상 작동하기 위해 필요한 Google Cloud 시스템 엔드포인트 4종을 허용 목록(Allowlist)에 추가합니다.
 
-### 6.1 Agent Registry 등록 실행 (`05-register-mcp.sh`)
+### 6.1 스크립트 실행 (`05-register-mcp.sh`)
 
 ```bash
 ./05-register-mcp.sh
 ```
 
-### 6.2 등록되는 서비스 목록
+### 6.2 🔍 스크립트 내부 구동 원리 (`05-register-mcp.sh`)
 
-| 구분 | 서비스 ID | 대상 엔드포인트 | 등록 목적 |
-| :---: | :--- | :--- | :--- |
-| **MCP 서버** | `banking-mcp-server` | `https://banking-mcp-server-...run.app/mcp` | 4대 뱅킹 도구 스키마 및 JSON-RPC 인터페이스 등록 |
-| **시스템 API** | `google-oauth2` | `https://oauth2.googleapis.com` | 런타임 서비스 인증 토큰 발급 허용 |
-| **시스템 API** | `google-cloud-logging` | `https://logging.googleapis.com` | Cloud Logging 감사 및 런타임 로그 전송 허용 |
-| **시스템 API** | `google-telemetry` | `https://telemetry.googleapis.com` | 트레이스 및 관측성(Observability) 수집 허용 |
-| **시스템 API** | `google-aiplatform` | `https://us-central1-aiplatform.googleapis.com` | Gemini Enterprise 모델 추론 엔드포인트 통신 허용 |
+#### ① MCP 도구 명세 추출 및 Agent Registry 서비스 생성
+MCP 서버의 `GET /tools` 응답을 가져와 Agent Registry가 요구하는 `{"tools": [...]}` 포맷의 `toolspec.json` 파일로 변환한 뒤 등록합니다. 등록이 완료되면 플랫폼이 부여한 고유 리소스 ID(`MCP_SERVER_NAME`, 예: `agentregistry-00000000-...`)를 조회해 `.env.runtime`에 저장합니다.
+
+```bash
+# 1. /tools 출력을 {"tools": [...]} 구조의 toolspec.json으로 래핑
+curl -fsS -H "Authorization: Bearer ${ID_TOKEN}" "${MCP_URL}/tools" | \
+  python3 -c 'import sys, json; tools=json.load(sys.stdin); json.dump({"tools": tools}, open("toolspec.json", "w"))'
+
+# 2. Agent Registry에 JSON-RPC 인터페이스 및 도구 스키마 등록
+gcloud alpha agent-registry services create banking-mcp-server \
+  --location="${LOCATION}" \
+  --display-name="Banking MCP Server" \
+  --interfaces=url="${MCP_URL}/mcp",protocolBinding=JSONRPC \
+  --mcp-server-spec-type=tool-spec \
+  --mcp-server-spec-content="toolspec.json"
+```
+
+#### ② Google Cloud 시스템 엔드포인트 4종 Allowlist 등록 및 `roles/iap.egressor` 바인딩
+`agent-egress` 게이트웨이는 **기본 거부(Default-Deny)** 방식으로 동작하므로, Agent Registry에 등록되지 않은 외부 도메인은 Google Cloud 자체 API라 할지라도 모두 차단됩니다. 따라서 스크립트는 아래 4개 필수 시스템 엔드포인트를 등록하고, **IAP Egressor(`roles/iap.egressor`)** 권한을 게이트웨이 SA와 에이전트 런타임 SA(`service-PROJECT_NUM@gcp-sa-aiplatform-re.iam.gserviceaccount.com`)에 바인딩합니다.
+
+```bash
+ENDPOINTS=(
+  "Vertex AI Locational API | https://${LOCATION}-aiplatform.googleapis.com"
+  "Cloud Trace API | https://telemetry.googleapis.com"
+  "Cloud Logging API | https://logging.googleapis.com"
+  "Agent Registry API | https://agentregistry.googleapis.com"
+)
+
+# 각 엔드포인트를 등록한 뒤 IAP Egressor 권한을 부여하여 게이트웨이 통과 허용
+gcloud alpha iap web add-iam-policy-binding \
+  --resource-type=agent-registry --endpoint="${ep_id}" --region="${LOCATION}" \
+  --member="serviceAccount:service-${PROJECT_NUM}@gcp-sa-aiplatform-re.iam.gserviceaccount.com" \
+  --role="roles/iap.egressor"
+```
 
 ---
 
 ## Step 7. Gemini Enterprise 에이전트 런타임 배포 (⏱ 15~20분)
 
 > **🚨 필수 가이드라인: 에이전트 구성에 15분 이상 소요됩니다 (중간에 중단하지 마세요)**
-> **Gemini Enterprise Agent Runtime**은 컨테이너 이미지 빌드, 격리된 보안 샌드박스 할당, Agent Gateway 프록시 마운트, 그리고 고유한 **Agent Identity(`principal://agents.global...`)** 발급을 순차적으로 진행합니다. 전체 완료까지 **약 15분~20분**이 소요되므로 배포가 진행되는 동안 터미널을 종료하지 마세요.
+> **Gemini Enterprise Agent Runtime**은 컨테이너 이미지 빌드, 격리된 보안 샌드박스 할당, Agent Gateway 프록시 마운트, 그리고 고유한 **Agent Identity(`principal://agents.global...`)** 발급을 순차적으로 진행합니다. 백엔드 프로비저닝 완료까지 **약 15분~20분**이 소요되므로 여유 있게 기다려 주세요.
 
-### 7.1 에이전트 핵심 구조 (`conversational-banking/app/agent.py`)
-에이전트는 **Google Agent Development Kit (ADK)**를 기반으로 작성되었으며, `ApiRegistry`를 통해 하드코딩 없이 Agent Registry에서 뱅킹 MCP 도구를 동적으로 연결합니다.
+### 7.1 스크립트 실행 (`06-deploy-agent.sh`)
+
+```bash
+./06-deploy-agent.sh
+```
+
+### 7.2 🔍 스크립트 및 에이전트 내부 구동 원리 (`06-deploy-agent.sh` & `app/agent.py`)
+
+#### ① Agent Gateway TLS Inspection Root CA 인증서 추출 및 컨테이너 주입
+Agent Gateway는 에이전트가 외부로 보내는 HTTPS 패킷 내부의 JSON 페이로드(도구 이름 및 이체 금액)를 검사하기 위해 **TLS 인터셉션(SSL 복호화 후 재암호화)**을 수행합니다. 에이전트 컨테이너가 게이트웨이의 사설 인증서를 신뢰할 수 있도록, `06-deploy-agent.sh`는 게이트웨이 리소스에서 Root CA 인증서를 추출하여 `conversational-banking/agent-gateway-ca.crt`로 저장합니다.
+
+```bash
+# Agent Gateway의 사설 Root CA 인증서를 추출하여 에이전트 빌드 디렉터리에 저장
+gcloud network-services agent-gateways describe agent-egress \
+  --location="${LOCATION}" --project="${PROJECT_ID}" \
+  --format="value(agentGatewayCard.rootCertificates[0])" > conversational-banking/agent-gateway-ca.crt
+```
+
+이 인증서는 `conversational-banking/Dockerfile` 빌드 시점에 OS 시스템 신뢰 저장소(`ca-certificates`)에 등록됩니다.
+
+#### ② `agents-cli deploy` 명령의 핵심 플래그 해설
+```bash
+agents-cli deploy \
+  --project="${PROJECT_ID}" \
+  --region="${LOCATION}" \
+  --deployment-target="agent_runtime" \
+  --agent-identity \
+  --agent-gateway-egress="projects/${PROJECT_ID}/locations/${LOCATION}/agentGateways/agent-egress" \
+  --update-env-vars="MCP_SERVER_NAME=${MCP_SERVER_NAME},GOOGLE_CLOUD_LOCATION=${LOCATION},PROJECT_ID=${PROJECT_ID},GOOGLE_API_USE_MTLS_ENDPOINT=never,GOOGLE_API_USE_CLIENT_CERTIFICATE=false" \
+  --no-wait
+```
+- `--agent-identity`: 에이전트 인스턴스만의 고유 암호화 ID(`principal://agents.global.org-...`)를 프로비저닝합니다.
+- `--agent-gateway-egress`: 에이전트 런타임 샌드박스의 모든 아웃바운드 트래픽이 `agent-egress` 게이트웨이를 강제로 경유하도록 네트워크를 바인딩합니다.
+- `--update-env-vars="MCP_SERVER_NAME=..."`: Step 6에서 등록된 MCP 서버 ID를 환경 변수로 전달하여 에이전트가 시작할 때 동적으로 도구 목록을 가져오게 합니다.
+
+#### ③ ADK 에이전트의 동적 도구 바인딩 및 Cloud Run 인증 (`conversational-banking/app/agent.py`)
+에이전트 코드는 MCP 서버의 URL을 하드코딩하지 않고 `ApiRegistry`에서 `MCP_SERVER_NAME`으로 도구 세트를 조회합니다. 또한 Cloud Run으로 요청을 보낼 때 Compute Engine 메타데이터 서버에서 대상 URL을 Audience로 하는 **OIDC ID 토큰**을 자동 발급받아 `Authorization: Bearer` 헤더에 주입합니다.
 
 ```python
 from google.adk.agents import Agent
 from google.adk.tools.api_registry import ApiRegistry
 
-api_registry = ApiRegistry(
-    api_registry_project_id=PROJECT_ID,
-    location=LOCATION,
-)
+# Agent Registry 카탈로그에서 MCP 도구 세트를 동적으로 로드
+api_registry = ApiRegistry(api_registry_project_id=PROJECT_ID, location=LOCATION)
 banking_tools = api_registry.get_toolset(mcp_server_name=MCP_SERVER_NAME)
 
 root_agent = Agent(
@@ -229,41 +448,47 @@ root_agent = Agent(
 )
 ```
 
-### 7.2 에이전트 배포 스크립트 실행 (`06-deploy-agent.sh`)
-아래 스크립트는 에이전트를 Gemini Enterprise 런타임에 배포한 뒤, 발급된 **Agent Identity**에 Cloud Run 뱅킹 MCP 서버를 호출할 수 있는 `roles/run.invoker` 권한을 자동으로 부여합니다.
-
-```bash
-./06-deploy-agent.sh
-```
-
 ---
 
 ## Step 8. 시맨틱 거버넌스 정책(SGP) 생성 (⏱ 3분)
 
 애플리케이션 코드를 전혀 수정하지 않고, **자연어 비즈니스 규정**만으로 고액 이체를 원천 차단하는 시맨틱 거버넌스 정책(`high-value-limit`)을 생성합니다.
 
-### 8.1 SGP 정책 생성 스크립트 실행 (`07-create-sgp-policy.sh`)
+### 8.1 스크립트 실행 (`07-create-sgp-policy.sh`)
 
 ```bash
 ./07-create-sgp-policy.sh
 ```
 
-### 8.2 자연어 제약 조건 설정 상세
+### 8.2 🔍 스크립트 내부 구동 원리 (`07-create-sgp-policy.sh`)
+
+#### ① 에이전트 ID 및 MCP 서버 ID 자동 연결
+`.env.runtime` 또는 Agent Registry 조회를 통해 배포된 에이전트(`AGENT_ID`)와 MCP 서버(`MCP_SERVER_NAME`)의 리소스 이름을 가져옵니다.
+
+#### ② ADK 런타임 도구 네임스페이스 접두사 매칭 (`Banking_MCP_Server_transfer_to_phone`)
+ADK의 `ApiRegistry.get_toolset()`은 MCP 서버의 표시 이름(`Banking MCP Server`)을 정규화하여 원래 도구 이름(`transfer_to_phone`) 앞에 **`Banking_MCP_Server_`** 접두사를 자동으로 붙입니다. 따라서 실제 런타임 패킷에 찍히는 도구 이름인 `Banking_MCP_Server_transfer_to_phone`을 대상으로 지정해야 SGP 엔진이 정확히 정책을 적용합니다.
+
+#### ③ 멱등성(Idempotent) 정책 생성 및 업데이트
+스크립트는 `high-value-limit` 정책이 이미 존재하는지 확인하여 없으면 `create`, 있으면 `update`를 수행하므로 여러 번 실행해도 안전합니다.
 
 ```bash
-# ADK 런타임이 부여하는 도구 네임스페이스 접두사(Banking_MCP_Server_)를 포함하여 지정합니다.
 TOOL_NAME="Banking_MCP_Server_transfer_to_phone"
 
-gcloud beta ai semantic-governance-policies create high-value-limit \
-  --project="${PROJECT_ID}" \
-  --location="${LOCATION}" \
-  --display-name="에이펙스 자산운용 고액 이체 한도 정책" \
-  --agent="projects/${PROJECT_ID}/locations/${LOCATION}/agents/${AGENT_ID}" \
-  --mcp-tools="mcp-server=projects/${PROJECT_ID}/locations/${LOCATION}/mcpServers/${MCP_SERVER_NAME},tools=${TOOL_NAME}" \
-  --natural-language-constraint="1회 이체 금액이 1,000,000 KRW(100만 원) 또는 1,000 USD를 초과하는 모든 송금을 차단합니다."
+if gcloud beta ai semantic-governance-policies describe high-value-limit --location="${LOCATION}" &>/dev/null; then
+  gcloud beta ai semantic-governance-policies update high-value-limit \
+    --project="${PROJECT_ID}" --location="${LOCATION}" \
+    --agent="projects/${PROJECT_ID}/locations/${LOCATION}/agents/${AGENT_ID}" \
+    --mcp-tools="mcp-server=projects/${PROJECT_ID}/locations/${LOCATION}/mcpServers/${MCP_SERVER_NAME},tools=${TOOL_NAME}" \
+    --natural-language-constraint="Block any transfer value exceeding USD 1000."
+else
+  gcloud beta ai semantic-governance-policies create high-value-limit \
+    --project="${PROJECT_ID}" --location="${LOCATION}" \
+    --display-name="High Value Transfer Limit" \
+    --agent="projects/${PROJECT_ID}/locations/${LOCATION}/agents/${AGENT_ID}" \
+    --mcp-tools="mcp-server=projects/${PROJECT_ID}/locations/${LOCATION}/mcpServers/${MCP_SERVER_NAME},tools=${TOOL_NAME}" \
+    --natural-language-constraint="Block any transfer value exceeding USD 1000."
+fi
 ```
-
-> **💡 실무 체크포인트**: ADK가 Agent Registry에서 `Banking MCP Server`의 도구를 불러올 때 런타임 도구 이름은 `Banking_MCP_Server_transfer_to_phone`이 됩니다. 정책의 `tools` 항목에 이 전체 이름을 등록해야 SGP 엔진이 송금 도구 호출을 정확히 식별하여 심사합니다.
 
 ---
 
@@ -271,14 +496,31 @@ gcloud beta ai semantic-governance-policies create high-value-limit \
 
 모든 인프라와 정책 배포가 완료되었습니다. 에이펙스 자산운용의 고객 **김민준(`CUST005`)** 시나리오로 3단계 대화를 실행하여 소액 이체 허용(`ALLOW`)과 고액 이체 차단(`DENY`)을 검증합니다.
 
-### 9.1 자동화 검증 스크립트 실행 (`08-test.sh`)
-`./08-test.sh`(내부적으로 `run_tests.py` 실행)를 호출하면 Gemini Enterprise 에이전트 런타임에 Turn 1~3 대화를 연속 전송하고 Cloud Logging 감사 로그까지 한 번에 검증합니다.
+### 9.1 스크립트 실행 (`08-test.sh`)
 
 ```bash
 ./08-test.sh
 ```
 
-### 9.2 3-Turn 시나리오별 기대 결과 요약
+### 9.2 🔍 검증 스크립트 구동 원리 (`08-test.sh` & `run_tests.py`)
+
+`08-test.sh`는 콘솔 테스트 가이드를 출력한 뒤 `python3 run_tests.py`를 호출합니다. `run_tests.py`는 내부적으로 다음 2가지 핵심 작업을 자동 수행합니다:
+
+#### ① 동일 세션 ID(`session_id`) 기반 멀티턴 `:streamQuery` REST 호출
+Turn 1에서 확인한 고객 ID(`CUST005`)를 Turn 2와 Turn 3에서도 에이전트가 기억할 수 있도록 동일한 `session_id`를 유지하며 Gemini Enterprise 런타임의 `:streamQuery` 엔드포인트를 호출합니다.
+
+```python
+url = f"https://{location}-aiplatform.googleapis.com/v1beta1/projects/{project_id}/locations/{location}/reasoningEngines/{re_id}:streamQuery"
+payload = {
+    "class_method": "stream_query",
+    "input": {
+        "message": message,
+        "session_id": session_id,  # Turn 1~3 동안 동일한 세션 유지
+    },
+}
+```
+
+#### ② 3-Turn 시나리오별 기대 결과 요약
 
 | 대화 순서 | 고객 입력 프롬프트 | SGP 판정 | 에이전트 최종 응답 |
 | :---: | :--- | :---: | :--- |
@@ -286,7 +528,8 @@ gcloud beta ai semantic-governance-policies create high-value-limit \
 | **Turn 2**<br/>(소액 송금) | `555-0001로 5만 원(50) 이체해 줘`<br/>*(또는 `transfer 50 to 555-0001`)* | **`ALLOW`** | 수취인(`555-0001`)에게 정상 이체되었습니다. 거래번호: `TXN-C0832A85`, 남은 잔액: **9,950,000원(9,950 USD)** |
 | **Turn 3**<br/>(고액 차단) | `555-0002로 200만 원(2000) 이체해 줘`<br/>*(또는 `transfer 2000 to 555-0002`)* | **`DENY`** | 죄송합니다. 요청하신 이체 금액이 **'고액 이체 한도 정책(High Value Transfer Limit)'의 1회 한도(100만 원 / 1,000 USD)를 초과**하여 거래를 진행할 수 없습니다. |
 
-### 9.3 Cloud Logging 시맨틱 거버넌스 감사 로그 조회
+#### ③ Cloud Logging 시맨틱 거버넌스 감사 로그 자동 조회
+SGP 엔진의 모든 평가 내역은 `projects/${PROJECT_ID}/logs/semantic-governance-policy` 로그 스트림에 기록됩니다. `run_tests.py`는 `jsonPayload.verdict:*` 필터로 실제 심사 로그만 추출하여 출력합니다.
 
 ```bash
 gcloud logging read 'logName="projects/'"${PROJECT_ID}"'/logs/semantic-governance-policy" AND jsonPayload.verdict:*' \
@@ -318,7 +561,7 @@ gcloud logging read 'logName="projects/'"${PROJECT_ID}"'/logs/semantic-governanc
 
 ## Step 10. 실습 리소스 정리 (`99-cleanup.sh`)
 
-실습을 모두 마친 후 지속적인 과금을 방지하기 위해 생성된 클라우드 리소스를 역순으로 안전하게 삭제합니다.
+실습을 모두 마친 후 지속적인 과금을 방지하기 위해 생성된 클라우드 리소스를 의존성 역순(SGP 정책 ➔ 에이전트 런타임 ➔ Agent Registry ➔ Cloud Run ➔ Authz Policy/Extension ➔ Agent Gateway ➔ PSC/DNS/Subnet)으로 안전하게 삭제합니다.
 
 ```bash
 ./99-cleanup.sh
