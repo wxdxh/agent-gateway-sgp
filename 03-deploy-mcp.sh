@@ -3,7 +3,7 @@ set -eo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/env.sh"
 
-echo "==> Step 4: Deploying banking-mcp-server to Cloud Run..."
+echo "==> Step 3: Deploying banking-mcp-server to Cloud Run..."
 cd "${SCRIPT_DIR}/banking-mcp-server"
 
 gcloud run deploy banking-mcp-server \
@@ -23,7 +23,7 @@ echo " Banking MCP Server URL: ${MCP_URL}"
 echo "=================================================="
 echo "export MCP_URL=\"${MCP_URL}\"" >> "${SCRIPT_DIR}/.env.runtime"
 
-echo "==> Step 4: Verifying /tools endpoint..."
+echo "==> Step 3: Verifying /tools endpoint..."
 ID_TOKEN="$(gcloud auth print-identity-token 2>/dev/null || true)"
 if [ -n "${ID_TOKEN}" ]; then
   curl -fsS -H "Authorization: Bearer ${ID_TOKEN}" "${MCP_URL}/tools" | python3 -m json.tool
@@ -31,11 +31,11 @@ else
   curl -fsS "${MCP_URL}/tools" | python3 -m json.tool
 fi
 
-echo "==> Step 4: Granting run.servicesInvoker to Agent Gateway Service Agent..."
+echo "==> Step 3: Granting run.servicesInvoker to Agent Gateway Service Agent..."
 gcloud run services add-iam-policy-binding banking-mcp-server \
   --region="${LOCATION}" \
   --member="${AGW_SA}" \
   --role="roles/run.servicesInvoker" \
   --project="${PROJECT_ID}"
 
-echo "==> Step 4 completed successfully."
+echo "==> Step 3 completed successfully."

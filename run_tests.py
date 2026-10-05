@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Automated End-to-End Verification for Vertex AI Agent Gateway & Semantic Governance Policies (SGP).
-Executes a multi-turn banking conversation across Agent Runtime:
+Automated End-to-End Verification for Gemini Enterprise Agent Gateway & Semantic Governance Policies (SGP).
+Executes a multi-turn banking conversation across Gemini Enterprise Agent Runtime:
   - Turn 1: Customer identification (CUST005) -> Expect account details & balance.
-  - Turn 2: Permitted transfer (< $1,000 USD) -> SGP ALLOW -> Transfer succeeds.
-  - Turn 3: High-value transfer (> $1,000 USD) -> SGP DENY -> Blocked with policy denial reason.
+  - Turn 2: Permitted transfer (< 1,000,000 KRW / $1,000 USD) -> SGP ALLOW -> Transfer succeeds.
+  - Turn 3: High-value transfer (> 1,000,000 KRW / $1,000 USD) -> SGP DENY -> Blocked with policy denial reason.
 Followed by Cloud Logging verification of SGP audit verdicts.
 """
 
@@ -28,6 +28,32 @@ def get_access_token():
     except Exception as e:
         print(f"Error obtaining gcloud access token: {e}")
         sys.exit(1)
+
+
+def resolve_reasoning_engine_id(project_id: str, location: str) -> str:
+    env_re_id = os.environ.get("REASONING_ENGINE_ID")
+    if env_re_id:
+        return env_re_id
+    try:
+        res = subprocess.run(
+            [
+                "gcloud", "ai", "reasoning-engines", "list",
+                f"--project={project_id}",
+                f"--region={location}",
+                "--filter=displayName:conversational-banking",
+                "--sort-by=~createTime",
+                "--format=value(name.basename())",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        lines = [line.strip() for line in res.stdout.splitlines() if line.strip()]
+        if lines:
+            return lines[0]
+    except Exception:
+        pass
+    return "378064324431708160"
 
 
 def stream_query(project_id: str, location: str, re_id: str, token: str, session_id: str, message: str):
@@ -83,10 +109,10 @@ def stream_query(project_id: str, location: str, re_id: str, token: str, session
 def main():
     project_id = os.environ.get("PROJECT_ID", "elevate-security-dhwee")
     location = os.environ.get("LOCATION", "us-central1")
-    re_id = os.environ.get("REASONING_ENGINE_ID", "378064324431708160")
+    re_id = resolve_reasoning_engine_id(project_id, location)
 
     print("=" * 80)
-    print(" Running Automated End-to-End Verification of Agent Gateway + SGP")
+    print(" Running Automated End-to-End Verification of Gemini Enterprise Agent Gateway + SGP")
     print(f" Project:          {project_id}")
     print(f" Region:           {location}")
     print(f" Reasoning Engine: {re_id}")

@@ -3,7 +3,7 @@ set -eo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "================================================================================"
-echo " Google Cloud Enterprise Agent Governance (SGP) - End-to-End Deployment"
+echo " Google Cloud Gemini Enterprise Agent Governance (SGP) - End-to-End Deployment"
 echo "================================================================================"
 source "${SCRIPT_DIR}/env.sh"
 
@@ -17,22 +17,22 @@ fi
 echo "--- 1. Setup Environment & IAM ---"
 "${SCRIPT_DIR}/01-setup-env.sh"
 
-echo "--- 2. Provision Networking (Subnet, NA, PSC, DNS) ---"
-"${SCRIPT_DIR}/02-setup-networking.sh"
+echo "--- 2. Provision Agent Gateway Foundation (Proxy Subnet, NA, agent-egress) ---"
+"${SCRIPT_DIR}/02-setup-agent-gateway.sh"
 
-echo "--- 3. Provision Agent Gateway & Authz Policy ---"
-"${SCRIPT_DIR}/03-setup-agent-gateway.sh"
+echo "--- 3. Deploy Banking MCP Server to Cloud Run ---"
+"${SCRIPT_DIR}/03-deploy-mcp.sh"
 
-echo "--- 4. Deploy Banking MCP Server to Cloud Run ---"
-"${SCRIPT_DIR}/04-deploy-mcp.sh"
+echo "--- 4. Register MCP Server & System Endpoints in Agent Registry ---"
+"${SCRIPT_DIR}/04-register-mcp.sh"
 
-echo "--- 5. Register MCP Server in Agent Registry ---"
-"${SCRIPT_DIR}/05-register-mcp.sh"
+echo "--- 5. Trigger Early Async Deployment of Conversational Banking Agent ---"
+"${SCRIPT_DIR}/05-deploy-agent.sh"
 
-echo "--- 6. Deploy Conversational Banking Agent ---"
-"${SCRIPT_DIR}/06-deploy-agent.sh"
+echo "--- 6. Provision SGP Private Service Connect (PSC) & Cloud DNS (in parallel with Agent build) ---"
+"${SCRIPT_DIR}/06-setup-sgp-networking.sh"
 
-echo "--- 7. Create Semantic Governance Policy ---"
+echo "--- 7. Configure Authz Extension, Authz Policy & Semantic Governance Policy ---"
 "${SCRIPT_DIR}/07-create-sgp-policy.sh"
 
 echo ""

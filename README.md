@@ -34,18 +34,21 @@ flowchart LR
 
 ---
 
-## ⏱️ 한눈에 보는 실습 로드맵 (총 예상 시간: 약 55분)
+## ⏱️ 한눈에 보는 실습 로드맵 (병렬 파이프라인 최적화 · 총 예상 시간: 약 45분)
+
+> **💡 대기 시간 최적화 설계 (병렬 프로비저닝)**:  
+> Gemini Enterprise 에이전트 런타임 프로비저닝(약 15~20분 소요)에 필요한 최소 의존성(Agent Gateway 및 MCP 등록)만 먼저 완료한 뒤, **Step 6(`05-deploy-agent.sh`)에서 에이전트 배포를 비동기(`--no-wait`)로 즉시 시작**합니다. 에이전트가 백그라운드에서 빌드되는 동안 **Step 7(SGP PSC 네트워킹 및 프라이빗 DNS 구성)**과 **Step 8(인가 확장 및 SGP 정책 생성)**을 병렬로 진행하여 실습 유휴 대기 시간을 획기적으로 단축합니다.
 
 | 단계 | 실행 스크립트 | 핵심 작업 | 예상 시간 | 실무 체크포인트 |
 | :---: | :--- | :--- | :---: | :--- |
 | **Step 1** | [`CODELAB_INSTRUCTIONS_KO.md`](./CODELAB_INSTRUCTIONS_KO.md) | 에이펙스 자산운용 시나리오 및 아키텍처 이해 | **5분** | 네트워크 경계 기반 정책 통제 구조 파악 |
-| **Step 2** | `01-setup-env.sh` | 필수 API 활성화 및 Gateway 서비스 계정 권한 부여 | **5분** | `roles/agentgateway.serviceAgent` 필수 |
-| **Step 3** | `02-setup-networking.sh` | Proxy Subnet, Network Attachment, PSC, DNS 구성 | **7분** | PSC 연결 상태 `ACCEPTED` 확인 |
-| **Step 4** | `03-setup-agent-gateway.sh` | `agent-egress` 게이트웨이 및 인가 정책 배포 | **5분** | `policy.internal.` DNS 피어링 연결 |
-| **Step 5** | `04-deploy-mcp.sh` | Cloud Run에 뱅킹 MCP 서버 배포 | **5분** | 4대 뱅킹 도구 스키마 응답 확인 |
-| **Step 6** | `05-register-mcp.sh` | Agent Registry에 MCP 도구 및 시스템 API 등록 | **5분** | 시스템 엔드포인트 4종 Allowlist 등록 |
-| **Step 7** | `06-deploy-agent.sh` | **Gemini Enterprise 에이전트 런타임 배포** | **15~20분** | **프로비저닝 중 절대 중단 금지** |
-| **Step 8** | `07-create-sgp-policy.sh` | 고액 이체 차단 시맨틱 거버넌스 정책(SGP) 생성 | **3분** | 런타임 도구 접두사 매칭 확인 |
+| **Step 2** | `01-setup-env.sh` | 필수 API 활성화 및 Gateway 서비스 계정 권한 부여 | **3분** | `roles/agentgateway.serviceAgent` 필수 |
+| **Step 3** | `02-setup-agent-gateway.sh` | Proxy-Only 서브넷, Network Attachment, `agent-egress` 생성 | **3분** | `AGENT_TO_ANYWHERE` Egress 게이트웨이 생성 |
+| **Step 4** | `03-deploy-mcp.sh` | Cloud Run에 뱅킹 MCP 서버 배포 및 Invoker 권한 부여 | **3분** | 4대 뱅킹 도구 스키마 응답 확인 |
+| **Step 5** | `04-register-mcp.sh` | Agent Registry에 MCP 도구 및 4대 시스템 API 등록 | **3분** | 시스템 엔드포인트 4종 `roles/iap.egressor` 바인딩 |
+| **Step 6** | `05-deploy-agent.sh` | **🚀 Gemini Enterprise 에이전트 런타임 비동기 배포 시작** | **2분 (백그라운드 15분)** | **`--no-wait`으로 백그라운드 배포 시작 후 즉시 다음 단계 진행** |
+| **Step 7** | `06-setup-sgp-networking.sh` | **(병렬 진행 1)** SGP 엔진 활성화, PSC 엔드포인트, 프라이빗 DNS 구성 | **5분** | 에이전트 빌드 중 PSC 연결(`ACCEPTED`) 및 `policy.internal.` 구성 |
+| **Step 8** | `07-create-sgp-policy.sh` | **(병렬 진행 2)** AuthzExtension, AuthzPolicy 및 고액 이체 차단 SGP 정책 생성 | **5분** | 에이전트 등록 대기 루프 후 `high-value-limit` 정책 바인딩 |
 | **Step 9** | `08-test.sh` / `run_tests.py` | 3-Turn 시나리오 검증 및 Cloud Logging 감사 확인 | **5분** | 소액 이체 `ALLOW` / 고액 이체 `DENY` |
 
 ---
@@ -56,7 +59,7 @@ flowchart LR
 agentgateway/
 ├── CODELAB_INSTRUCTIONS_KO.md      # 📘 단계별 한국어 Quicklab 실습 지침서 (Markdown)
 ├── codelab-ko.html                 # 🌐 대화형 한국어 Codelab 웹 가이드 (SVG 다이어그램 포함)
-├── index.html                      # GitHub Pages용 대화형 Codelab 메인 페이지
+├── index.html                      # GitHub Pages / Cloud Run용 대화형 Codelab 메인 페이지
 │
 ├── banking-mcp-server/             # 에이펙스 자산운용 뱅킹 MCP 서버
 │   ├── server.py                   # Model Context Protocol JSON-RPC 2.0 & /tools 엔드포인트
@@ -73,14 +76,14 @@ agentgateway/
 │   └── agents-cli-manifest.yaml    # Agents CLI 프로젝트 매니페스트
 │
 ├── env.sh                          # 프로젝트 공통 환경 변수 및 자동 감지 설정
-├── 01-setup-env.sh                 # 필수 API 활성화 및 Gateway 서비스 계정 IAM 설정
-├── 02-setup-networking.sh          # Proxy Subnet, Network Attachment, PSC, Private DNS 구성
-├── 03-setup-agent-gateway.sh       # Agent Gateway 및 콘텐츠 인가 정책(Authz Policy) 등록
-├── 04-deploy-mcp.sh                # Cloud Run에 뱅킹 MCP 서버 배포
-├── 05-register-mcp.sh              # Agent Registry 도구 등록 및 시스템 API Allowlist 등록
-├── 06-deploy-agent.sh              # Gemini Enterprise 에이전트 런타임 배포 (15~20분 소요)
-├── 07-create-sgp-policy.sh         # 자연어 제약 조건 시맨틱 거버넌스 정책(SGP) 생성
-├── 08-test.sh                      # 대화형 및 자동화 종합 검증 실행 스크립트
+├── 01-setup-env.sh                 # [Step 2] 필수 API 활성화 및 Gateway 서비스 계정 IAM 설정
+├── 02-setup-agent-gateway.sh       # [Step 3] Proxy Subnet, Network Attachment, agent-egress 게이트웨이 생성
+├── 03-deploy-mcp.sh                # [Step 4] Cloud Run에 뱅킹 MCP 서버 배포 및 Invoker IAM 부여
+├── 04-register-mcp.sh              # [Step 5] Agent Registry 도구 등록 및 시스템 API Allowlist 등록
+├── 05-deploy-agent.sh              # [Step 6] Gemini Enterprise 에이전트 런타임 조기 비동기(--no-wait) 배포 시작
+├── 06-setup-sgp-networking.sh      # [Step 7] SGP 엔진 활성화, PSC 엔드포인트, 프라이빗 Cloud DNS 구성 (병렬 진행)
+├── 07-create-sgp-policy.sh         # [Step 8] AuthzExtension, AuthzPolicy 및 시맨틱 거버넌스 정책 생성 (병렬 진행)
+├── 08-test.sh                      # [Step 9] 대화형 및 자동화 종합 검증 실행 스크립트
 ├── run_tests.py                    # E2E 3-Turn 자동화 검증 및 SGP 감사 로그 확인 스크립트
 ├── 99-cleanup.sh                   # 생성된 클라우드 리소스 일괄 정리 스크립트
 └── deploy-all.sh                   # 전체 배포 파이프라인 일괄 실행 스크립트
@@ -95,18 +98,18 @@ agentgateway/
 ./deploy-all.sh
 ```
 
-### 2. 단계별 수동 배포 및 검증
-상세한 단계별 설명과 아키텍처 가이드는 **[`CODELAB_INSTRUCTIONS_KO.md`](./CODELAB_INSTRUCTIONS_KO.md)** 문서를 참고하세요.
+### 2. 단계별 수동 배포 및 검증 (병렬 파이프라인 최적화)
+상세한 단계별 설명과 스크립트 내부 동작 원리는 **[`CODELAB_INSTRUCTIONS_KO.md`](./CODELAB_INSTRUCTIONS_KO.md)** 문서를 참고하세요.
 
 ```bash
-./01-setup-env.sh
-./02-setup-networking.sh
-./03-setup-agent-gateway.sh
-./04-deploy-mcp.sh
-./05-register-mcp.sh
-./06-deploy-agent.sh        # 약 15~20분 소요 (중단 금지)
-./07-create-sgp-policy.sh
-./08-test.sh                # 3-Turn 자동화 검증 및 Cloud Logging 감사 로그 확인
+./01-setup-env.sh                 # Step 2: API 활성화 및 IAM 권한 설정
+./02-setup-agent-gateway.sh       # Step 3: Proxy Subnet, Network Attachment, agent-egress 생성
+./03-deploy-mcp.sh                # Step 4: Cloud Run에 뱅킹 MCP 서버 배포
+./04-register-mcp.sh              # Step 5: Agent Registry에 MCP 서버 및 시스템 API 등록
+./05-deploy-agent.sh              # Step 6: 에이전트 런타임 비동기(--no-wait) 배포 시작 (백그라운드 빌드 진행)
+./06-setup-sgp-networking.sh      # Step 7: (에이전트 빌드 중 진행) SGP 엔진 활성화, PSC 및 Cloud DNS 구성
+./07-create-sgp-policy.sh         # Step 8: (에이전트 빌드 중 진행) AuthzExtension, AuthzPolicy 및 SGP 정책 생성
+./08-test.sh                      # Step 9: 3-Turn 자동화 검증 및 Cloud Logging 감사 로그 확인
 ```
 
 ---

@@ -13,17 +13,17 @@ if [[ -z "${MCP_SERVER_NAME}" ]]; then
 fi
 
 if [[ -z "${MCP_SERVER_NAME}" ]]; then
-  echo "Error: MCP_SERVER_NAME is not set. Run 05-register-mcp.sh first."
+  echo "Error: MCP_SERVER_NAME is not set. Run 04-register-mcp.sh first."
   exit 1
 fi
 
-echo "==> Step 6: Extracting Agent Gateway TLS Inspection Root CA certificate..."
+echo "==> Step 5: Extracting Agent Gateway TLS Inspection Root CA certificate..."
 gcloud network-services agent-gateways describe agent-egress \
   --location="${LOCATION}" \
   --project="${PROJECT_ID}" \
   --format="value(agentGatewayCard.rootCertificates[0])" > "${SCRIPT_DIR}/conversational-banking/agent-gateway-ca.crt"
 
-echo "==> Step 6: Deploying Conversational Banking Agent to Vertex AI Agent Runtime..."
+echo "==> Step 5: Triggering asynchronous deployment of Conversational Banking Agent to Gemini Enterprise Agent Runtime..."
 cd "${SCRIPT_DIR}/conversational-banking"
 export UV_NO_CONFIG=1
 export PIP_CONFIG_FILE=/dev/null
@@ -37,23 +37,11 @@ agents-cli deploy \
   --update-env-vars="MCP_SERVER_NAME=${MCP_SERVER_NAME},GOOGLE_CLOUD_LOCATION=${LOCATION},PROJECT_ID=${PROJECT_ID},GOOGLE_API_USE_MTLS_ENDPOINT=never,GOOGLE_API_USE_CLIENT_CERTIFICATE=false" \
   --no-wait
 
-echo "==> Step 6: Waiting for Agent registration..."
-sleep 10
-
-export AGENT_ID="$(gcloud alpha agent-registry agents list \
-  --project="${PROJECT_ID}" \
-  --location="${LOCATION}" \
-  --filter="displayName:'conversational-banking'" \
-  --format="value(name.basename())" | head -n 1 || true)"
-
-if [[ -n "${AGENT_ID}" ]]; then
-  echo "=================================================="
-  echo " Deployed Agent ID: ${AGENT_ID}"
-  echo "=================================================="
-  echo "export AGENT_ID=\"${AGENT_ID}\"" >> "${SCRIPT_DIR}/.env.runtime"
-else
-  echo "Note: Agent deployment initiated. Querying Agent ID once deployment completes:"
-  echo "gcloud alpha agent-registry agents list --project=${PROJECT_ID} --location=${LOCATION}"
-fi
-
-echo "==> Step 6 completed successfully."
+echo "================================================================================"
+echo " [ASYNC DEPLOYMENT STARTED]"
+echo " Gemini Enterprise Agent Runtime provisioning is now running in the background"
+echo " (typically takes 15-20 minutes)."
+echo " You can immediately proceed to Step 6 (06-setup-sgp-networking.sh) and"
+echo " Step 7 (07-create-sgp-policy.sh) while the agent builds in the background!"
+echo "================================================================================"
+echo "==> Step 5 completed successfully."

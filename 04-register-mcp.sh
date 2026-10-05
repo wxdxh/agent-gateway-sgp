@@ -12,11 +12,11 @@ if [[ -z "${MCP_URL}" ]]; then
 fi
 
 if [[ -z "${MCP_URL}" ]]; then
-  echo "Error: MCP_URL is not set. Run 04-deploy-mcp.sh first."
+  echo "Error: MCP_URL is not set. Run 03-deploy-mcp.sh first."
   exit 1
 fi
 
-echo "==> Step 5: Extracting tool specification from MCP server..."
+echo "==> Step 4: Extracting tool specification from MCP server..."
 ID_TOKEN="$(gcloud auth print-identity-token 2>/dev/null || true)"
 if [ -n "${ID_TOKEN}" ]; then
   curl -fsS -H "Authorization: Bearer ${ID_TOKEN}" "${MCP_URL}/tools" | python3 -c 'import sys, json; tools=json.load(sys.stdin); json.dump({"tools": tools}, open("'${SCRIPT_DIR}'/toolspec.json", "w"))'
@@ -24,7 +24,7 @@ else
   curl -fsS "${MCP_URL}/tools" | python3 -c 'import sys, json; tools=json.load(sys.stdin); json.dump({"tools": tools}, open("'${SCRIPT_DIR}'/toolspec.json", "w"))'
 fi
 
-echo "==> Step 5: Registering MCP service in Agent Registry..."
+echo "==> Step 4: Registering MCP service in Agent Registry..."
 gcloud alpha agent-registry services create banking-mcp-server \
   --project="${PROJECT_ID}" \
   --location="${LOCATION}" \
@@ -33,7 +33,7 @@ gcloud alpha agent-registry services create banking-mcp-server \
   --mcp-server-spec-type=tool-spec \
   --mcp-server-spec-content="${SCRIPT_DIR}/toolspec.json" || true
 
-echo "==> Step 5: Retrieving MCP Server Resource ID..."
+echo "==> Step 4: Retrieving MCP Server Resource ID..."
 export MCP_SERVER_NAME="$(gcloud alpha agent-registry mcp-servers list \
   --project="${PROJECT_ID}" \
   --location="${LOCATION}" \
@@ -50,9 +50,9 @@ else
   echo "export MCP_SERVER_NAME=\"${MCP_SERVER_NAME}\"" >> "${SCRIPT_DIR}/.env.runtime"
 fi
 
-echo "==> Step 5: Allowlisting Google Cloud system endpoints for Agent Gateway..."
+echo "==> Step 4: Allowlisting Google Cloud system endpoints for Agent Gateway..."
 ENDPOINTS=(
-  "Vertex AI Locational API | https://${LOCATION}-aiplatform.googleapis.com"
+  "Gemini Enterprise Locational API | https://${LOCATION}-aiplatform.googleapis.com"
   "Cloud Trace API | https://telemetry.googleapis.com"
   "Cloud Logging API | https://logging.googleapis.com"
   "Agent Registry API | https://agentregistry.googleapis.com"
@@ -95,4 +95,4 @@ for entry in "${ENDPOINTS[@]}"; do
   fi
 done
 
-echo "==> Step 5 completed successfully."
+echo "==> Step 4 completed successfully."

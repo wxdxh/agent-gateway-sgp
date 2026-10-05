@@ -725,7 +725,7 @@
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
           <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
         </svg>
-        <span id="remainingTimeText">총 예상 소요 시간: 55분</span>
+        <span id="remainingTimeText">총 예상 소요 시간: 45분</span>
       </div>
       <button class="btn-icon" id="viewAllBtn" type="button">
         <span id="viewAllText">전체 펼쳐보기</span>
@@ -748,7 +748,7 @@
   <div class="codelab-layout">
     <!-- Left Sidebar -->
     <aside class="codelab-sidebar">
-      <div class="sidebar-section-label">실습 목차 (총 9단계 · 55분)</div>
+      <div class="sidebar-section-label">실습 목차 (병렬 최적화 · 총 45분)</div>
       <ul class="step-nav-list" id="stepNavList">
         <li class="step-nav-item active" data-step="1">
           <div class="step-nav-left">
@@ -762,49 +762,49 @@
             <span class="step-num">2</span>
             <span class="step-nav-title">환경 설정 및 IAM 구성</span>
           </div>
-          <span class="step-nav-time">5분</span>
+          <span class="step-nav-time">3분</span>
         </li>
         <li class="step-nav-item" data-step="3">
           <div class="step-nav-left">
             <span class="step-num">3</span>
-            <span class="step-nav-title">하이브리드 네트워크 &amp; PSC</span>
+            <span class="step-nav-title">Agent Gateway 기반 구축</span>
           </div>
-          <span class="step-nav-time">7분</span>
+          <span class="step-nav-time">3분</span>
         </li>
         <li class="step-nav-item" data-step="4">
           <div class="step-nav-left">
             <span class="step-num">4</span>
-            <span class="step-nav-title">Agent Gateway 및 인가 정책</span>
+            <span class="step-nav-title">뱅킹 MCP 서버 배포</span>
           </div>
-          <span class="step-nav-time">5분</span>
+          <span class="step-nav-time">3분</span>
         </li>
         <li class="step-nav-item" data-step="5">
           <div class="step-nav-left">
             <span class="step-num">5</span>
-            <span class="step-nav-title">뱅킹 MCP 서버 배포</span>
+            <span class="step-nav-title">Agent Registry 카탈로그 등록</span>
           </div>
-          <span class="step-nav-time">5분</span>
+          <span class="step-nav-time">3분</span>
         </li>
         <li class="step-nav-item" data-step="6">
           <div class="step-nav-left">
             <span class="step-num">6</span>
-            <span class="step-nav-title">Agent Registry 카탈로그 등록</span>
+            <span class="step-nav-title">🚀 에이전트 조기 비동기 배포</span>
           </div>
-          <span class="step-nav-time">5분</span>
+          <span class="step-nav-time">2분</span>
         </li>
         <li class="step-nav-item" data-step="7">
           <div class="step-nav-left">
             <span class="step-num">7</span>
-            <span class="step-nav-title">Gemini Enterprise 에이전트 배포</span>
+            <span class="step-nav-title">(병렬 1) SGP PSC &amp; DNS</span>
           </div>
-          <span class="step-nav-time">15분</span>
+          <span class="step-nav-time">5분</span>
         </li>
         <li class="step-nav-item" data-step="8">
           <div class="step-nav-left">
             <span class="step-num">8</span>
-            <span class="step-nav-title">시맨틱 거버넌스 정책(SGP) 생성</span>
+            <span class="step-nav-title">(병렬 2) 인가 및 SGP 정책</span>
           </div>
-          <span class="step-nav-time">3분</span>
+          <span class="step-nav-time">5분</span>
         </li>
         <li class="step-nav-item" data-step="9">
           <div class="step-nav-left">
@@ -964,7 +964,15 @@
           <div class="diagram-caption">[그림 1] Gemini Enterprise 에이전트와 Agent Gateway · SGP 기반 금융 보안 통제 아키텍처</div>
         </div>
 
-        <h2 class="section-heading">한눈에 보는 실습 로드맵 (총 55분)</h2>
+        <div class="callout callout-success">
+          <div class="callout-title">⚡ 병렬 파이프라인 최적화 설계 (유휴 대기 시간 10분 이상 단축)</div>
+          <p style="margin-bottom:0;">
+            <strong>Gemini Enterprise Agent Runtime</strong> 프로비저닝은 백엔드에서 약 15~20분이 소요됩니다. 본 코드랩은 에이전트 배포에 필수적인 최소 선행 리소스(<code>agent-egress</code> 게이트웨이 및 MCP 도구 등록)만 먼저 완료한 뒤, <strong>Step 6(<code>05-deploy-agent.sh</code>)에서 에이전트 배포를 비동기(<code>--no-wait</code>)로 조기 시작</strong>합니다.<br>
+            에이전트가 백그라운드에서 빌드되는 동안 <strong>Step 7(SGP PSC 네트워킹 및 DNS 구성)</strong>과 <strong>Step 8(인가 확장 및 SGP 정책 생성)</strong>을 병렬로 진행하여 실습 체감 시간을 약 45분으로 단축합니다.
+          </p>
+        </div>
+
+        <h2 class="section-heading">한눈에 보는 실습 로드맵 (병렬 최적화 · 총 45분)</h2>
         <div class="table-wrapper">
           <table>
             <thead>
@@ -988,50 +996,50 @@
                 <td><span class="pill pill-blue">Step 2</span></td>
                 <td><span class="pill-mono">01-setup-env.sh</span></td>
                 <td>필수 API 활성화 및 Gateway 서비스 계정 권한 부여</td>
-                <td><strong>5분</strong></td>
+                <td><strong>3분</strong></td>
                 <td><code>roles/agentgateway.serviceAgent</code> 필수</td>
               </tr>
               <tr>
                 <td><span class="pill pill-blue">Step 3</span></td>
-                <td><span class="pill-mono">02-setup-networking.sh</span></td>
-                <td>Proxy Subnet, Network Attachment, PSC, DNS 구성</td>
-                <td><strong>7분</strong></td>
-                <td>PSC 상태 <code>ACCEPTED</code> 확인</td>
+                <td><span class="pill-mono">02-setup-agent-gateway.sh</span></td>
+                <td>Proxy-Only 서브넷, Network Attachment, <code>agent-egress</code> 생성</td>
+                <td><strong>3분</strong></td>
+                <td><code>AGENT_TO_ANYWHERE</code> Egress 게이트웨이 생성</td>
               </tr>
               <tr>
                 <td><span class="pill pill-blue">Step 4</span></td>
-                <td><span class="pill-mono">03-setup-agent-gateway.sh</span></td>
-                <td><code>agent-egress</code> 게이트웨이 및 인가 정책 배포</td>
-                <td><strong>5분</strong></td>
-                <td><code>policy.internal.</code> DNS 피어링 연결</td>
-              </tr>
-              <tr>
-                <td><span class="pill pill-blue">Step 5</span></td>
-                <td><span class="pill-mono">04-deploy-mcp.sh</span></td>
-                <td>Cloud Run에 뱅킹 MCP 서버 배포</td>
-                <td><strong>5분</strong></td>
+                <td><span class="pill-mono">03-deploy-mcp.sh</span></td>
+                <td>Cloud Run에 뱅킹 MCP 서버 배포 및 Invoker 권한 부여</td>
+                <td><strong>3분</strong></td>
                 <td>4대 뱅킹 도구 스키마 응답 확인</td>
               </tr>
               <tr>
-                <td><span class="pill pill-blue">Step 6</span></td>
-                <td><span class="pill-mono">05-register-mcp.sh</span></td>
-                <td>Agent Registry에 MCP 도구 및 시스템 API 등록</td>
-                <td><strong>5분</strong></td>
+                <td><span class="pill pill-blue">Step 5</span></td>
+                <td><span class="pill-mono">04-register-mcp.sh</span></td>
+                <td>Agent Registry에 MCP 도구 및 4대 시스템 API 등록</td>
+                <td><strong>3분</strong></td>
                 <td>시스템 엔드포인트 4종 Allowlist 등록</td>
               </tr>
               <tr>
-                <td><span class="pill pill-yellow">Step 7</span></td>
-                <td><span class="pill-mono">06-deploy-agent.sh</span></td>
-                <td>Gemini Enterprise 에이전트 런타임 배포</td>
-                <td><span class="pill pill-red">15~20분</span></td>
-                <td><strong>프로비저닝 중 절대 중단 금지</strong></td>
+                <td><span class="pill pill-yellow">Step 6</span></td>
+                <td><span class="pill-mono">05-deploy-agent.sh</span></td>
+                <td><strong>🚀 Gemini Enterprise 에이전트 런타임 조기 비동기 배포 시작</strong></td>
+                <td><span class="pill pill-yellow">2분 (백그라운드 15분)</span></td>
+                <td><strong><code>--no-wait</code> 배포 시작 후 즉시 Step 7 진행</strong></td>
               </tr>
               <tr>
-                <td><span class="pill pill-blue">Step 8</span></td>
+                <td><span class="pill pill-purple">Step 7</span></td>
+                <td><span class="pill-mono">06-setup-sgp-networking.sh</span></td>
+                <td><strong>(병렬 진행 1)</strong> SGP 엔진 활성화, PSC 엔드포인트, 프라이빗 DNS 구성</td>
+                <td><strong>5분</strong></td>
+                <td>PSC 상태 <code>ACCEPTED</code> 및 <code>policy.internal.</code> 확인</td>
+              </tr>
+              <tr>
+                <td><span class="pill pill-purple">Step 8</span></td>
                 <td><span class="pill-mono">07-create-sgp-policy.sh</span></td>
-                <td>고액 이체 차단 시맨틱 거버넌스 정책(SGP) 생성</td>
-                <td><strong>3분</strong></td>
-                <td>런타임 도구 접두사 매칭 확인</td>
+                <td><strong>(병렬 진행 2)</strong> AuthzExtension, AuthzPolicy 및 고액 이체 차단 SGP 정책 생성</td>
+                <td><strong>5분</strong></td>
+                <td>에이전트 등록 확인 후 <code>high-value-limit</code> 정책 바인딩</td>
               </tr>
               <tr>
                 <td><span class="pill pill-green">Step 9</span></td>
@@ -1051,11 +1059,11 @@
       </section>
 
       <!-- ==================== STEP 2 ==================== -->
-      <section class="step-card" id="step-2" data-duration="5">
+      <section class="step-card" id="step-2" data-duration="3">
         <div class="step-header">
           <div class="step-meta">
             <span class="step-badge">Step 2 of 9</span>
-            <span class="step-duration">⏱ 예상 소요 시간: 5분</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 3분</span>
           </div>
           <h1 class="step-title">사전 준비 및 프로젝트 환경 / IAM 설정 (01-setup-env.sh)</h1>
         </div>
@@ -1068,7 +1076,7 @@
         <h2 class="section-heading">1. 레포지토리 클론 및 스크립트 실행</h2>
         <div class="code-container">
           <div class="code-header">
-            <span>Bash — 레포지토리 클론 및 Step 1 스크립트 실행</span>
+            <span>Bash — 레포지토리 클론 및 01-setup-env.sh 실행</span>
             <button class="copy-btn" type="button">복사</button>
           </div>
           <pre><code>git clone https://github.com/wxdxh/agent-gateway-sgp.git
@@ -1163,84 +1171,38 @@ done</code></pre>
 
         <div class="step-footer">
           <button class="btn-nav prev-step-btn" type="button" data-target="1">← 이전 단계</button>
-          <button class="btn-nav primary next-step-btn" type="button" data-target="3">다음 단계: 하이브리드 네트워크 &amp; PSC →</button>
+          <button class="btn-nav primary next-step-btn" type="button" data-target="3">다음 단계: Agent Gateway 기반 구축 →</button>
         </div>
       </section>
 
       <!-- ==================== STEP 3 ==================== -->
-      <section class="step-card" id="step-3" data-duration="7">
+      <section class="step-card" id="step-3" data-duration="3">
         <div class="step-header">
           <div class="step-meta">
             <span class="step-badge">Step 3 of 9</span>
-            <span class="step-duration">⏱ 예상 소요 시간: 7분</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 3분</span>
           </div>
-          <h1 class="step-title">하이브리드 네트워킹 및 Private Service Connect 구성 (02-setup-networking.sh)</h1>
+          <h1 class="step-title">Agent Gateway Egress 기반 구축 (02-setup-agent-gateway.sh)</h1>
         </div>
 
         <p>
-          Google 관리형 <strong>Agent Gateway</strong>가 에이펙스 자산운용의 VPC 내부로 안전하게 진입하고,
-          외부 인터넷을 거치지 않는 <strong>Private Service Connect (PSC)</strong> 전용 터널을 통해 SGP 정책 엔진과 통신하도록 구성합니다.
+          에이전트 런타임 배포(<code>05-deploy-agent.sh</code>)를 조기에 시작할 수 있도록, 에이전트가 바인딩될
+          <strong>Agent Gateway(<code>agent-egress</code>)</strong>와 이를 뒷받침하는 VPC 프록시 서브넷 및 Network Attachment를 먼저 생성합니다.
         </p>
 
-        <!-- Clean, Uncluttered SVG Diagram 2: VPC & PSC -->
-        <div class="diagram-box">
-          <svg width="840" height="240" viewBox="0 0 840 240" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="20" y="18" width="525" height="204" rx="14" fill="#f8fafc" stroke="#1a73e8" stroke-width="1.8"/>
-            <text x="40" y="44" fill="#1a73e8" font-size="12.5" font-weight="700">에이펙스 자산운용 VPC (us-central1)</text>
-
-            <g filter="url(#cardShadow)">
-              <rect x="40" y="62" width="215" height="138" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
-              <rect x="56" y="78" width="183" height="46" rx="8" fill="#e6f4ea"/>
-              <text x="147" y="98" text-anchor="middle" fill="#1e8e3e" font-size="11.5" font-weight="700">Regional Proxy Subnet</text>
-              <text x="147" y="114" text-anchor="middle" fill="#475569" font-size="10.5" font-family="Roboto Mono">10.11.13.0/24</text>
-
-              <rect x="56" y="136" width="183" height="48" rx="8" fill="#e8f0fe"/>
-              <text x="147" y="156" text-anchor="middle" fill="#1a73e8" font-size="11.5" font-weight="700">Network Attachment</text>
-              <text x="147" y="173" text-anchor="middle" fill="#475569" font-size="10.5" font-family="Roboto Mono">agent-gateway-na</text>
-            </g>
-
-            <line x1="255" y1="131" x2="305" y2="131" stroke="#1a73e8" stroke-width="2" marker-end="url(#arrBlue)"/>
-
-            <g filter="url(#cardShadow)">
-              <rect x="310" y="62" width="215" height="138" rx="10" fill="#ffffff" stroke="#8430ce" stroke-width="1.6"/>
-              <rect x="326" y="78" width="183" height="46" rx="8" fill="#f3e8fd"/>
-              <text x="417" y="98" text-anchor="middle" fill="#8430ce" font-size="11.5" font-weight="700">PSC 엔드포인트</text>
-              <text x="417" y="114" text-anchor="middle" fill="#475569" font-size="10.5" font-family="Roboto Mono">sgp-psc-endpoint (10.10.0.9)</text>
-
-              <rect x="326" y="136" width="183" height="48" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
-              <text x="417" y="156" text-anchor="middle" fill="#0f172a" font-size="11.5" font-weight="700">Cloud DNS 프라이빗 존</text>
-              <text x="417" y="173" text-anchor="middle" fill="#1a73e8" font-size="10.5" font-family="Roboto Mono">policy.internal. ➔ 10.10.0.9</text>
-            </g>
-
-            <line x1="525" y1="101" x2="608" y2="101" stroke="#d93025" stroke-width="2.4" marker-end="url(#arrRed)"/>
-            <text x="567" y="90" text-anchor="middle" fill="#d93025" font-size="10.5" font-weight="700">PSC 비공개 터널</text>
-
-            <g filter="url(#cardShadow)">
-              <rect x="612" y="38" width="208" height="164" rx="14" fill="#ffffff" stroke="#d93025" stroke-width="2"/>
-              <rect x="612" y="38" width="208" height="32" rx="12" fill="#d93025"/>
-              <text x="716" y="59" text-anchor="middle" fill="#ffffff" font-size="11.5" font-weight="700">Google 관리형 SGP 테넌트</text>
-              <text x="716" y="102" text-anchor="middle" fill="#0f172a" font-size="12.5" font-weight="700">Service Attachment</text>
-              <text x="716" y="122" text-anchor="middle" fill="#64748b" font-size="10.5">자동 감지 및 PSC 수락</text>
-              <rect x="636" y="140" width="160" height="42" rx="8" fill="#fce8e6"/>
-              <text x="716" y="165" text-anchor="middle" fill="#d93025" font-size="11.5" font-weight="700">SGP 정책 평가 엔진</text>
-            </g>
-          </svg>
-          <div class="diagram-caption">[그림 2] VPC 네트워크 어태치먼트 및 Private Service Connect (PSC) 비공개 연결 구조</div>
-        </div>
-
-        <h2 class="section-heading">1. 하이브리드 네트워킹 자동 구성 실행</h2>
+        <h2 class="section-heading">1. Agent Gateway 기반 구축 스크립트 실행</h2>
         <div class="code-container">
           <div class="code-header">
-            <span>Bash — Step 2 스크립트 실행</span>
+            <span>Bash — 02-setup-agent-gateway.sh 실행</span>
             <button class="copy-btn" type="button">복사</button>
           </div>
-          <pre><code>./02-setup-networking.sh</code></pre>
+          <pre><code>./02-setup-agent-gateway.sh</code></pre>
         </div>
 
         <div class="script-anatomy">
-          <div class="script-anatomy-header">🔍 스크립트 내부 구동 원리 해설 (02-setup-networking.sh)</div>
+          <div class="script-anatomy-header">🔍 스크립트 내부 구동 원리 해설 (02-setup-agent-gateway.sh)</div>
           <p>
-            <code>02-setup-networking.sh</code>는 내부적으로 다음 <strong>4단계 네트워크 개통 명령</strong>을 순차 실행합니다:
+            이 스크립트는 에이전트의 아웃바운드(Egress) 통제를 담당하는 핵심 게이트웨이 인프라 3가지를 순차 생성합니다.
           </p>
 
           <h3 class="subsection-heading">① Proxy-Only 서브넷 및 Network Attachment 생성</h3>
@@ -1249,7 +1211,7 @@ done</code></pre>
           </p>
           <div class="code-container">
             <div class="code-header">
-              <span>02-setup-networking.sh — 서브넷 및 Network Attachment 생성</span>
+              <span>02-setup-agent-gateway.sh — 서브넷 및 Network Attachment 생성</span>
               <button class="copy-btn" type="button">복사</button>
             </div>
             <pre><code>gcloud compute networks subnets create proxy-only-subnet \
@@ -1261,96 +1223,14 @@ gcloud compute network-attachments create agent-gateway-na \
   --connection-preference=ACCEPT_AUTOMATIC</code></pre>
           </div>
 
-          <h3 class="subsection-heading">② SGP 엔진 동적 활성화 및 PSC 엔드포인트(sgp-psc-endpoint) 연결</h3>
-          <p>
-            프로젝트마다 다르게 할당되는 Google 관리형 SGP 엔진의 <code>pscServiceAttachment</code> 주소를 동적으로 조회한 뒤,
-            내부 정적 IP(<code>sgp-psc-ip</code>, 예: <code>10.10.0.9</code>)와 PSC 전달 규칙을 생성합니다.
-          </p>
-          <div class="code-container">
-            <div class="code-header">
-              <span>02-setup-networking.sh — SGP Service Attachment 동적 조회 및 PSC 연결</span>
-              <button class="copy-btn" type="button">복사</button>
-            </div>
-            <pre><code># SGP 엔진 활성화 및 테넌트 PSC Service Attachment URI 추출
-gcloud beta ai semantic-governance-policy-engine update --location="${LOCATION}" --project="${PROJECT_ID}" --quiet
-SERVICE_ATTACHMENT="$(gcloud beta ai semantic-governance-policy-engine describe \
-  --location="${LOCATION}" --project="${PROJECT_ID}" --format="value(pscServiceAttachment)")"
-
-# 내부 정적 IP 예약 및 PSC Forwarding Rule 생성
-gcloud compute addresses create sgp-psc-ip --region="${LOCATION}" --subnet="${SUBNET_NAME}" --purpose=GCE_ENDPOINT
-gcloud compute forwarding-rules create sgp-psc-endpoint \
-  --region="${LOCATION}" --network="${NETWORK_NAME}" \
-  --address="sgp-psc-ip" --target-service-attachment="${SERVICE_ATTACHMENT}"</code></pre>
-          </div>
-
-          <h3 class="subsection-heading">③ Cloud DNS 프라이빗 존(policy.internal.) A 레코드 매핑</h3>
-          <p>
-            게이트웨이가 <code>https://policy.internal</code> 도메인을 호출할 때 위에서 만든 PSC 내부 IP로 라우팅되도록 프라이빗 DNS 레코드를 등록합니다.
-          </p>
-          <div class="code-container">
-            <div class="code-header">
-              <span>02-setup-networking.sh — 프라이빗 DNS 구성</span>
-              <button class="copy-btn" type="button">복사</button>
-            </div>
-            <pre><code>gcloud dns managed-zones create policy-engine-zone \
-  --dns-name="policy.internal." --visibility=private --networks="${NETWORK_NAME}"
-
-gcloud dns record-sets create policy.internal. \
-  --zone=policy-engine-zone --type=A --ttl=300 --rrdatas="${PSC_IP}"</code></pre>
-          </div>
-        </div>
-
-        <div class="callout callout-success">
-          <div class="callout-title">✅ 핵심 검증: PSC 연결 상태 확인</div>
-          <p style="margin-bottom:0;">
-            <code>gcloud compute forwarding-rules describe sgp-psc-endpoint --region=us-central1 --format="value(pscConnectionStatus)"</code> 실행 시 <strong><code>ACCEPTED</code></strong>가 출력되어야 합니다.
-          </p>
-        </div>
-
-        <div class="step-footer">
-          <button class="btn-nav prev-step-btn" type="button" data-target="2">← 이전 단계</button>
-          <button class="btn-nav primary next-step-btn" type="button" data-target="4">다음 단계: Agent Gateway 및 인가 정책 →</button>
-        </div>
-      </section>
-
-      <!-- ==================== STEP 4 ==================== -->
-      <section class="step-card" id="step-4" data-duration="5">
-        <div class="step-header">
-          <div class="step-meta">
-            <span class="step-badge">Step 4 of 9</span>
-            <span class="step-duration">⏱ 예상 소요 시간: 5분</span>
-          </div>
-          <h1 class="step-title">Agent Gateway 및 콘텐츠 인가 정책 구성 (03-setup-agent-gateway.sh)</h1>
-        </div>
-
-        <p>
-          에이전트의 외부 호출을 가로채는 <strong>Agent Gateway(<code>agent-egress</code>)</strong>를 배포하고,
-          추론 및 도구 호출 페이로드를 <code>policy.internal</code>로 전달해 실시간 심사를 수행하는 <strong>Content Authz Policy</strong>를 연결합니다.
-        </p>
-
-        <h2 class="section-heading">1. Agent Gateway 배포 스크립트 실행</h2>
-        <div class="code-container">
-          <div class="code-header">
-            <span>Bash — Step 3 스크립트 실행</span>
-            <button class="copy-btn" type="button">복사</button>
-          </div>
-          <pre><code>./03-setup-agent-gateway.sh</code></pre>
-        </div>
-
-        <div class="script-anatomy">
-          <div class="script-anatomy-header">🔍 스크립트 내부 구동 원리 해설 (03-setup-agent-gateway.sh)</div>
-          <p>
-            이 스크립트는 YAML 선언 파일 2개와 REST API 호출 1개를 사용하여 게이트웨이 인터셉트 체인을 완성합니다.
-          </p>
-
-          <h3 class="subsection-heading">① Egress Agent Gateway 생성 (agent-gateway-vpc-egress.yaml)</h3>
+          <h3 class="subsection-heading">② Egress Agent Gateway 생성 (agent-gateway-vpc-egress.yaml)</h3>
           <p>
             <code>AGENT_TO_ANYWHERE</code> 경로로 에이전트의 모든 아웃바운드 통신을 제어하며,
-            Step 3에서 만든 <code>agent-gateway-na</code> 어태치먼트와 <code>policy.internal.</code> DNS 피어링을 연결합니다.
+            방금 만든 <code>agent-gateway-na</code> 어태치먼트와 <code>policy.internal.</code> DNS 피어링을 연결합니다.
           </p>
           <div class="code-container">
             <div class="code-header">
-              <span>03-setup-agent-gateway.sh — Agent Gateway YAML 임포트</span>
+              <span>02-setup-agent-gateway.sh — Agent Gateway YAML 임포트</span>
               <button class="copy-btn" type="button">복사</button>
             </div>
             <pre><code>name: projects/${PROJECT_ID}/locations/${LOCATION}/agentGateways/agent-egress
@@ -1369,71 +1249,22 @@ networkConfig:
     targetProject: ${PROJECT_ID}
     targetNetwork: projects/${PROJECT_ID}/global/networks/${NETWORK_NAME}</code></pre>
           </div>
-
-          <h3 class="subsection-heading">② SGP Authorization Extension 등록 (sgp-authzextension)</h3>
-          <p>
-            게이트웨이가 외부 인가 심사관(Callout)으로 호출할 대상을 <code>policy.internal</code>로 지정하고,
-            <code>"failOpen": false</code>(엔진 장애 시 트래픽 차단)를 설정합니다.
-          </p>
-          <div class="code-container">
-            <div class="code-header">
-              <span>03-setup-agent-gateway.sh — Authz Extension 등록 REST 호출</span>
-              <button class="copy-btn" type="button">복사</button>
-            </div>
-            <pre><code>curl -fsS -X POST \
-  "https://networkservices.googleapis.com/v1beta1/projects/${PROJECT_ID}/locations/${LOCATION}/authzExtensions?authzExtensionId=sgp-authzextension" \
-  -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "service": "policy.internal",
-    "authority": "policy.internal",
-    "failOpen": false,
-    "loadBalancingScheme": "LOAD_BALANCING_SCHEME_UNSPECIFIED"
-  }'</code></pre>
-          </div>
-
-          <h3 class="subsection-heading">③ Content Authz Policy 바인딩 (agent-egress-sgp-authzpolicy.yaml)</h3>
-          <p>
-            CEL 조건식(<code>when</code>)을 통해 <code>:generateContent</code> 또는 <code>:streamGenerateContent</code>로 끝나는 HTTP 요청만 정밀 타겟팅하여
-            <code>CONTENT_AUTHZ</code> 프로필로 페이로드 심사를 수행합니다.
-          </p>
-          <div class="code-container">
-            <div class="code-header">
-              <span>03-setup-agent-gateway.sh — Content Authz Policy YAML 임포트</span>
-              <button class="copy-btn" type="button">복사</button>
-            </div>
-            <pre><code>target:
-  resources:
-    - "projects/${PROJECT_NUM}/locations/${LOCATION}/agentGateways/agent-egress"
-httpRules:
-  - to:
-      operations:
-        - paths:
-            - prefix: "/"
-    when: '!request.headers["content-type"].startsWith("application/grpc") &amp;&amp; (request.path.endsWith(":generateContent") || request.path.endsWith(":streamGenerateContent"))'
-action: CUSTOM
-policyProfile: CONTENT_AUTHZ
-customProvider:
-  authzExtension:
-    resources:
-      - "projects/${PROJECT_NUM}/locations/${LOCATION}/authzExtensions/sgp-authzextension"</code></pre>
-          </div>
         </div>
 
         <div class="step-footer">
-          <button class="btn-nav prev-step-btn" type="button" data-target="3">← 이전 단계</button>
-          <button class="btn-nav primary next-step-btn" type="button" data-target="5">다음 단계: 뱅킹 MCP 서버 배포 →</button>
+          <button class="btn-nav prev-step-btn" type="button" data-target="2">← 이전 단계</button>
+          <button class="btn-nav primary next-step-btn" type="button" data-target="4">다음 단계: 뱅킹 MCP 서버 배포 →</button>
         </div>
       </section>
 
-      <!-- ==================== STEP 5 ==================== -->
-      <section class="step-card" id="step-5" data-duration="5">
+      <!-- ==================== STEP 4 ==================== -->
+      <section class="step-card" id="step-4" data-duration="3">
         <div class="step-header">
           <div class="step-meta">
-            <span class="step-badge">Step 5 of 9</span>
-            <span class="step-duration">⏱ 예상 소요 시간: 5분</span>
+            <span class="step-badge">Step 4 of 9</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 3분</span>
           </div>
-          <h1 class="step-title">에이펙스 자산운용 뱅킹 MCP 서버 배포 (04-deploy-mcp.sh)</h1>
+          <h1 class="step-title">에이펙스 자산운용 뱅킹 MCP 서버 배포 (03-deploy-mcp.sh)</h1>
         </div>
 
         <p>
@@ -1443,31 +1274,31 @@ customProvider:
         <h2 class="section-heading">1. 로컬 단위 테스트 및 Cloud Run 배포 실행</h2>
         <div class="code-container">
           <div class="code-header">
-            <span>Bash — 로컬 프로토콜 검증 및 Step 4 배포 실행</span>
+            <span>Bash — 로컬 프로토콜 검증 및 03-deploy-mcp.sh 실행</span>
             <button class="copy-btn" type="button">복사</button>
           </div>
           <pre><code># 1. 로컬에서 JSON-RPC 2.0 및 도구 동작 단위 테스트
 python3 banking-mcp-server/test_server.py
 
 # 2. Cloud Run에 banking-mcp-server 빌드 및 배포
-./04-deploy-mcp.sh</code></pre>
+./03-deploy-mcp.sh</code></pre>
         </div>
 
         <div class="script-anatomy">
-          <div class="script-anatomy-header">🔍 스크립트 및 서버 내부 구동 원리 해설 (server.py &amp; 04-deploy-mcp.sh)</div>
+          <div class="script-anatomy-header">🔍 스크립트 및 서버 내부 구동 원리 해설 (server.py &amp; 03-deploy-mcp.sh)</div>
           <p>
             <code>banking-mcp-server/server.py</code>는 FastAPI 기반 웹 서버로, 카탈로그 등록을 위한 <code>GET /tools</code> 엔드포인트와
             실시간 도구 실행을 위한 <code>POST /mcp</code>(JSON-RPC 2.0) 엔드포인트를 제공합니다.
           </p>
 
-          <h3 class="subsection-heading">① Cloud Run 소스 배포 및 게이트웨이 호출 권한 부여 (04-deploy-mcp.sh)</h3>
+          <h3 class="subsection-heading">① Cloud Run 소스 배포 및 게이트웨이 호출 권한 부여 (03-deploy-mcp.sh)</h3>
           <p>
             Cloud Run에 컨테이너를 배포한 뒤 생성된 URL(<code>MCP_URL</code>)을 후속 스크립트가 읽을 수 있도록 <code>.env.runtime</code>에 기록하고,
             Agent Gateway 서비스 계정(<code>AGW_SA</code>)에 <code>roles/run.servicesInvoker</code> 권한을 부여합니다.
           </p>
           <div class="code-container">
             <div class="code-header">
-              <span>04-deploy-mcp.sh — Cloud Run 배포 및 IAM 바인딩</span>
+              <span>03-deploy-mcp.sh — Cloud Run 배포 및 IAM 바인딩</span>
               <button class="copy-btn" type="button">복사</button>
             </div>
             <pre><code>gcloud run deploy banking-mcp-server \
@@ -1520,19 +1351,19 @@ gcloud run services add-iam-policy-binding banking-mcp-server \
         </div>
 
         <div class="step-footer">
-          <button class="btn-nav prev-step-btn" type="button" data-target="4">← 이전 단계</button>
-          <button class="btn-nav primary next-step-btn" type="button" data-target="6">다음 단계: Agent Registry 카탈로그 등록 →</button>
+          <button class="btn-nav prev-step-btn" type="button" data-target="3">← 이전 단계</button>
+          <button class="btn-nav primary next-step-btn" type="button" data-target="5">다음 단계: Agent Registry 카탈로그 등록 →</button>
         </div>
       </section>
 
-      <!-- ==================== STEP 6 ==================== -->
-      <section class="step-card" id="step-6" data-duration="5">
+      <!-- ==================== STEP 5 ==================== -->
+      <section class="step-card" id="step-5" data-duration="3">
         <div class="step-header">
           <div class="step-meta">
-            <span class="step-badge">Step 6 of 9</span>
-            <span class="step-duration">⏱ 예상 소요 시간: 5분</span>
+            <span class="step-badge">Step 5 of 9</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 3분</span>
           </div>
-          <h1 class="step-title">Agent Registry에 MCP 서버 및 시스템 엔드포인트 등록 (05-register-mcp.sh)</h1>
+          <h1 class="step-title">Agent Registry에 MCP 서버 및 시스템 엔드포인트 등록 (04-register-mcp.sh)</h1>
         </div>
 
         <p>
@@ -1543,14 +1374,14 @@ gcloud run services add-iam-policy-binding banking-mcp-server \
         <h2 class="section-heading">1. Agent Registry 등록 스크립트 실행</h2>
         <div class="code-container">
           <div class="code-header">
-            <span>Bash — Step 5 스크립트 실행</span>
+            <span>Bash — 04-register-mcp.sh 실행</span>
             <button class="copy-btn" type="button">복사</button>
           </div>
-          <pre><code>./05-register-mcp.sh</code></pre>
+          <pre><code>./04-register-mcp.sh</code></pre>
         </div>
 
         <div class="script-anatomy">
-          <div class="script-anatomy-header">🔍 스크립트 내부 구동 원리 해설 (05-register-mcp.sh)</div>
+          <div class="script-anatomy-header">🔍 스크립트 내부 구동 원리 해설 (04-register-mcp.sh)</div>
 
           <h3 class="subsection-heading">① /tools 스키마 추출 및 MCP 카탈로그 등록</h3>
           <p>
@@ -1559,7 +1390,7 @@ gcloud run services add-iam-policy-binding banking-mcp-server \
           </p>
           <div class="code-container">
             <div class="code-header">
-              <span>05-register-mcp.sh — toolspec.json 생성 및 MCP 서비스 등록</span>
+              <span>04-register-mcp.sh — toolspec.json 생성 및 MCP 서비스 등록</span>
               <button class="copy-btn" type="button">복사</button>
             </div>
             <pre><code>curl -fsS -H "Authorization: Bearer ${ID_TOKEN}" "${MCP_URL}/tools" | \
@@ -1581,11 +1412,11 @@ gcloud alpha agent-registry services create banking-mcp-server \
           </p>
           <div class="code-container">
             <div class="code-header">
-              <span>05-register-mcp.sh — 시스템 엔드포인트 등록 및 roles/iap.egressor 바인딩</span>
+              <span>04-register-mcp.sh — 시스템 엔드포인트 등록 및 roles/iap.egressor 바인딩</span>
               <button class="copy-btn" type="button">복사</button>
             </div>
             <pre><code>ENDPOINTS=(
-  "Vertex AI Locational API | https://${LOCATION}-aiplatform.googleapis.com"
+  "Gemini Enterprise Locational API | https://${LOCATION}-aiplatform.googleapis.com"
   "Cloud Trace API | https://telemetry.googleapis.com"
   "Cloud Logging API | https://logging.googleapis.com"
   "Agent Registry API | https://agentregistry.googleapis.com"
@@ -1600,51 +1431,52 @@ gcloud alpha iap web add-iam-policy-binding \
         </div>
 
         <div class="step-footer">
-          <button class="btn-nav prev-step-btn" type="button" data-target="5">← 이전 단계</button>
-          <button class="btn-nav primary next-step-btn" type="button" data-target="7">다음 단계: Gemini Enterprise 에이전트 배포 →</button>
+          <button class="btn-nav prev-step-btn" type="button" data-target="4">← 이전 단계</button>
+          <button class="btn-nav primary next-step-btn" type="button" data-target="6">다음 단계: 🚀 에이전트 조기 비동기 배포 →</button>
         </div>
       </section>
 
-      <!-- ==================== STEP 7 ==================== -->
-      <section class="step-card" id="step-7" data-duration="15">
+      <!-- ==================== STEP 6 ==================== -->
+      <section class="step-card" id="step-6" data-duration="2">
         <div class="step-header">
           <div class="step-meta">
-            <span class="step-badge">Step 7 of 9</span>
-            <span class="step-duration">⏱ 예상 소요 시간: 15분 ~ 20분</span>
+            <span class="step-badge">Step 6 of 9</span>
+            <span class="step-duration">⏱ 스크립트 실행: 2분 (백그라운드 프로비저닝 15~20분)</span>
           </div>
-          <h1 class="step-title">Gemini Enterprise 에이전트 런타임 배포 (06-deploy-agent.sh)</h1>
+          <h1 class="step-title">🚀 Gemini Enterprise 에이전트 런타임 조기 비동기 배포 (05-deploy-agent.sh)</h1>
         </div>
 
-        <div class="callout callout-danger">
-          <div class="callout-title">🚨 필수 가이드라인: 에이전트 구성에 15분 이상 소요됩니다 (중간에 중단하지 마세요)</div>
+        <div class="callout callout-info">
+          <div class="callout-title">⚡ 핵심 시간 단축 포인트: --no-wait 비동기 배포 시작 후 즉시 Step 7로 이동!</div>
           <p style="margin-bottom:0;">
             <strong>Gemini Enterprise Agent Runtime</strong>은 컨테이너 이미지 빌드, 격리된 보안 샌드박스 할당, Agent Gateway 프록시 마운트,
-            그리고 고유한 <strong>Agent Identity(<code>principal://agents.global...</code>)</strong> 발급을 순차적으로 진행합니다.<br>
-            전체 완료까지 <strong>약 15분~20분</strong>이 소요되므로 배포가 진행되는 동안 터미널을 종료하지 마세요.
+            그리고 고유한 <strong>Agent Identity(<code>principal://agents.global...</code>)</strong> 발급까지 백엔드에서 <strong>약 15~20분</strong>이 소요됩니다.<br>
+            <code>05-deploy-agent.sh</code>는 <code>--no-wait</code> 플래그로 <strong>백그라운드 프로비저닝 작업만 즉시 트리거하고 종료(약 1~2분)</strong>됩니다.
+            스크립트 실행이 끝나면 기다리지 말고 <strong>곧바로 Step 7(<code>06-setup-sgp-networking.sh</code>)로 넘어가 SGP 네트워킹과 정책 구성을 병렬로 진행</strong>하세요!
           </p>
         </div>
 
-        <h2 class="section-heading">1. 에이전트 배포 스크립트 실행 (06-deploy-agent.sh)</h2>
+        <h2 class="section-heading">1. 에이전트 비동기 배포 스크립트 실행 (05-deploy-agent.sh)</h2>
         <div class="code-container">
           <div class="code-header">
-            <span>Bash — Step 6 에이전트 배포 실행 (15~20분 소요)</span>
+            <span>Bash — 05-deploy-agent.sh 실행 (백그라운드 배포 트리거)</span>
             <button class="copy-btn" type="button">복사</button>
           </div>
-          <pre><code>./06-deploy-agent.sh</code></pre>
+          <pre><code>./05-deploy-agent.sh</code></pre>
         </div>
 
         <div class="script-anatomy">
-          <div class="script-anatomy-header">🔍 스크립트 및 에이전트 내부 구동 원리 해설 (06-deploy-agent.sh &amp; app/agent.py)</div>
+          <div class="script-anatomy-header">🔍 스크립트 및 에이전트 내부 구동 원리 해설 (05-deploy-agent.sh &amp; app/agent.py)</div>
 
           <h3 class="subsection-heading">① Agent Gateway TLS Inspection Root CA 인증서 추출 및 주입</h3>
           <p>
             Agent Gateway가 에이전트의 HTTPS 아웃바운드 패킷 내부(도구 이름 및 송금 금액)를 검사하려면 TLS 복호화(Inspection)를 수행해야 합니다.
-            에이전트 컨테이너가 게이트웨이의 사설 인증서를 신뢰할 수 있도록, <code>06-deploy-agent.sh</code>는 게이트웨이의 Root CA 인증서를 추출해
+            에이전트 컨테이너가 게이트웨이의 사설 인증서를 신뢰할 수 있도록, <code>05-deploy-agent.sh</code>는 Step 3에서 생성한 <code>agent-egress</code> 게이트웨이의 Root CA 인증서를 추출해
             컨테이너 이미지 빌드 디렉터리에 저장합니다.
           </p>
           <div class="code-container">
             <div class="code-header">
-              <span>06-deploy-agent.sh — Root CA 추출 및 agents-cli 배포 명령</span>
+              <span>05-deploy-agent.sh — Root CA 추출 및 agents-cli 비동기 배포 명령</span>
               <button class="copy-btn" type="button">복사</button>
             </div>
             <pre><code># 1. Agent Gateway의 TLS Inspection Root CA 인증서 추출
@@ -1652,7 +1484,7 @@ gcloud network-services agent-gateways describe agent-egress \
   --location="${LOCATION}" --project="${PROJECT_ID}" \
   --format="value(agentGatewayCard.rootCertificates[0])" &gt; conversational-banking/agent-gateway-ca.crt
 
-# 2. Gemini Enterprise Agent Runtime에 에이전트 배포
+# 2. Gemini Enterprise Agent Runtime에 에이전트 비동기(--no-wait) 배포 트리거
 agents-cli deploy \
   --project="${PROJECT_ID}" \
   --region="${LOCATION}" \
@@ -1695,30 +1527,156 @@ root_agent = Agent(
         </div>
 
         <div class="step-footer">
+          <button class="btn-nav prev-step-btn" type="button" data-target="5">← 이전 단계</button>
+          <button class="btn-nav primary next-step-btn" type="button" data-target="7">다음 단계: (병렬 1) SGP PSC &amp; DNS 구성 →</button>
+        </div>
+      </section>
+
+      <!-- ==================== STEP 7 ==================== -->
+      <section class="step-card" id="step-7" data-duration="5">
+        <div class="step-header">
+          <div class="step-meta">
+            <span class="step-badge">Step 7 of 9</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 5분 (에이전트 빌드와 병렬 진행)</span>
+          </div>
+          <h1 class="step-title">(병렬 진행 1) SGP 정책 엔진 활성화 · PSC 엔드포인트 및 프라이빗 DNS 구성 (06-setup-sgp-networking.sh)</h1>
+        </div>
+
+        <p>
+          백그라운드에서 Gemini Enterprise 에이전트 런타임이 프로비저닝되는 동안, <strong>Agent Gateway(<code>agent-egress</code>)</strong>가
+          외부 인터넷을 거치지 않는 <strong>Private Service Connect (PSC)</strong> 전용 터널을 통해 SGP 정책 엔진과 통신하도록 구성합니다.
+        </p>
+
+        <!-- Clean, Uncluttered SVG Diagram 2: VPC & PSC -->
+        <div class="diagram-box">
+          <svg width="840" height="240" viewBox="0 0 840 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="20" y="18" width="525" height="204" rx="14" fill="#f8fafc" stroke="#1a73e8" stroke-width="1.8"/>
+            <text x="40" y="44" fill="#1a73e8" font-size="12.5" font-weight="700">에이펙스 자산운용 VPC (us-central1)</text>
+
+            <g filter="url(#cardShadow)">
+              <rect x="40" y="62" width="215" height="138" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+              <rect x="56" y="78" width="183" height="46" rx="8" fill="#e6f4ea"/>
+              <text x="147" y="98" text-anchor="middle" fill="#1e8e3e" font-size="11.5" font-weight="700">Regional Proxy Subnet</text>
+              <text x="147" y="114" text-anchor="middle" fill="#475569" font-size="10.5" font-family="Roboto Mono">10.11.13.0/24</text>
+
+              <rect x="56" y="136" width="183" height="48" rx="8" fill="#e8f0fe"/>
+              <text x="147" y="156" text-anchor="middle" fill="#1a73e8" font-size="11.5" font-weight="700">Network Attachment</text>
+              <text x="147" y="173" text-anchor="middle" fill="#475569" font-size="10.5" font-family="Roboto Mono">agent-gateway-na</text>
+            </g>
+
+            <line x1="255" y1="131" x2="305" y2="131" stroke="#1a73e8" stroke-width="2" marker-end="url(#arrBlue)"/>
+
+            <g filter="url(#cardShadow)">
+              <rect x="310" y="62" width="215" height="138" rx="10" fill="#ffffff" stroke="#8430ce" stroke-width="1.6"/>
+              <rect x="326" y="78" width="183" height="46" rx="8" fill="#f3e8fd"/>
+              <text x="417" y="98" text-anchor="middle" fill="#8430ce" font-size="11.5" font-weight="700">PSC 엔드포인트</text>
+              <text x="417" y="114" text-anchor="middle" fill="#475569" font-size="10.5" font-family="Roboto Mono">sgp-psc-endpoint (10.10.0.9)</text>
+
+              <rect x="326" y="136" width="183" height="48" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+              <text x="417" y="156" text-anchor="middle" fill="#0f172a" font-size="11.5" font-weight="700">Cloud DNS 프라이빗 존</text>
+              <text x="417" y="173" text-anchor="middle" fill="#1a73e8" font-size="10.5" font-family="Roboto Mono">policy.internal. ➔ 10.10.0.9</text>
+            </g>
+
+            <line x1="525" y1="101" x2="608" y2="101" stroke="#d93025" stroke-width="2.4" marker-end="url(#arrRed)"/>
+            <text x="567" y="90" text-anchor="middle" fill="#d93025" font-size="10.5" font-weight="700">PSC 비공개 터널</text>
+
+            <g filter="url(#cardShadow)">
+              <rect x="612" y="38" width="208" height="164" rx="14" fill="#ffffff" stroke="#d93025" stroke-width="2"/>
+              <rect x="612" y="38" width="208" height="32" rx="12" fill="#d93025"/>
+              <text x="716" y="59" text-anchor="middle" fill="#ffffff" font-size="11.5" font-weight="700">Google 관리형 SGP 테넌트</text>
+              <text x="716" y="102" text-anchor="middle" fill="#0f172a" font-size="12.5" font-weight="700">Service Attachment</text>
+              <text x="716" y="122" text-anchor="middle" fill="#64748b" font-size="10.5">자동 감지 및 PSC 수락</text>
+              <rect x="636" y="140" width="160" height="42" rx="8" fill="#fce8e6"/>
+              <text x="716" y="165" text-anchor="middle" fill="#d93025" font-size="11.5" font-weight="700">SGP 정책 평가 엔진</text>
+            </g>
+          </svg>
+          <div class="diagram-caption">[그림 2] VPC 네트워크 어태치먼트 및 Private Service Connect (PSC) 비공개 연결 구조</div>
+        </div>
+
+        <h2 class="section-heading">1. SGP PSC 및 프라이빗 DNS 구성 스크립트 실행</h2>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Bash — 06-setup-sgp-networking.sh 실행</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>./06-setup-sgp-networking.sh</code></pre>
+        </div>
+
+        <div class="script-anatomy">
+          <div class="script-anatomy-header">🔍 스크립트 내부 구동 원리 해설 (06-setup-sgp-networking.sh)</div>
+
+          <h3 class="subsection-heading">① SGP 엔진 동적 활성화 및 PSC 엔드포인트(sgp-psc-endpoint) 연결</h3>
+          <p>
+            프로젝트마다 다르게 할당되는 Google 관리형 SGP 엔진의 <code>pscServiceAttachment</code> 주소를 동적으로 조회한 뒤,
+            내부 정적 IP(<code>sgp-psc-ip</code>, 예: <code>10.10.0.9</code>)와 PSC 전달 규칙을 생성합니다.
+          </p>
+          <div class="code-container">
+            <div class="code-header">
+              <span>06-setup-sgp-networking.sh — SGP Service Attachment 동적 조회 및 PSC 연결</span>
+              <button class="copy-btn" type="button">복사</button>
+            </div>
+            <pre><code># SGP 엔진 활성화 및 테넌트 PSC Service Attachment URI 추출
+gcloud beta ai semantic-governance-policy-engine update --location="${LOCATION}" --project="${PROJECT_ID}" --quiet
+SERVICE_ATTACHMENT="$(gcloud beta ai semantic-governance-policy-engine describe \
+  --location="${LOCATION}" --project="${PROJECT_ID}" --format="value(pscServiceAttachment)")"
+
+# 내부 정적 IP 예약 및 PSC Forwarding Rule 생성
+gcloud compute addresses create sgp-psc-ip --region="${LOCATION}" --subnet="${SUBNET_NAME}" --purpose=GCE_ENDPOINT
+gcloud compute forwarding-rules create sgp-psc-endpoint \
+  --region="${LOCATION}" --network="${NETWORK_NAME}" \
+  --address="sgp-psc-ip" --target-service-attachment="${SERVICE_ATTACHMENT}"</code></pre>
+          </div>
+
+          <h3 class="subsection-heading">② Cloud DNS 프라이빗 존(policy.internal.) A 레코드 매핑</h3>
+          <p>
+            게이트웨이가 <code>https://policy.internal</code> 도메인을 호출할 때 위에서 만든 PSC 내부 IP로 라우팅되도록 프라이빗 DNS 레코드를 등록합니다.
+          </p>
+          <div class="code-container">
+            <div class="code-header">
+              <span>06-setup-sgp-networking.sh — 프라이빗 DNS 구성</span>
+              <button class="copy-btn" type="button">복사</button>
+            </div>
+            <pre><code>gcloud dns managed-zones create policy-engine-zone \
+  --dns-name="policy.internal." --visibility=private --networks="${NETWORK_NAME}"
+
+gcloud dns record-sets create policy.internal. \
+  --zone=policy-engine-zone --type=A --ttl=300 --rrdatas="${PSC_IP}"</code></pre>
+          </div>
+        </div>
+
+        <div class="callout callout-success">
+          <div class="callout-title">✅ 핵심 검증: PSC 연결 상태 확인</div>
+          <p style="margin-bottom:0;">
+            <code>gcloud compute forwarding-rules describe sgp-psc-endpoint --region=us-central1 --format="value(pscConnectionStatus)"</code> 실행 시 <strong><code>ACCEPTED</code></strong>가 출력되어야 합니다.
+          </p>
+        </div>
+
+        <div class="step-footer">
           <button class="btn-nav prev-step-btn" type="button" data-target="6">← 이전 단계</button>
-          <button class="btn-nav primary next-step-btn" type="button" data-target="8">다음 단계: 시맨틱 거버넌스 정책(SGP) 생성 →</button>
+          <button class="btn-nav primary next-step-btn" type="button" data-target="8">다음 단계: (병렬 2) 인가 및 SGP 정책 생성 →</button>
         </div>
       </section>
 
       <!-- ==================== STEP 8 ==================== -->
-      <section class="step-card" id="step-8" data-duration="3">
+      <section class="step-card" id="step-8" data-duration="5">
         <div class="step-header">
           <div class="step-meta">
             <span class="step-badge">Step 8 of 9</span>
-            <span class="step-duration">⏱ 예상 소요 시간: 3분</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 5분 (에이전트 등록 완료 대기 포함)</span>
           </div>
-          <h1 class="step-title">시맨틱 거버넌스 정책(SGP) 생성 (07-create-sgp-policy.sh)</h1>
+          <h1 class="step-title">(병렬 진행 2) 콘텐츠 인가 정책 연동 및 시맨틱 거버넌스 정책 생성 (07-create-sgp-policy.sh)</h1>
         </div>
 
         <p>
-          이제 애플리케이션 코드를 전혀 수정하지 않고, <strong>자연어 비즈니스 규정</strong>만으로 고액 이체를 원천 차단하는
-          시맨틱 거버넌스 정책(<code>high-value-limit</code>)을 생성합니다.
+          이제 <code>agent-egress</code> 게이트웨이가 모델 및 도구 호출 페이로드를 <code>policy.internal</code>로 전달해 실시간 심사를 수행하도록
+          <strong>AuthzExtension</strong> 및 <strong>Content Authz Policy</strong>를 연결하고,
+          <strong>자연어 비즈니스 규정</strong>만으로 고액 이체를 원천 차단하는 시맨틱 거버넌스 정책(<code>high-value-limit</code>)을 생성합니다.
         </p>
 
-        <h2 class="section-heading">1. SGP 정책 생성 스크립트 실행</h2>
+        <h2 class="section-heading">1. 인가 확장 및 SGP 정책 생성 스크립트 실행</h2>
         <div class="code-container">
           <div class="code-header">
-            <span>Bash — Step 7 스크립트 실행</span>
+            <span>Bash — 07-create-sgp-policy.sh 실행</span>
             <button class="copy-btn" type="button">복사</button>
           </div>
           <pre><code>./07-create-sgp-policy.sh</code></pre>
@@ -1726,32 +1684,56 @@ root_agent = Agent(
 
         <div class="script-anatomy">
           <div class="script-anatomy-header">🔍 스크립트 내부 구동 원리 해설 (07-create-sgp-policy.sh)</div>
+
+          <h3 class="subsection-heading">① SGP Authorization Extension 및 Content Authz Policy 바인딩</h3>
           <p>
-            <code>07-create-sgp-policy.sh</code>는 Agent Registry에서 에이전트 ID(<code>AGENT_ID</code>)와 MCP 서버 ID(<code>MCP_SERVER_NAME</code>)를 자동으로 조회하여,
-            특정 에이전트가 특정 MCP 도구를 호출할 때만 자연어 규정을 적용하도록 바인딩합니다.
+            게이트웨이가 외부 인가 심사관(Callout)으로 호출할 대상을 <code>policy.internal</code>로 지정(<code>"failOpen": false</code>)하고,
+            <code>:generateContent</code> 또는 <code>:streamGenerateContent</code>로 끝나는 HTTP 요청을 인터셉트하도록 <code>CONTENT_AUTHZ</code> 정책을 연결합니다.
           </p>
           <div class="code-container">
             <div class="code-header">
-              <span>07-create-sgp-policy.sh — 멱등성(Create / Update) 정책 등록 로직</span>
+              <span>07-create-sgp-policy.sh — AuthzExtension 및 Content Authz Policy 구성</span>
               <button class="copy-btn" type="button">복사</button>
             </div>
-            <pre><code># ADK 런타임이 부여하는 도구 네임스페이스 접두사(Banking_MCP_Server_)를 포함하여 지정합니다.
+            <pre><code># 1. SGP Authorization Extension 등록
+curl -fsS -X POST \
+  "https://networkservices.googleapis.com/v1beta1/projects/${PROJECT_ID}/locations/${LOCATION}/authzExtensions?authzExtensionId=sgp-authzextension" \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}" -H "Content-Type: application/json" \
+  -d '{"service":"policy.internal","authority":"policy.internal","failOpen":false,"loadBalancingScheme":"LOAD_BALANCING_SCHEME_UNSPECIFIED"}'
+
+# 2. Content Authz Policy 임포트
+gcloud beta network-security authz-policies import agent-egress-sgp-authzpolicy \
+  --source="agent-egress-sgp-authzpolicy.yaml" --location="${LOCATION}" --project="${PROJECT_ID}"</code></pre>
+          </div>
+
+          <h3 class="subsection-heading">② 백그라운드 에이전트 등록 대기 루프 및 시맨틱 거버넌스 정책(high-value-limit) 생성</h3>
+          <p>
+            Step 6에서 비동기로 시작한 에이전트 런타임 배포가 아직 진행 중이라면 20초 간격으로 <code>AGENT_ID</code> 등록 완료를 자동 폴링(Polling)한 뒤,
+            ADK 런타임 도구 이름(<code>Banking_MCP_Server_transfer_to_phone</code>)에 자연어 제약 조건을 바인딩합니다.
+          </p>
+          <div class="code-container">
+            <div class="code-header">
+              <span>07-create-sgp-policy.sh — 에이전트 등록 폴링 및 정책 등록 로직</span>
+              <button class="copy-btn" type="button">복사</button>
+            </div>
+            <pre><code># 백그라운드 에이전트 프로비저닝이 완료되어 Agent Registry에 등록될 때까지 자동 대기
+while [[ -z "${AGENT_ID}" ]]; do
+  echo "Waiting for background Agent Runtime deployment (started in Step 5)..."
+  sleep 20
+  export AGENT_ID="$(gcloud alpha agent-registry agents list \
+    --project="${PROJECT_ID}" --location="${LOCATION}" \
+    --filter="displayName:'conversational-banking'" --format="value(name.basename())" | head -n 1)"
+done
+
+# ADK 런타임이 부여하는 도구 네임스페이스 접두사(Banking_MCP_Server_)를 포함하여 정책 생성
 TOOL_NAME="Banking_MCP_Server_transfer_to_phone"
 
-if gcloud beta ai semantic-governance-policies describe high-value-limit --location="${LOCATION}" &amp;&gt;/dev/null; then
-  gcloud beta ai semantic-governance-policies update high-value-limit \
-    --project="${PROJECT_ID}" --location="${LOCATION}" \
-    --agent="projects/${PROJECT_ID}/locations/${LOCATION}/agents/${AGENT_ID}" \
-    --mcp-tools="mcp-server=projects/${PROJECT_ID}/locations/${LOCATION}/mcpServers/${MCP_SERVER_NAME},tools=${TOOL_NAME}" \
-    --natural-language-constraint="Block any transfer value exceeding USD 1000."
-else
-  gcloud beta ai semantic-governance-policies create high-value-limit \
-    --project="${PROJECT_ID}" --location="${LOCATION}" \
-    --display-name="High Value Transfer Limit" \
-    --agent="projects/${PROJECT_ID}/locations/${LOCATION}/agents/${AGENT_ID}" \
-    --mcp-tools="mcp-server=projects/${PROJECT_ID}/locations/${LOCATION}/mcpServers/${MCP_SERVER_NAME},tools=${TOOL_NAME}" \
-    --natural-language-constraint="Block any transfer value exceeding USD 1000."
-fi</code></pre>
+gcloud beta ai semantic-governance-policies create high-value-limit \
+  --project="${PROJECT_ID}" --location="${LOCATION}" \
+  --display-name="High Value Transfer Limit" \
+  --agent="projects/${PROJECT_ID}/locations/${LOCATION}/agents/${AGENT_ID}" \
+  --mcp-tools="mcp-server=projects/${PROJECT_ID}/locations/${LOCATION}/mcpServers/${MCP_SERVER_NAME},tools=${TOOL_NAME}" \
+  --natural-language-constraint="Block any transfer value exceeding USD 1000."</code></pre>
           </div>
         </div>
 
@@ -1837,8 +1819,9 @@ fi</code></pre>
           <div class="script-anatomy-header">🔍 검증 스크립트 내부 구동 원리 해설 (08-test.sh &amp; run_tests.py)</div>
           <p>
             <code>08-test.sh</code>는 내부적으로 <code>python3 run_tests.py</code>를 실행합니다.
-            <code>run_tests.py</code>는 동일한 <code>session_id</code>를 유지하면서 Gemini Enterprise 런타임의 <code>:streamQuery</code> 엔드포인트에
-            Turn 1~3 메시지를 연속으로 전송하고, 응답 키워드와 Cloud Logging의 SGP 감사 로그를 자동으로 교차 검증합니다.
+            <code>run_tests.py</code>는 가장 최근 배포된 <code>conversational-banking</code> 런타임 ID를 자동으로 탐지하고,
+            동일한 <code>session_id</code>를 유지하면서 Gemini Enterprise 런타임의 <code>:streamQuery</code> 엔드포인트에
+            Turn 1~3 메시지를 연속으로 전송하여 응답 키워드와 Cloud Logging의 SGP 감사 로그를 교차 검증합니다.
           </p>
           <div class="code-container">
             <div class="code-header">
@@ -2017,7 +2000,7 @@ payload = {
 
         var rem = calculateRemainingMinutes(currentStep);
         if (remainingTimeText) {
-          remainingTimeText.textContent = '남은 예상 시간: 약 ' + rem + '분 (총 55분)';
+          remainingTimeText.textContent = '남은 예상 시간: 약 ' + rem + '분 (총 45분)';
         }
 
         if (!viewAllMode) {
