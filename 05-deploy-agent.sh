@@ -23,7 +23,7 @@ gcloud network-services agent-gateways describe agent-egress \
   --project="${PROJECT_ID}" \
   --format="value(agentGatewayCard.rootCertificates[0])" > "${SCRIPT_DIR}/conversational-banking/agent-gateway-ca.crt"
 
-echo "==> Step 5: Triggering asynchronous deployment of Conversational Banking Agent to Gemini Enterprise Agent Runtime..."
+echo "==> Step 5: Deploying Conversational Banking Agent to Gemini Enterprise Agent Runtime..."
 cd "${SCRIPT_DIR}/conversational-banking"
 export UV_NO_CONFIG=1
 export PIP_CONFIG_FILE=/dev/null
@@ -38,10 +38,7 @@ agents-cli deploy \
   --no-wait
 
 echo "================================================================================"
-echo " [ASYNC DEPLOYMENT STARTED]"
-echo " Gemini Enterprise Agent Runtime provisioning is now running in the background"
-echo " (typically takes 15-20 minutes)."
-echo " You can immediately proceed to Step 6 (06-setup-sgp-networking.sh) and"
-echo " Step 7 (07-create-sgp-policy.sh) while the agent builds in the background!"
+echo " Gemini Enterprise Agent Runtime deployment initiated in the background."
+echo " Proceed to Step 6 (06-setup-sgp-networking.sh) and Step 7 (07-create-sgp-policy.sh)."
 echo "================================================================================"
 echo "==> Step 5 completed successfully."

@@ -1,6 +1,6 @@
 # [Quicklab 가이드] Gemini Enterprise와 Agent Gateway · 시맨틱 거버넌스 정책(SGP)을 활용한 자율형 AI 에이전트 거버넌스
 
-> **총 예상 소요 시간**: 약 **45분** (에이전트 런타임 비동기 조기 배포 및 SGP 인프라 병렬 구성으로 대기 시간 단축)
+> **총 예상 소요 시간**: 약 **45분**
 > **난이도**: 중급 (Intermediate)
 > **대상 환경**: Google Cloud (`us-central1`), Gemini Enterprise, Agent Gateway, Agent Registry, Cloud Run
 > **웹 버전 가이드 (Cloud Run)**: [https://agent-gateway-codelab-1080321871308.us-central1.run.app](https://agent-gateway-codelab-1080321871308.us-central1.run.app)
@@ -42,10 +42,10 @@ flowchart LR
 
 ---
 
-### 1.3 한눈에 보는 실습 로드맵 (병렬 파이프라인 최적화 · 총 9단계 · 약 45분)
+### 1.3 한눈에 보는 실습 로드맵 (총 9단계 · 약 45분)
 
-> **💡 대기 시간 단축을 위한 병렬 파이프라인 설계**
-> Gemini Enterprise Agent Runtime 프로비저닝은 컨테이너 빌드 및 샌드박스 할당으로 인해 약 15~20분이 소요됩니다. 본 실습은 에이전트 배포에 필요한 최소 선행 리소스(`agent-egress` 게이트웨이 및 MCP 도구 등록)만 먼저 구성한 뒤 **Step 6(`05-deploy-agent.sh`)에서 비동기(`--no-wait`)로 에이전트 배포를 조기 시작**합니다. 이후 에이전트가 백그라운드에서 빌드되는 동안 **Step 7(SGP PSC 네트워킹 및 DNS 구성)**과 **Step 8(인가 확장 및 SGP 정책 생성)**을 병렬로 진행하여 실습 유휴 대기 시간을 대폭 단축합니다.
+> **⚡ 병렬 파이프라인 설계 안내**
+> Gemini Enterprise Agent Runtime 프로비저닝은 컨테이너 빌드 및 샌드박스 할당으로 인해 백엔드에서 약 15~20분이 소요됩니다. 본 실습은 에이전트 배포에 필요한 선행 리소스(`agent-egress` 게이트웨이 및 MCP 도구 등록)를 먼저 구성한 뒤 **Step 6(`05-deploy-agent.sh`)에서 비동기(`--no-wait`)로 에이전트 배포를 시작**하고, 에이전트가 백그라운드에서 빌드되는 동안 **Step 7(SGP PSC 네트워킹 및 DNS 구성)**과 **Step 8(인가 확장 및 SGP 정책 생성)**을 병렬로 진행합니다.
 
 | 단계 | 실행 스크립트 | 핵심 작업 | 예상 시간 | 실무 체크포인트 |
 | :---: | :--- | :--- | :---: | :--- |
@@ -284,7 +284,7 @@ gcloud alpha iap web add-iam-policy-binding \
 
 ## Step 6. 🚀 Gemini Enterprise 에이전트 런타임 조기 비동기 배포 시작 (⏱ 2분 · 백그라운드 15~20분)
 
-> **💡 핵심 시간 단축 포인트: `--no-wait` 비동기 배포 트리거 후 즉시 Step 7 진행**
+> **💡 실습 가이드라인: `--no-wait` 비동기 배포 트리거 후 즉시 Step 7 진행**
 > **Gemini Enterprise Agent Runtime**은 컨테이너 이미지 빌드, 격리된 보안 샌드박스 할당, Agent Gateway 프록시 마운트, 그리고 고유한 **Agent Identity(`principal://agents.global...`)** 발급까지 백엔드에서 **약 15~20분**이 소요됩니다.
 > `05-deploy-agent.sh`는 `--no-wait` 플래그를 사용하여 **백그라운드 배포 작업만 즉시 트리거하고 종료(약 1~2분)**됩니다. 스크립트가 완료되면 에이전트가 만들어질 때까지 기다리지 말고 **곧바로 Step 7(`06-setup-sgp-networking.sh`)로 넘어가 SGP 네트워킹 및 정책 구성을 병렬로 진행**하세요!
 

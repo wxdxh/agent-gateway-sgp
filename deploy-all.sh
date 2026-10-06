@@ -17,7 +17,7 @@ fi
 echo "--- 1. Setup Environment & IAM ---"
 "${SCRIPT_DIR}/01-setup-env.sh"
 
-echo "--- 2. Provision Agent Gateway Foundation (Proxy Subnet, NA, agent-egress) ---"
+echo "--- 2. Provision Agent Gateway (Proxy Subnet, NA, agent-egress) ---"
 "${SCRIPT_DIR}/02-setup-agent-gateway.sh"
 
 echo "--- 3. Deploy Banking MCP Server to Cloud Run ---"
@@ -26,10 +26,10 @@ echo "--- 3. Deploy Banking MCP Server to Cloud Run ---"
 echo "--- 4. Register MCP Server & System Endpoints in Agent Registry ---"
 "${SCRIPT_DIR}/04-register-mcp.sh"
 
-echo "--- 5. Trigger Early Async Deployment of Conversational Banking Agent ---"
+echo "--- 5. Deploy Conversational Banking Agent to Gemini Enterprise ---"
 "${SCRIPT_DIR}/05-deploy-agent.sh"
 
-echo "--- 6. Provision SGP Private Service Connect (PSC) & Cloud DNS (in parallel with Agent build) ---"
+echo "--- 6. Provision SGP Private Service Connect (PSC) & Cloud DNS ---"
 "${SCRIPT_DIR}/06-setup-sgp-networking.sh"
 
 echo "--- 7. Configure Authz Extension, Authz Policy & Semantic Governance Policy ---"

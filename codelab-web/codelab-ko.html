@@ -965,14 +965,13 @@
         </div>
 
         <div class="callout callout-success">
-          <div class="callout-title">⚡ 병렬 파이프라인 최적화 설계 (유휴 대기 시간 10분 이상 단축)</div>
+          <div class="callout-title">⚡ 병렬 파이프라인 설계 안내</div>
           <p style="margin-bottom:0;">
-            <strong>Gemini Enterprise Agent Runtime</strong> 프로비저닝은 백엔드에서 약 15~20분이 소요됩니다. 본 코드랩은 에이전트 배포에 필수적인 최소 선행 리소스(<code>agent-egress</code> 게이트웨이 및 MCP 도구 등록)만 먼저 완료한 뒤, <strong>Step 6(<code>05-deploy-agent.sh</code>)에서 에이전트 배포를 비동기(<code>--no-wait</code>)로 조기 시작</strong>합니다.<br>
-            에이전트가 백그라운드에서 빌드되는 동안 <strong>Step 7(SGP PSC 네트워킹 및 DNS 구성)</strong>과 <strong>Step 8(인가 확장 및 SGP 정책 생성)</strong>을 병렬로 진행하여 실습 체감 시간을 약 45분으로 단축합니다.
+            <strong>Gemini Enterprise Agent Runtime</strong> 프로비저닝은 백엔드에서 약 15~20분이 소요됩니다. 본 코드랩은 에이전트 배포에 필수적인 선행 리소스(<code>agent-egress</code> 게이트웨이 및 MCP 도구 등록)를 먼저 완료한 뒤, <strong>Step 6(<code>05-deploy-agent.sh</code>)에서 에이전트 배포를 비동기(<code>--no-wait</code>)로 시작</strong>하고 백그라운드에서 빌드되는 동안 <strong>Step 7(SGP PSC 네트워킹 및 DNS 구성)</strong>과 <strong>Step 8(인가 확장 및 SGP 정책 생성)</strong>을 병렬로 진행합니다.
           </p>
         </div>
 
-        <h2 class="section-heading">한눈에 보는 실습 로드맵 (병렬 최적화 · 총 45분)</h2>
+        <h2 class="section-heading">한눈에 보는 실습 로드맵 (총 45분)</h2>
         <div class="table-wrapper">
           <table>
             <thead>
@@ -1447,7 +1446,7 @@ gcloud alpha iap web add-iam-policy-binding \
         </div>
 
         <div class="callout callout-info">
-          <div class="callout-title">⚡ 핵심 시간 단축 포인트: --no-wait 비동기 배포 시작 후 즉시 Step 7로 이동!</div>
+          <div class="callout-title">⚡ 실습 가이드라인: --no-wait 비동기 배포 시작 후 즉시 Step 7로 이동!</div>
           <p style="margin-bottom:0;">
             <strong>Gemini Enterprise Agent Runtime</strong>은 컨테이너 이미지 빌드, 격리된 보안 샌드박스 할당, Agent Gateway 프록시 마운트,
             그리고 고유한 <strong>Agent Identity(<code>principal://agents.global...</code>)</strong> 발급까지 백엔드에서 <strong>약 15~20분</strong>이 소요됩니다.<br>
