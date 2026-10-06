@@ -52,7 +52,7 @@ fi
 
 echo "==> Step 4: Allowlisting Google Cloud system endpoints for Agent Gateway..."
 ENDPOINTS=(
-  "Gemini Enterprise Locational API | https://${LOCATION}-aiplatform.googleapis.com"
+  "Gemini Enterprise Global API | https://aiplatform.googleapis.com"
   "Cloud Trace API | https://telemetry.googleapis.com"
   "Cloud Logging API | https://logging.googleapis.com"
   "Agent Registry API | https://agentregistry.googleapis.com"

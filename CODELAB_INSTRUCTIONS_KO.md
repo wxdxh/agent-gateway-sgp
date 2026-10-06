@@ -267,7 +267,7 @@ gcloud alpha agent-registry services create banking-mcp-server \
 
 ```bash
 ENDPOINTS=(
-  "Gemini Enterprise Locational API | https://${LOCATION}-aiplatform.googleapis.com"
+  "Gemini Enterprise Global API | https://aiplatform.googleapis.com"
   "Cloud Trace API | https://telemetry.googleapis.com"
   "Cloud Logging API | https://logging.googleapis.com"
   "Agent Registry API | https://agentregistry.googleapis.com"
@@ -316,28 +316,35 @@ agents-cli deploy \
   --deployment-target="agent_runtime" \
   --agent-identity \
   --agent-gateway-egress="projects/${PROJECT_ID}/locations/${LOCATION}/agentGateways/agent-egress" \
-  --update-env-vars="MCP_SERVER_NAME=${MCP_SERVER_NAME},GOOGLE_CLOUD_LOCATION=${LOCATION},PROJECT_ID=${PROJECT_ID},GOOGLE_API_USE_MTLS_ENDPOINT=never,GOOGLE_API_USE_CLIENT_CERTIFICATE=false" \
+  --update-env-vars="MCP_SERVER_NAME=${MCP_SERVER_NAME},GOOGLE_CLOUD_LOCATION=global,LOCATION=${LOCATION},MODEL=gemini-3.8-flash,PROJECT_ID=${PROJECT_ID},GOOGLE_API_USE_MTLS_ENDPOINT=never,GOOGLE_API_USE_CLIENT_CERTIFICATE=false" \
   --no-wait
 ```
 - `--agent-identity`: 에이전트 인스턴스만의 고유 암호화 ID(`principal://agents.global.org-...`)를 프로비저닝합니다.
 - `--agent-gateway-egress`: 에이전트 런타임 샌드박스의 모든 아웃바운드 트래픽이 `agent-egress` 게이트웨이를 강제로 경유하도록 네트워크를 바인딩합니다.
-- `--update-env-vars="MCP_SERVER_NAME=..."`: Step 5에서 등록된 MCP 서버 ID를 환경 변수로 전달하여 에이전트가 시작할 때 동적으로 도구 목록을 가져오게 합니다.
+- `--update-env-vars="...,GOOGLE_CLOUD_LOCATION=global,LOCATION=${LOCATION},MODEL=gemini-3.8-flash,..."`: Gemini 3.8 Flash 모델 호출은 **Global 엔드포인트(`https://aiplatform.googleapis.com`, `GOOGLE_CLOUD_LOCATION=global`)**를 사용하고, Agent Registry MCP 도구 조회는 리전(`LOCATION=us-central1`)을 사용하도록 분리 전달합니다.
 - `--no-wait`: 백엔드 프로비저닝 완료를 블로킹 대기하지 않고 즉시 제어권을 반환하여, 실습자가 Step 7과 Step 8을 동시에 진행할 수 있도록 합니다.
 
-#### ③ ADK 에이전트의 동적 도구 바인딩 및 Cloud Run 인증 (`conversational-banking/app/agent.py`)
-에이전트 코드는 MCP 서버의 URL을 하드코딩하지 않고 `ApiRegistry`에서 `MCP_SERVER_NAME`으로 도구 세트를 조회합니다. 또한 Cloud Run으로 요청을 보낼 때 Compute Engine 메타데이터 서버에서 대상 URL을 Audience로 하는 **OIDC ID 토큰**을 자동 발급받아 `Authorization: Bearer` 헤더에 주입합니다.
+#### ③ ADK 에이전트의 동적 도구 바인딩 및 Global 엔드포인트 설정 (`conversational-banking/app/agent.py`)
+에이전트 코드는 `GOOGLE_CLOUD_LOCATION="global"`을 고정하여 `gemini-3.8-flash` 모델 추론이 **Gemini Enterprise Global API(`https://aiplatform.googleapis.com`)**를 향하도록 설정하고, `AgentRegistry`에서는 리전(`LOCATION`)의 `MCP_SERVER_NAME`으로 도구 세트를 동적 조회합니다. 또한 Cloud Run으로 요청을 보낼 때 Compute Engine 메타데이터 서버에서 대상 URL을 Audience로 하는 **OIDC ID 토큰**을 자동 발급받아 `Authorization: Bearer` 헤더에 주입합니다.
 
 ```python
+import os
 from google.adk.agents import Agent
-from google.adk.tools.api_registry import ApiRegistry
+from google.adk.integrations.agent_registry import AgentRegistry
+from google.adk.models import Gemini
 
-# Agent Registry 카탈로그에서 MCP 도구 세트를 동적으로 로드
-api_registry = ApiRegistry(api_registry_project_id=PROJECT_ID, location=LOCATION)
-banking_tools = api_registry.get_toolset(mcp_server_name=MCP_SERVER_NAME)
+# Gemini 3.8 Flash 모델 추론이 Global 엔드포인트(https://aiplatform.googleapis.com)를 사용하도록 설정
+os.environ["GOOGLE_CLOUD_LOCATION"] = os.environ.get("GEMINI_LOCATION", "global")
+
+# Agent Registry 카탈로그(리전: us-central1)에서 MCP 도구 세트를 동적으로 로드
+registry = AgentRegistry(project_id=PROJECT_ID, location=LOCATION)
+banking_tools = registry.get_mcp_toolset(
+    f"projects/{PROJECT_ID}/locations/{LOCATION}/mcpServers/{MCP_SERVER_NAME}"
+)
 
 root_agent = Agent(
     name="conversational_banking",
-    model=Gemini(model="gemini-2.5-flash"),
+    model=Gemini(model="gemini-3.8-flash"),
     instruction="""당신은 에이펙스 자산운용(Apex Asset Management)의 전문 AI 뱅킹 어시스턴트입니다.
     1. 고객이 고객번호(예: CUST005)를 제시하면 get_account로 계좌와 잔액을 확인하세요.
     2. 송금 요청 시 transfer_to_phone 도구를 호출하세요.

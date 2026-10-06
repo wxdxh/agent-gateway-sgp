@@ -110,10 +110,13 @@ try:
 except Exception:
     pass
 
+# Pin GOOGLE_CLOUD_LOCATION to "global" so Gemini uses the Global Endpoint (https://aiplatform.googleapis.com)
+os.environ["GOOGLE_CLOUD_LOCATION"] = os.environ.get("GEMINI_LOCATION", "global")
+
 PROJECT_ID = os.environ.get("PROJECT_ID") or os.environ.get("GOOGLE_CLOUD_PROJECT", "")
-LOCATION = os.environ.get("GOOGLE_CLOUD_LOCATION") or os.environ.get("LOCATION", "us-central1")
+LOCATION = os.environ.get("LOCATION") or os.environ.get("GOOGLE_CLOUD_AGENT_ENGINE_LOCATION", "us-central1")
 MCP_SERVER_NAME = os.environ.get("MCP_SERVER_NAME", "")
-MODEL = os.environ.get("MODEL", "gemini-2.5-flash")
+MODEL = os.environ.get("MODEL", "gemini-3.8-flash")
 
 tools = []
 if PROJECT_ID and MCP_SERVER_NAME:

@@ -1415,7 +1415,7 @@ gcloud alpha agent-registry services create banking-mcp-server \
               <button class="copy-btn" type="button">복사</button>
             </div>
             <pre><code>ENDPOINTS=(
-  "Gemini Enterprise Locational API | https://${LOCATION}-aiplatform.googleapis.com"
+  "Gemini Enterprise Global API | https://aiplatform.googleapis.com"
   "Cloud Trace API | https://telemetry.googleapis.com"
   "Cloud Logging API | https://logging.googleapis.com"
   "Agent Registry API | https://agentregistry.googleapis.com"
@@ -1490,32 +1490,36 @@ agents-cli deploy \
   --deployment-target="agent_runtime" \
   --agent-identity \
   --agent-gateway-egress="projects/${PROJECT_ID}/locations/${LOCATION}/agentGateways/agent-egress" \
-  --update-env-vars="MCP_SERVER_NAME=${MCP_SERVER_NAME},GOOGLE_CLOUD_LOCATION=${LOCATION},PROJECT_ID=${PROJECT_ID},GOOGLE_API_USE_MTLS_ENDPOINT=never,GOOGLE_API_USE_CLIENT_CERTIFICATE=false" \
+  --update-env-vars="MCP_SERVER_NAME=${MCP_SERVER_NAME},GOOGLE_CLOUD_LOCATION=global,LOCATION=${LOCATION},MODEL=gemini-3.8-flash,PROJECT_ID=${PROJECT_ID},GOOGLE_API_USE_MTLS_ENDPOINT=never,GOOGLE_API_USE_CLIENT_CERTIFICATE=false" \
   --no-wait</code></pre>
           </div>
 
-          <h3 class="subsection-heading">② ADK 기반 에이전트 동적 도구 바인딩 (conversational-banking/app/agent.py)</h3>
+          <h3 class="subsection-heading">② ADK 에이전트 동적 도구 바인딩 및 Global 엔드포인트 설정 (conversational-banking/app/agent.py)</h3>
           <p>
-            에이전트는 <code>ApiRegistry</code>를 통해 하드코딩 없이 Agent Registry에서 뱅킹 MCP 도구를 동적으로 연결하며,
-            Cloud Run 호출 시 메타데이터 서버에서 OIDC ID 토큰을 자동 발급받아 <code>Authorization: Bearer</code> 헤더에 주입합니다.
+            에이전트는 <code>GOOGLE_CLOUD_LOCATION="global"</code>을 설정하여 <code>gemini-3.8-flash</code> 모델 호출 시 <strong>Global 엔드포인트(<code>https://aiplatform.googleapis.com</code>)</strong>를 사용하며,
+            <code>AgentRegistry</code>를 통해 하드코딩 없이 리전(<code>us-central1</code>)의 뱅킹 MCP 도구를 동적으로 연결합니다. 또한 Cloud Run 호출 시 메타데이터 서버에서 OIDC ID 토큰을 자동 발급받아 <code>Authorization: Bearer</code> 헤더에 주입합니다.
           </p>
           <div class="code-container">
             <div class="code-header">
               <span>Python — conversational-banking/app/agent.py</span>
               <button class="copy-btn" type="button">복사</button>
             </div>
-            <pre><code>from google.adk.agents import Agent
-from google.adk.tools.api_registry import ApiRegistry
+            <pre><code>import os
+from google.adk.agents import Agent
+from google.adk.integrations.agent_registry import AgentRegistry
+from google.adk.models import Gemini
 
-api_registry = ApiRegistry(
-    api_registry_project_id=PROJECT_ID,
-    location=LOCATION,
+# Gemini 3.8 Flash 모델 추론이 Global 엔드포인트(https://aiplatform.googleapis.com)를 사용하도록 설정
+os.environ["GOOGLE_CLOUD_LOCATION"] = os.environ.get("GEMINI_LOCATION", "global")
+
+registry = AgentRegistry(project_id=PROJECT_ID, location=LOCATION)
+banking_tools = registry.get_mcp_toolset(
+    f"projects/{PROJECT_ID}/locations/{LOCATION}/mcpServers/{MCP_SERVER_NAME}"
 )
-banking_tools = api_registry.get_toolset(mcp_server_name=MCP_SERVER_NAME)
 
 root_agent = Agent(
     name="conversational_banking",
-    model=Gemini(model="gemini-2.5-flash"),
+    model=Gemini(model="gemini-3.8-flash"),
     instruction="""당신은 에이펙스 자산운용(Apex Asset Management)의 전문 AI 뱅킹 어시스턴트입니다.
     1. 고객이 고객번호(예: CUST005)를 제시하면 get_account로 계좌와 잔액을 확인하세요.
     2. 송금 요청 시 transfer_to_phone 도구를 호출하세요.
