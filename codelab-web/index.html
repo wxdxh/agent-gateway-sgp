@@ -698,7 +698,134 @@
     @media (max-width: 960px) {
       .codelab-sidebar { display: none; }
       .codelab-main { margin-left: 0; padding: 20px 16px 60px; }
-      .step-card { padding: 26px 20px; }
+      .step-card, .qwik-card { padding: 26px 20px; }
+      .lab-mode-tabs { flex-direction: column; }
+    }
+
+    /* Lab Mode Switcher Tabs (Standard vs Qwiklabs Cloud Shell) */
+    .lab-mode-tabs {
+      max-width: 960px;
+      margin: 0 auto 20px auto;
+      display: flex;
+      gap: 12px;
+      background: var(--bg-surface);
+      padding: 8px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .lab-mode-tab {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 18px;
+      border-radius: 12px;
+      border: 1.5px solid transparent;
+      background: var(--bg-subtle);
+      color: var(--text-secondary);
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.18s ease;
+      font-family: inherit;
+    }
+
+    .lab-mode-tab:hover {
+      border-color: var(--gcp-blue);
+      color: var(--text-primary);
+    }
+
+    .lab-mode-tab.active {
+      background: var(--gcp-blue-light);
+      border-color: var(--gcp-blue);
+      color: var(--gcp-blue-dark);
+      box-shadow: 0 2px 8px rgba(26, 115, 232, 0.12);
+    }
+
+    [data-theme="dark"] .lab-mode-tab.active {
+      color: var(--gcp-blue);
+    }
+
+    .lab-mode-tab-left {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .lab-mode-tab-title {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .lab-mode-tab-sub {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .lab-mode-tab.active .lab-mode-tab-sub {
+      color: var(--text-secondary);
+    }
+
+    .lab-mode-badge {
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--gcp-green-light);
+      color: var(--gcp-green);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .qwik-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-top: 4px solid var(--gcp-green);
+      border-radius: var(--radius-lg);
+      padding: 40px 44px;
+      box-shadow: var(--shadow-md);
+      max-width: 960px;
+      margin: 0 auto;
+      display: none;
+      animation: fadeIn 0.22s ease-out;
+    }
+
+    .qwik-card.active {
+      display: block;
+    }
+
+    .qwik-badge {
+      background-color: var(--gcp-green-light);
+      color: var(--gcp-green);
+      font-weight: 700;
+      font-size: 12.5px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      letter-spacing: 0.2px;
+    }
+
+    .qwik-verify-box {
+      margin: 22px 0;
+      padding: 20px 24px;
+      border-radius: var(--radius-md);
+      background-color: var(--gcp-green-light);
+      border: 1px solid rgba(30, 142, 62, 0.3);
+    }
+
+    .qwik-verify-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--gcp-green);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
   </style>
 </head>
@@ -748,7 +875,7 @@
   <div class="codelab-layout">
     <!-- Left Sidebar -->
     <aside class="codelab-sidebar">
-      <div class="sidebar-section-label">실습 목차 (병렬 최적화 · 총 45분)</div>
+      <div class="sidebar-section-label" id="sidebarSectionLabel">실습 목차 (병렬 최적화 · 총 45분)</div>
       <ul class="step-nav-list" id="stepNavList">
         <li class="step-nav-item active" data-step="1">
           <div class="step-nav-left">
@@ -818,6 +945,24 @@
 
     <!-- Main Step Content -->
     <main class="codelab-main">
+
+      <!-- Mode Switcher Tabs: Standard Codelab vs Qwiklabs Cloud Shell -->
+      <div class="lab-mode-tabs" role="tablist" aria-label="코드랩 문서 모드 선택">
+        <button class="lab-mode-tab active" id="modeTabStandard" type="button" data-mode="standard">
+          <div class="lab-mode-tab-left">
+            <div class="lab-mode-tab-title">📘 아키텍처 &amp; 코드랩 상세 가이드</div>
+            <div class="lab-mode-tab-sub">아키텍처 다이어그램 · 보안 설계 원리 · 스크립트 내부 해부</div>
+          </div>
+          <span class="lab-mode-badge" style="background:var(--gcp-blue-light);color:var(--gcp-blue);">표준 가이드</span>
+        </button>
+        <button class="lab-mode-tab" id="modeTabQwiklabs" type="button" data-mode="qwiklabs">
+          <div class="lab-mode-tab-left">
+            <div class="lab-mode-tab-title">☁️ Qwiklabs · Cloud Shell 실습 인스트럭션</div>
+            <div class="lab-mode-tab-sub">Google Cloud Qwiklabs 및 Cloud Shell 터미널 실행 전용 가이드 (Task 0~8)</div>
+          </div>
+          <span class="lab-mode-badge">Cloud Shell 전용</span>
+        </button>
+      </div>
 
       <!-- ==================== STEP 1 ==================== -->
       <section class="step-card active" id="step-1" data-duration="5">
@@ -1933,6 +2078,717 @@ payload = {
         </div>
       </section>
 
+      <!-- ===================================================================== -->
+      <!-- ==================== QWIKLABS CLOUD SHELL MODE ====================== -->
+      <!-- ===================================================================== -->
+
+      <!-- QWIKLABS TASK 0 (Step 1) -->
+      <section class="qwik-card" id="qwik-step-1" data-duration="5">
+        <div class="step-header">
+          <div class="step-meta">
+            <span class="qwik-badge">☁️ Qwiklabs Task 0 (Step 1 of 9)</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 5분 · Google Cloud Shell 환경</span>
+          </div>
+          <h1 class="step-title">Qwiklabs 시작 · Cloud Shell 활성화 및 실습 도구 세팅</h1>
+        </div>
+
+        <div class="callout callout-info">
+          <div class="callout-title">☁️ Qwiklabs + Google Cloud Shell 전용 핸즈온 가이드</div>
+          <p style="margin-bottom:0;">
+            이 탭은 <strong>Google Cloud Qwiklabs (Skills Boost)</strong> 환경에서 브라우저 내장 <strong>Google Cloud Shell</strong>만으로
+            처음부터 끝까지 복사·붙여넣기로 실습을 완주할 수 있도록 구성된 전용 인스트럭션입니다.<br>
+            각 Task마다 <strong>⚡ 옵션 A (스크립트 원클릭 실행)</strong> 또는 <strong>🛠️ 옵션 B (Cloud Shell CLI 개별 명령어 실행)</strong> 중 원하는 방식을 선택하여 진행하세요.
+          </p>
+        </div>
+
+        <h2 class="section-heading">1. Qwiklabs 랩 시작 및 시크릿 창 로그인</h2>
+        <ol style="margin-left:20px;margin-bottom:18px;color:var(--text-secondary);">
+          <li>Qwiklabs 화면 좌측 상단의 <strong>[Start Lab]</strong> 버튼을 클릭합니다.</li>
+          <li>좌측 패널에 생성된 임시 자격 증명(<code>Username</code>, <code>Password</code>, <code>Project ID</code>)을 확인합니다.</li>
+          <li><strong>[Open Google Console]</strong> 버튼을 우클릭하여 <strong>시크릿 창(Incognito Window)</strong>에서 열고 발급된 임시 계정으로 로그인합니다.</li>
+        </ol>
+
+        <h2 class="section-heading">2. Google Cloud Shell 활성화 및 프로젝트 확인</h2>
+        <p>
+          Google Cloud 콘솔 우측 상단 툴바에서 <strong>Activate Cloud Shell (<code>&gt;_</code> 아이콘)</strong>을 클릭하고 <strong>[Continue]</strong>를 누릅니다.
+          터미널이 열리면 아래 명령을 실행하여 계정 인증 및 프로젝트 설정을 확인합니다 (팝업 발생 시 <strong>[Authorize]</strong> 클릭).
+        </p>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Cloud Shell — 인증 계정 및 활성 프로젝트 확인</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>gcloud auth list
+gcloud config list project</code></pre>
+        </div>
+
+        <h2 class="section-heading">3. 실습 리포지토리 클론 및 Cloud Shell 필수 도구(uv · agents-cli) 설치</h2>
+        <p>
+          Cloud Shell 홈 디렉터리(<code>$HOME</code>)에 실습 리포지토리를 클론하고, <code>uv</code> 및 <code>google-agents-cli</code>를 설치합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Cloud Shell — 저장소 클론 및 uv · google-agents-cli 설치</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~
+git clone https://github.com/wxdxh/agent-gateway-sgp.git
+cd ~/agent-gateway-sgp
+chmod +x *.sh
+
+# Cloud Shell 환경에 uv 및 google-agents-cli 설치
+curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+echo 'export PATH="$HOME/.local/bin:$PATH"' &gt;&gt; ~/.bashrc
+
+uv tool install google-agents-cli
+agents-cli --version</code></pre>
+        </div>
+
+        <div class="qwik-verify-box">
+          <div class="qwik-verify-title">✅ Task 0 환경 변수 로드 확인</div>
+          <p style="margin-bottom:10px;">아래 명령어를 실행하여 Qwiklabs 프로젝트 ID와 번호가 정상 감지되는지 확인하세요.</p>
+          <div class="code-container" style="margin:0;">
+            <div class="code-header">
+              <span>Cloud Shell — env.sh 로드 및 확인</span>
+              <button class="copy-btn" type="button">복사</button>
+            </div>
+            <pre><code>cd ~/agent-gateway-sgp
+source env.sh</code></pre>
+          </div>
+        </div>
+
+        <div class="step-footer">
+          <div></div>
+          <button class="btn-nav primary next-step-btn" type="button" data-target="2">다음 Task: API 활성화 및 IAM 구성 →</button>
+        </div>
+      </section>
+
+      <!-- QWIKLABS TASK 1 (Step 2) -->
+      <section class="qwik-card" id="qwik-step-2" data-duration="3">
+        <div class="step-header">
+          <div class="step-meta">
+            <span class="qwik-badge">☁️ Qwiklabs Task 1 (Step 2 of 9)</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 3분 · Cloud Shell</span>
+          </div>
+          <h1 class="step-title">Task 1. 필수 Google Cloud API 활성화 및 서비스 에이전트 IAM 구성</h1>
+        </div>
+
+        <h2 class="section-heading">⚡ 옵션 A: 스크립트로 한 번에 실행 (권장)</h2>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Cloud Shell — 01-setup-env.sh 실행</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-sgp
+./01-setup-env.sh</code></pre>
+        </div>
+
+        <h2 class="section-heading">🛠️ 옵션 B: Cloud Shell에서 개별 CLI 명령어로 직접 실행</h2>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Cloud Shell — API 16종 활성화 및 Agent Gateway 서비스 에이전트 권한 부여</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-sgp
+source env.sh
+
+# 1. 필수 Google Cloud API 16종 활성화
+gcloud services enable \
+  compute.googleapis.com \
+  networksecurity.googleapis.com \
+  networkservices.googleapis.com \
+  dns.googleapis.com \
+  iam.googleapis.com \
+  iap.googleapis.com \
+  agentregistry.googleapis.com \
+  aiplatform.googleapis.com \
+  run.googleapis.com \
+  cloudbuild.googleapis.com \
+  artifactregistry.googleapis.com \
+  storage.googleapis.com \
+  modelarmor.googleapis.com \
+  telemetry.googleapis.com \
+  cloudtrace.googleapis.com \
+  logging.googleapis.com \
+  --project="${PROJECT_ID}"
+
+# 2. Network Services 관리형 서비스 에이전트 ID 발급
+gcloud beta services identity create \
+  --service=networkservices.googleapis.com \
+  --project="${PROJECT_ID}" || true
+
+# 3. Agent Gateway 서비스 에이전트에 필수 IAM 역할 3종 부여
+for ROLE in "roles/agentgateway.serviceAgent" "roles/aiplatform.user" "roles/modelarmor.user"; do
+  gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+    --member="${AGW_SA}" \
+    --role="${ROLE}" \
+    --condition=None \
+    --quiet
+done</code></pre>
+        </div>
+
+        <div class="qwik-verify-box">
+          <div class="qwik-verify-title">✅ Task 1 완료 확인 (Cloud Shell 검증 명령어)</div>
+          <div class="code-container" style="margin:0;">
+            <div class="code-header">
+              <span>Cloud Shell — 서비스 에이전트 IAM 바인딩 확인</span>
+              <button class="copy-btn" type="button">복사</button>
+            </div>
+            <pre><code>gcloud projects get-iam-policy "${PROJECT_ID}" \
+  --flatten="bindings[].members" \
+  --filter="bindings.members:${AGW_SA}" \
+  --format="table(bindings.role)"</code></pre>
+          </div>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" type="button" data-target="1">← 이전 Task</button>
+          <button class="btn-nav primary next-step-btn" type="button" data-target="3">다음 Task: Agent Gateway 구축 →</button>
+        </div>
+      </section>
+
+      <!-- QWIKLABS TASK 2 (Step 3) -->
+      <section class="qwik-card" id="qwik-step-3" data-duration="3">
+        <div class="step-header">
+          <div class="step-meta">
+            <span class="qwik-badge">☁️ Qwiklabs Task 2 (Step 3 of 9)</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 3분 · Cloud Shell</span>
+          </div>
+          <h1 class="step-title">Task 2. Agent Gateway 기반 구축 (proxy-only-subnet · agent-gateway-na · agent-egress)</h1>
+        </div>
+
+        <h2 class="section-heading">⚡ 옵션 A: 스크립트로 한 번에 실행 (권장)</h2>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Cloud Shell — 02-setup-agent-gateway.sh 실행</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-sgp
+./02-setup-agent-gateway.sh</code></pre>
+        </div>
+
+        <h2 class="section-heading">🛠️ 옵션 B: Cloud Shell에서 개별 CLI 명령어로 직접 실행</h2>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Cloud Shell — 프록시 서브넷, Network Attachment, agent-egress 게이트웨이 생성</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-sgp
+source env.sh
+
+# 1. 리전 관리형 프록시 전용 서브넷 생성
+gcloud compute networks subnets create proxy-only-subnet \
+  --network="${NETWORK_NAME}" \
+  --region="${LOCATION}" \
+  --range="10.11.13.0/24" \
+  --purpose=REGIONAL_MANAGED_PROXY \
+  --role=ACTIVE \
+  --project="${PROJECT_ID}" || true
+
+# 2. Agent Gateway Egress용 Network Attachment 생성
+gcloud compute network-attachments create agent-gateway-na \
+  --region="${LOCATION}" \
+  --subnets="${SUBNET_NAME}" \
+  --connection-preference=ACCEPT_AUTOMATIC \
+  --project="${PROJECT_ID}" || true
+
+# 3. AGENT_TO_ANYWHERE 모드의 Agent Gateway (agent-egress) 선언 및 임포트
+cat &gt; agent-gateway-vpc-egress.yaml &lt;&lt; EOF
+name: projects/${PROJECT_ID}/locations/${LOCATION}/agentGateways/agent-egress
+protocols:
+  - MCP
+googleManaged:
+  governedAccessPath: AGENT_TO_ANYWHERE
+registries:
+  - //agentregistry.googleapis.com/projects/${PROJECT_ID}/locations/${LOCATION}
+networkConfig:
+  egress:
+    networkAttachment: projects/${PROJECT_ID}/regions/${LOCATION}/networkAttachments/agent-gateway-na
+  dnsPeeringConfig:
+    domains:
+      - policy.internal.
+    targetProject: ${PROJECT_ID}
+    targetNetwork: projects/${PROJECT_ID}/global/networks/${NETWORK_NAME}
+EOF
+
+gcloud network-services agent-gateways import agent-egress \
+  --source=agent-gateway-vpc-egress.yaml \
+  --location="${LOCATION}" \
+  --project="${PROJECT_ID}"</code></pre>
+        </div>
+
+        <div class="qwik-verify-box">
+          <div class="qwik-verify-title">✅ Task 2 완료 확인 (Cloud Shell 검증 명령어)</div>
+          <div class="code-container" style="margin:0;">
+            <div class="code-header">
+              <span>Cloud Shell — agent-egress 게이트웨이 상태 확인</span>
+              <button class="copy-btn" type="button">복사</button>
+            </div>
+            <pre><code>gcloud network-services agent-gateways describe agent-egress \
+  --location="${LOCATION}" \
+  --project="${PROJECT_ID}" \
+  --format="yaml(name,googleManaged,networkConfig)"</code></pre>
+          </div>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" type="button" data-target="2">← 이전 Task</button>
+          <button class="btn-nav primary next-step-btn" type="button" data-target="4">다음 Task: 뱅킹 MCP 서버 배포 →</button>
+        </div>
+      </section>
+
+      <!-- QWIKLABS TASK 3 (Step 4) -->
+      <section class="qwik-card" id="qwik-step-4" data-duration="3">
+        <div class="step-header">
+          <div class="step-meta">
+            <span class="qwik-badge">☁️ Qwiklabs Task 3 (Step 4 of 9)</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 3분 · Cloud Shell</span>
+          </div>
+          <h1 class="step-title">Task 3. 에이펙스 자산운용 뱅킹 MCP 서버 배포 (Cloud Run)</h1>
+        </div>
+
+        <h2 class="section-heading">⚡ 옵션 A: 스크립트로 한 번에 실행 (권장)</h2>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Cloud Shell — 03-deploy-mcp.sh 실행</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-sgp
+./03-deploy-mcp.sh</code></pre>
+        </div>
+
+        <h2 class="section-heading">🛠️ 옵션 B: Cloud Shell에서 개별 CLI 명령어로 직접 실행</h2>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Cloud Shell — Cloud Run에 banking-mcp-server 배포 및 URL 저장</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-sgp
+source env.sh
+
+# 1. Cloud Run에 뱅킹 MCP 서버 배포
+gcloud run deploy banking-mcp-server \
+  --source=mcp_server \
+  --region="${LOCATION}" \
+  --project="${PROJECT_ID}" \
+  --allow-unauthenticated \
+  --quiet
+
+# 2. 배포된 Cloud Run 엔드포인트 URL을 .env.runtime에 저장
+export MCP_URL="$(gcloud run services describe banking-mcp-server \
+  --region="${LOCATION}" \
+  --project="${PROJECT_ID}" \
+  --format="value(status.url)")"
+echo "export MCP_URL=\"${MCP_URL}\"" &gt; .env.runtime
+echo "MCP_URL=${MCP_URL}"</code></pre>
+        </div>
+
+        <div class="qwik-verify-box">
+          <div class="qwik-verify-title">✅ Task 3 완료 확인 (Cloud Shell 검증 명령어)</div>
+          <div class="code-container" style="margin:0;">
+            <div class="code-header">
+              <span>Cloud Shell — MCP 서버 /tools 엔드포인트 응답 확인</span>
+              <button class="copy-btn" type="button">복사</button>
+            </div>
+            <pre><code>source ~/agent-gateway-sgp/.env.runtime
+ID_TOKEN="$(gcloud auth print-identity-token)"
+curl -fsS -H "Authorization: Bearer ${ID_TOKEN}" "${MCP_URL}/tools" | python3 -m json.tool | head -n 25</code></pre>
+          </div>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" type="button" data-target="3">← 이전 Task</button>
+          <button class="btn-nav primary next-step-btn" type="button" data-target="5">다음 Task: Agent Registry 등록 →</button>
+        </div>
+      </section>
+
+      <!-- QWIKLABS TASK 4 (Step 5) -->
+      <section class="qwik-card" id="qwik-step-5" data-duration="3">
+        <div class="step-header">
+          <div class="step-meta">
+            <span class="qwik-badge">☁️ Qwiklabs Task 4 (Step 5 of 9)</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 3분 · Cloud Shell</span>
+          </div>
+          <h1 class="step-title">Task 4. Agent Registry에 MCP 서버 및 Global API 엔드포인트 등록</h1>
+        </div>
+
+        <div class="callout callout-info">
+          <div class="callout-title">🌐 Gemini 3.8 Flash · Global Endpoint (https://aiplatform.googleapis.com) 등록</div>
+          <p style="margin-bottom:0;">
+            에이전트가 <code>gemini-3.8-flash</code> 모델을 <strong>Global Endpoint(<code>https://aiplatform.googleapis.com</code>)</strong>로 호출하므로,
+            <code>agent-egress</code> 게이트웨이 통과를 위해 <code>Gemini Enterprise Global API | https://aiplatform.googleapis.com</code>을 포함한 4개 시스템 엔드포인트를 등록하고 <code>roles/iap.egressor</code> 권한을 부여합니다.
+          </p>
+        </div>
+
+        <h2 class="section-heading">⚡ 옵션 A: 스크립트로 한 번에 실행 (권장)</h2>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Cloud Shell — 04-register-mcp.sh 실행</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-sgp
+./04-register-mcp.sh</code></pre>
+        </div>
+
+        <h2 class="section-heading">🛠️ 옵션 B: Cloud Shell에서 개별 CLI 명령어로 직접 실행</h2>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Cloud Shell — Banking MCP 서버 및 Global API 시스템 엔드포인트 4종 등록</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-sgp
+source env.sh
+source .env.runtime
+
+# 1. MCP 도구 스키마를 toolspec.json으로 추출
+ID_TOKEN="$(gcloud auth print-identity-token 2&gt;/dev/null || true)"
+curl -fsS -H "Authorization: Bearer ${ID_TOKEN}" "${MCP_URL}/tools" | \
+  python3 -c 'import sys, json; tools=json.load(sys.stdin); json.dump({"tools": tools}, open("toolspec.json", "w"))'
+
+# 2. Agent Registry에 Banking MCP Server 등록
+gcloud alpha agent-registry services create banking-mcp-server \
+  --project="${PROJECT_ID}" \
+  --location="${LOCATION}" \
+  --display-name="Banking MCP Server" \
+  --interfaces=url="${MCP_URL}/mcp",protocolBinding=JSONRPC \
+  --mcp-server-spec-type=tool-spec \
+  --mcp-server-spec-content="toolspec.json" || true
+
+export MCP_SERVER_NAME="$(gcloud alpha agent-registry mcp-servers list \
+  --project="${PROJECT_ID}" \
+  --location="${LOCATION}" \
+  --filter="displayName:'Banking MCP Server'" \
+  --format="value(name.basename())" | head -n 1)"
+echo "export MCP_SERVER_NAME=\"${MCP_SERVER_NAME}\"" &gt;&gt; .env.runtime
+
+# 3. Gemini Enterprise Global API (https://aiplatform.googleapis.com) 등 4개 시스템 엔드포인트 Allowlist 등록
+ENDPOINTS=(
+  "Gemini Enterprise Global API | https://aiplatform.googleapis.com"
+  "Cloud Trace API | https://telemetry.googleapis.com"
+  "Cloud Logging API | https://logging.googleapis.com"
+  "Agent Registry API | https://agentregistry.googleapis.com"
+)
+
+for entry in "${ENDPOINTS[@]}"; do
+  IFS="|" read -r name url &lt;&lt;&lt; "$entry"
+  name="$(echo "$name" | xargs)"
+  url="$(echo "$url" | xargs)"
+  service_id="$(echo "$name" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9' | cut -c 1-40)"
+
+  res="$(gcloud alpha agent-registry services create "${service_id}" \
+    --project="${PROJECT_ID}" --location="${LOCATION}" --display-name="${name}" \
+    --endpoint-spec-type=no-spec --interfaces=url="${url}",protocolBinding=JSONRPC \
+    --format="value(registryResource)" 2&gt;&amp;1)" || true
+
+  ep_id="$(echo "${res}" | grep -oE 'agentregistry-[0-9a-f-]+$' | head -n 1 || true)"
+  if [[ -n "${ep_id}" ]]; then
+    gcloud alpha iap web add-iam-policy-binding \
+      --resource-type=agent-registry --endpoint="${ep_id}" --region="${LOCATION}" \
+      --project="${PROJECT_ID}" --member="${AGW_SA}" --role="roles/iap.egressor" --quiet &gt;/dev/null || true
+    gcloud alpha iap web add-iam-policy-binding \
+      --resource-type=agent-registry --endpoint="${ep_id}" --region="${LOCATION}" \
+      --project="${PROJECT_ID}" \
+      --member="serviceAccount:service-${PROJECT_NUM}@gcp-sa-aiplatform-re.iam.gserviceaccount.com" \
+      --role="roles/iap.egressor" --quiet &gt;/dev/null || true
+  fi
+done</code></pre>
+        </div>
+
+        <div class="qwik-verify-box">
+          <div class="qwik-verify-title">✅ Task 4 완료 확인 (Cloud Shell 검증 명령어)</div>
+          <div class="code-container" style="margin:0;">
+            <div class="code-header">
+              <span>Cloud Shell — Agent Registry 서비스 목록 확인</span>
+              <button class="copy-btn" type="button">복사</button>
+            </div>
+            <pre><code>gcloud alpha agent-registry services list \
+  --project="${PROJECT_ID}" \
+  --location="${LOCATION}" \
+  --format="table(name.basename(),displayName)"</code></pre>
+          </div>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" type="button" data-target="4">← 이전 Task</button>
+          <button class="btn-nav primary next-step-btn" type="button" data-target="6">다음 Task: 🚀 에이전트 조기 비동기 배포 →</button>
+        </div>
+      </section>
+
+      <!-- QWIKLABS TASK 5 (Step 6) -->
+      <section class="qwik-card" id="qwik-step-6" data-duration="2">
+        <div class="step-header">
+          <div class="step-meta">
+            <span class="qwik-badge">☁️ Qwiklabs Task 5 (Step 6 of 9)</span>
+            <span class="step-duration">⏱ 스크립트 실행: 2분 (백그라운드 빌드 15~20분) · Cloud Shell</span>
+          </div>
+          <h1 class="step-title">Task 5. 🚀 Gemini Enterprise 에이전트 런타임 조기 비동기 배포 시작</h1>
+        </div>
+
+        <div class="callout callout-info">
+          <div class="callout-title">⚡ 병렬 파이프라인 안내: --no-wait 실행 후 즉시 Task 6으로 이동하세요!</div>
+          <p style="margin-bottom:0;">
+            Gemini Enterprise Agent Runtime 프로비저닝은 백엔드에서 약 15~20분이 소요됩니다.<br>
+            아래 명령은 <code>--no-wait</code> 옵션으로 <strong>백그라운드 배포만 즉시 트리거(약 1~2분)하고 터미널 프롬프트를 반환</strong>합니다. 명령이 끝나면 기다리지 말고 <strong>곧바로 다음 Task(Task 6)로 넘어가세요!</strong>
+          </p>
+        </div>
+
+        <h2 class="section-heading">⚡ 옵션 A: 스크립트로 한 번에 실행 (권장)</h2>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Cloud Shell — 05-deploy-agent.sh 실행 (비동기 배포 시작)</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-sgp
+./05-deploy-agent.sh</code></pre>
+        </div>
+
+        <h2 class="section-heading">🛠️ 옵션 B: Cloud Shell에서 개별 CLI 명령어로 직접 실행</h2>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Cloud Shell — Root CA 추출 및 Gemini 3.8 Flash (Global Endpoint) 비동기 배포</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-sgp
+source env.sh
+source .env.runtime
+export PATH="$HOME/.local/bin:$PATH"
+
+# 1. Agent Gateway TLS Inspection Root CA 인증서 추출
+gcloud network-services agent-gateways describe agent-egress \
+  --location="${LOCATION}" \
+  --project="${PROJECT_ID}" \
+  --format="value(agentGatewayCard.rootCertificates[0])" &gt; conversational-banking/agent-gateway-ca.crt
+
+# 2. Gemini 3.8 Flash + Global Endpoint (GOOGLE_CLOUD_LOCATION=global) 비동기 배포 시작
+cd ~/agent-gateway-sgp/conversational-banking
+export UV_NO_CONFIG=1
+export PIP_CONFIG_FILE=/dev/null
+
+agents-cli deploy \
+  --project="${PROJECT_ID}" \
+  --region="${LOCATION}" \
+  --deployment-target="agent_runtime" \
+  --agent-identity \
+  --agent-gateway-egress="projects/${PROJECT_ID}/locations/${LOCATION}/agentGateways/agent-egress" \
+  --update-env-vars="MCP_SERVER_NAME=${MCP_SERVER_NAME},GOOGLE_CLOUD_LOCATION=global,LOCATION=${LOCATION},MODEL=gemini-3.8-flash,PROJECT_ID=${PROJECT_ID},GOOGLE_API_USE_MTLS_ENDPOINT=never,GOOGLE_API_USE_CLIENT_CERTIFICATE=false" \
+  --no-wait
+
+cd ~/agent-gateway-sgp</code></pre>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" type="button" data-target="5">← 이전 Task</button>
+          <button class="btn-nav primary next-step-btn" type="button" data-target="7">다음 Task: (병렬 1) SGP PSC &amp; DNS 구성 →</button>
+        </div>
+      </section>
+
+      <!-- QWIKLABS TASK 6 (Step 7) -->
+      <section class="qwik-card" id="qwik-step-7" data-duration="5">
+        <div class="step-header">
+          <div class="step-meta">
+            <span class="qwik-badge">☁️ Qwiklabs Task 6 (Step 7 of 9)</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 5분 (에이전트 빌드와 병렬 진행) · Cloud Shell</span>
+          </div>
+          <h1 class="step-title">Task 6. (병렬 진행 1) SGP 정책 엔진 활성화 · PSC 엔드포인트 및 프라이빗 DNS 구성</h1>
+        </div>
+
+        <h2 class="section-heading">⚡ 옵션 A: 스크립트로 한 번에 실행 (권장)</h2>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Cloud Shell — 06-setup-sgp-networking.sh 실행</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-sgp
+./06-setup-sgp-networking.sh</code></pre>
+        </div>
+
+        <h2 class="section-heading">🛠️ 옵션 B: Cloud Shell에서 개별 CLI 명령어로 직접 실행</h2>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Cloud Shell — SGP 엔진 활성화, PSC 엔드포인트(sgp-psc-endpoint) 및 policy.internal. DNS 구성</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-sgp
+source env.sh
+
+# 1. SGP 정책 엔진 활성화 및 전용 Service Attachment URI 조회
+TOKEN="$(gcloud auth print-access-token)"
+curl -fsS -X PATCH \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -H "X-Goog-User-Project: ${PROJECT_ID}" \
+  "https://networksecurity.googleapis.com/v1alpha1/projects/${PROJECT_ID}/locations/${LOCATION}/semanticGovernancePolicyEngine?updateMask=state" \
+  -d '{"state": "ENABLED"}'
+
+export SERVICE_ATTACHMENT="$(curl -fsS \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "X-Goog-User-Project: ${PROJECT_ID}" \
+  "https://networksecurity.googleapis.com/v1alpha1/projects/${PROJECT_ID}/locations/${LOCATION}/semanticGovernancePolicyEngine" | \
+  python3 -c 'import sys, json; print(json.load(sys.stdin).get("serviceAttachment", ""))')"
+echo "SERVICE_ATTACHMENT=${SERVICE_ATTACHMENT}"
+
+# 2. VPC 내부 고정 IP 예약 및 PSC Forwarding Rule 생성
+gcloud compute addresses create sgp-psc-ip \
+  --region="${LOCATION}" \
+  --subnet="${SUBNET_NAME}" \
+  --project="${PROJECT_ID}" || true
+
+export PSC_IP="$(gcloud compute addresses describe sgp-psc-ip \
+  --region="${LOCATION}" \
+  --project="${PROJECT_ID}" \
+  --format="value(address)")"
+
+gcloud compute forwarding-rules create sgp-psc-endpoint \
+  --region="${LOCATION}" \
+  --network="${NETWORK_NAME}" \
+  --address=sgp-psc-ip \
+  --target-service-attachment="${SERVICE_ATTACHMENT}" \
+  --project="${PROJECT_ID}" || true
+
+# 3. Cloud DNS 프라이빗 존(policy.internal.) 및 와일드카드 A 레코드 생성
+gcloud dns managed-zones create sgp-private-zone \
+  --dns-name="policy.internal." \
+  --description="Private zone for SGP endpoint" \
+  --visibility=private \
+  --networks="${NETWORK_NAME}" \
+  --project="${PROJECT_ID}" || true
+
+gcloud dns record-sets create "*.${LOCATION}.policy.internal." \
+  --zone=sgp-private-zone \
+  --type=A \
+  --ttl=300 \
+  --rrdatas="${PSC_IP}" \
+  --project="${PROJECT_ID}" || true</code></pre>
+        </div>
+
+        <div class="qwik-verify-box">
+          <div class="qwik-verify-title">✅ Task 6 완료 확인 (Cloud Shell 검증 명령어)</div>
+          <div class="code-container" style="margin:0;">
+            <div class="code-header">
+              <span>Cloud Shell — PSC 엔드포인트 상태 확인 (ACCEPTED 확인)</span>
+              <button class="copy-btn" type="button">복사</button>
+            </div>
+            <pre><code>gcloud compute forwarding-rules describe sgp-psc-endpoint \
+  --region="${LOCATION}" \
+  --project="${PROJECT_ID}" \
+  --format="table(name,IPAddress,pscConnectionStatus)"</code></pre>
+          </div>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" type="button" data-target="6">← 이전 Task</button>
+          <button class="btn-nav primary next-step-btn" type="button" data-target="8">다음 Task: (병렬 2) 인가 및 SGP 정책 생성 →</button>
+        </div>
+      </section>
+
+      <!-- QWIKLABS TASK 7 (Step 8) -->
+      <section class="qwik-card" id="qwik-step-8" data-duration="5">
+        <div class="step-header">
+          <div class="step-meta">
+            <span class="qwik-badge">☁️ Qwiklabs Task 7 (Step 8 of 9)</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 5분 (에이전트 ID 자동 대기 포함) · Cloud Shell</span>
+          </div>
+          <h1 class="step-title">Task 7. (병렬 진행 2) 인가 확장 · AuthzPolicy 및 100만 원 한도 SGP 정책 생성</h1>
+        </div>
+
+        <h2 class="section-heading">⚡ 옵션 A: 스크립트로 한 번에 실행 (권장)</h2>
+        <p>
+          <code>07-create-sgp-policy.sh</code>는 <code>sgp-authzextension</code>과 <code>agent-egress-sgp-authzpolicy</code>를 먼저 생성한 뒤,
+          Task 5에서 시작한 에이전트 런타임의 <strong>Agent Identity(<code>AGENT_ID</code>)</strong> 발급이 완료될 때까지 자동으로 폴링하여 대기한 후 <code>high-value-limit</code> SGP 정책을 생성합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Cloud Shell — 07-create-sgp-policy.sh 실행</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-sgp
+./07-create-sgp-policy.sh</code></pre>
+        </div>
+
+        <div class="qwik-verify-box">
+          <div class="qwik-verify-title">✅ Task 7 완료 확인 (Cloud Shell 검증 명령어)</div>
+          <div class="code-container" style="margin:0;">
+            <div class="code-header">
+              <span>Cloud Shell — 생성된 SGP 정책(high-value-limit) 상세 확인</span>
+              <button class="copy-btn" type="button">복사</button>
+            </div>
+            <pre><code>gcloud beta network-security semantic-governance-policies describe high-value-limit \
+  --location="${LOCATION}" \
+  --project="${PROJECT_ID}"</code></pre>
+          </div>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" type="button" data-target="7">← 이전 Task</button>
+          <button class="btn-nav primary next-step-btn" type="button" data-target="9">다음 Task: 3-Turn 시맨틱 거버넌스 검증 →</button>
+        </div>
+      </section>
+
+      <!-- QWIKLABS TASK 8 (Step 9) -->
+      <section class="qwik-card" id="qwik-step-9" data-duration="5">
+        <div class="step-header">
+          <div class="step-meta">
+            <span class="qwik-badge">☁️ Qwiklabs Task 8 (Step 9 of 9)</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 5분 · Cloud Shell</span>
+          </div>
+          <h1 class="step-title">Task 8. 3-Turn 시맨틱 거버넌스 정책 검증 및 Cloud Logging 감사 로그 확인</h1>
+        </div>
+
+        <h2 class="section-heading">1. Cloud Shell에서 3-Turn 시나리오 검증 실행 (08-test.sh)</h2>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Cloud Shell — 08-test.sh 실행 (잔액 조회 → 5만 원 허용 → 500만 원 차단)</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-sgp
+./08-test.sh</code></pre>
+        </div>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span>Cloud Shell 예상 출력 (Turn 1 ALLOW · Turn 2 ALLOW · Turn 3 DENY)</span>
+          </div>
+          <pre><code>--- [Turn 1] Account Inquiry (get_account) ---
+  [Tool Call]   get_account(args={'customer_id': 'CUST005'})
+  [Tool Result] get_account -&gt; {'balance': 10000.0, 'customer_id': 'CUST005', 'name': 'Eva Green'}
+
+--- [Turn 2] Low-Value Transfer: 50,000 KRW (Expected: ALLOW) ---
+  [Tool Call]   transfer_to_phone(args={'amount': 50, 'customer_id': 'CUST005', 'target_phone': '555-0001'})
+  [Tool Result] transfer_to_phone -&gt; {'amount': 50.0, 'sender_new_balance': 9950.0, 'status': 'success'}
+
+--- [Turn 3] High-Value Transfer: 5,000,000 KRW (Expected: DENY by SGP) ---
+  [Tool Call]   transfer_to_phone(args={'amount': 5000, 'customer_id': 'CUST005', 'target_phone': '555-0001'})
+  [Tool Result] transfer_to_phone -&gt; {'error': 'Tool call transfer_to_phone rejected by semantic governance policy.'}</code></pre>
+        </div>
+
+        <h2 class="section-heading">2. Cloud Logging 감사 로그 조회 (Cloud Shell)</h2>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Cloud Shell — SGP 정책 차단 감사 로그 확인</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>gcloud logging read \
+  'jsonPayload.enforcedSecurityPolicy.matchedRules.name:"high-value-limit" OR textPayload:"transfer_to_phone"' \
+  --project="${PROJECT_ID}" \
+  --limit=10 \
+  --format="yaml(timestamp,httpRequest.status,jsonPayload)"</code></pre>
+        </div>
+
+        <div class="callout callout-success">
+          <div class="callout-title">🎉 Qwiklabs · Cloud Shell 핸즈온 실습 완주!</div>
+          <p style="margin-bottom:0;">
+            Google Cloud Shell에서 <strong>Gemini Enterprise (`gemini-3.8-flash`, Global Endpoint)</strong>와
+            <strong>Agent Gateway · SGP</strong>를 활용한 자율형 금융 에이전트 거버넌스 실습을 모두 완료하셨습니다.
+          </p>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" type="button" data-target="8">← 이전 Task</button>
+          <button class="btn-nav primary" id="qwikRestartBtn" type="button">Task 0으로 돌아가기 ↺</button>
+        </div>
+      </section>
+
     </main>
   </div>
 
@@ -1944,8 +2800,10 @@ payload = {
       var totalSteps = 9;
       var currentStep = 1;
       var viewAllMode = false;
+      var currentMode = 'standard'; // 'standard' | 'qwiklabs'
 
       var stepCards = document.querySelectorAll('.step-card');
+      var qwikCards = document.querySelectorAll('.qwik-card');
       var navItems = document.querySelectorAll('.step-nav-item');
       var progressBar = document.getElementById('progressBar');
       var remainingTimeText = document.getElementById('remainingTimeText');
@@ -1954,7 +2812,35 @@ payload = {
       var themeToggleBtn = document.getElementById('themeToggleBtn');
       var themeToggleText = document.getElementById('themeToggleText');
       var restartBtn = document.getElementById('restartBtn');
+      var qwikRestartBtn = document.getElementById('qwikRestartBtn');
       var logoLink = document.getElementById('logoLink');
+      var modeTabStandard = document.getElementById('modeTabStandard');
+      var modeTabQwiklabs = document.getElementById('modeTabQwiklabs');
+      var sidebarSectionLabel = document.getElementById('sidebarSectionLabel');
+
+      var standardNavTitles = [
+        '시나리오 및 아키텍처',
+        '환경 설정 및 IAM 구성',
+        'Agent Gateway 기반 구축',
+        '뱅킹 MCP 서버 배포',
+        'Agent Registry 카탈로그 등록',
+        '🚀 에이전트 조기 비동기 배포',
+        '(병렬 1) SGP PSC & DNS',
+        '(병렬 2) 인가 및 SGP 정책',
+        '3-Turn 검증 및 감사 로그'
+      ];
+
+      var qwiklabsNavTitles = [
+        'Task 0: Qwiklabs & Cloud Shell 준비',
+        'Task 1: API 활성화 및 IAM 구성',
+        'Task 2: Agent Gateway 구축',
+        'Task 3: 뱅킹 MCP 서버 배포',
+        'Task 4: Agent Registry & Global API',
+        'Task 5: 🚀 에이전트 비동기 배포',
+        'Task 6: (병렬 1) SGP PSC & DNS',
+        'Task 7: (병렬 2) 인가 및 SGP 정책',
+        'Task 8: 3-Turn 검증 및 감사 로그'
+      ];
 
       function calculateRemainingMinutes(fromStep) {
         var sum = 0;
@@ -1968,20 +2854,63 @@ payload = {
         return sum;
       }
 
-      function goToStep(stepNumber) {
-        if (stepNumber < 1 || stepNumber > totalSteps) {
-          return;
-        }
-        currentStep = stepNumber;
+      function renderCards() {
+        var isQwik = currentMode === 'qwiklabs';
 
         stepCards.forEach(function (card, idx) {
           var stepIdx = idx + 1;
-          if (viewAllMode || stepIdx === currentStep) {
+          card.style.marginBottom = viewAllMode ? '28px' : '0';
+          if (!isQwik && (viewAllMode || stepIdx === currentStep)) {
             card.classList.add('active');
           } else {
             card.classList.remove('active');
           }
         });
+
+        qwikCards.forEach(function (card, idx) {
+          var stepIdx = idx + 1;
+          card.style.marginBottom = viewAllMode ? '28px' : '0';
+          if (isQwik && (viewAllMode || stepIdx === currentStep)) {
+            card.classList.add('active');
+          } else {
+            card.classList.remove('active');
+          }
+        });
+
+        navItems.forEach(function (item, idx) {
+          var titleEl = item.querySelector('.step-nav-title');
+          if (titleEl) {
+            titleEl.textContent = isQwik ? qwiklabsNavTitles[idx] : standardNavTitles[idx];
+          }
+        });
+
+        if (sidebarSectionLabel) {
+          sidebarSectionLabel.textContent = isQwik
+            ? 'Qwiklabs 실습 목차 (Cloud Shell · 45분)'
+            : '실습 목차 (병렬 최적화 · 총 45분)';
+        }
+      }
+
+      function setLabMode(mode) {
+        currentMode = mode === 'qwiklabs' ? 'qwiklabs' : 'standard';
+        if (modeTabStandard && modeTabQwiklabs) {
+          if (currentMode === 'qwiklabs') {
+            modeTabStandard.classList.remove('active');
+            modeTabQwiklabs.classList.add('active');
+          } else {
+            modeTabQwiklabs.classList.remove('active');
+            modeTabStandard.classList.add('active');
+          }
+        }
+        renderCards();
+      }
+
+      function goToStep(stepNumber) {
+        if (stepNumber < 1 || stepNumber > totalSteps) {
+          return;
+        }
+        currentStep = stepNumber;
+        renderCards();
 
         navItems.forEach(function (item) {
           var itemStep = parseInt(item.getAttribute('data-step') || '1', 10);
@@ -2009,11 +2938,24 @@ payload = {
         if (!viewAllMode) {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
-          var targetEl = document.getElementById('step-' + currentStep);
+          var prefix = currentMode === 'qwiklabs' ? 'qwik-step-' : 'step-';
+          var targetEl = document.getElementById(prefix + currentStep);
           if (targetEl) {
             targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
         }
+      }
+
+      if (modeTabStandard) {
+        modeTabStandard.addEventListener('click', function () {
+          setLabMode('standard');
+        });
+      }
+
+      if (modeTabQwiklabs) {
+        modeTabQwiklabs.addEventListener('click', function () {
+          setLabMode('qwiklabs');
+        });
       }
 
       navItems.forEach(function (item) {
@@ -2043,6 +2985,12 @@ payload = {
         });
       }
 
+      if (qwikRestartBtn) {
+        qwikRestartBtn.addEventListener('click', function () {
+          goToStep(1);
+        });
+      }
+
       if (logoLink) {
         logoLink.addEventListener('click', function (e) {
           e.preventDefault();
@@ -2056,15 +3004,7 @@ payload = {
           if (viewAllText) {
             viewAllText.textContent = viewAllMode ? '단계별 보기' : '전체 펼쳐보기';
           }
-          stepCards.forEach(function (card, idx) {
-            var stepIdx = idx + 1;
-            card.style.marginBottom = viewAllMode ? '28px' : '0';
-            if (viewAllMode || stepIdx === currentStep) {
-              card.classList.add('active');
-            } else {
-              card.classList.remove('active');
-            }
-          });
+          renderCards();
         });
       }
 
@@ -2112,6 +3052,10 @@ payload = {
           goToStep(currentStep - 1);
         }
       });
+
+      if (window.location.hash === '#qwiklabs' || window.location.search.indexOf('mode=qwiklabs') !== -1) {
+        setLabMode('qwiklabs');
+      }
     })();
   </script>
 </body>

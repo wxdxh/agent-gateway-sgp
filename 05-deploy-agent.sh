@@ -24,6 +24,15 @@ gcloud network-services agent-gateways describe agent-egress \
   --format="value(agentGatewayCard.rootCertificates[0])" > "${SCRIPT_DIR}/conversational-banking/agent-gateway-ca.crt"
 
 echo "==> Step 5: Deploying Conversational Banking Agent to Gemini Enterprise Agent Runtime..."
+if ! command -v uv &>/dev/null; then
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  export PATH="${HOME}/.local/bin:${PATH}"
+fi
+if ! command -v agents-cli &>/dev/null; then
+  uv tool install google-agents-cli
+  export PATH="${HOME}/.local/bin:${PATH}"
+fi
+
 cd "${SCRIPT_DIR}/conversational-banking"
 export UV_NO_CONFIG=1
 export PIP_CONFIG_FILE=/dev/null

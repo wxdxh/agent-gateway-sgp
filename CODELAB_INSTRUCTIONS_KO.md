@@ -2,8 +2,9 @@
 
 > **총 예상 소요 시간**: 약 **45분**
 > **난이도**: 중급 (Intermediate)
-> **대상 환경**: Google Cloud (`us-central1`), Gemini Enterprise, Agent Gateway, Agent Registry, Cloud Run
-> **웹 버전 가이드 (Cloud Run)**: [https://agent-gateway-codelab-1080321871308.us-central1.run.app](https://agent-gateway-codelab-1080321871308.us-central1.run.app)
+> **대상 환경**: Google Cloud (`us-central1`), Gemini Enterprise (`gemini-3.8-flash`, Global Endpoint), Agent Gateway, Agent Registry, Cloud Run
+> **웹 버전 가이드 (Cloud Run)**: [표준 아키텍처 가이드](https://agent-gateway-codelab-1080321871308.us-central1.run.app) | [☁️ Qwiklabs · Cloud Shell 실습 탭](https://agent-gateway-codelab-1080321871308.us-central1.run.app/?mode=qwiklabs)
+> **Cloud Shell 전용 마크다운 인스트럭션**: **[`QWIKLABS_CLOUD_SHELL_KO.md`](./QWIKLABS_CLOUD_SHELL_KO.md)**
 
 ---
 

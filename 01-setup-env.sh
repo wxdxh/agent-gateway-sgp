@@ -38,4 +38,17 @@ for ROLE in "roles/agentgateway.serviceAgent" "roles/aiplatform.user" "roles/mod
     --quiet
 done
 
+echo "==> Step 1: Verifying Cloud Shell CLI tools (uv & google-agents-cli)..."
+if ! command -v uv &>/dev/null; then
+  echo "Installing uv..."
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  export PATH="${HOME}/.local/bin:${PATH}"
+fi
+
+if ! command -v agents-cli &>/dev/null; then
+  echo "Installing google-agents-cli..."
+  uv tool install google-agents-cli
+  export PATH="${HOME}/.local/bin:${PATH}"
+fi
+
 echo "==> Step 1 completed successfully."

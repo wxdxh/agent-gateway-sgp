@@ -2,7 +2,8 @@
 
 본 저장소는 Google Cloud의 **Gemini Enterprise**, **Agent Gateway**, **Semantic Governance Policies (SGP)**를 결합하여 자율형 AI 에이전트의 도구 호출(Tool Invocation)을 네트워크 경계에서 실시간으로 통제하고 감사하는 종합 레퍼런스 아키텍처 및 실습 코드셋입니다.
 
-> 📘 **상세 단계별 퀵랩(Quicklab) 실습 지침서 바로가기**: **[`CODELAB_INSTRUCTIONS_KO.md`](./CODELAB_INSTRUCTIONS_KO.md)**
+> 📘 **상세 아키텍처 & 코드랩 실습 지침서**: **[`CODELAB_INSTRUCTIONS_KO.md`](./CODELAB_INSTRUCTIONS_KO.md)**  
+> ☁️ **Qwiklabs · Cloud Shell 전용 핸즈온 인스트럭션**: **[`QWIKLABS_CLOUD_SHELL_KO.md`](./QWIKLABS_CLOUD_SHELL_KO.md)** | **[웹 코드랩 (Qwiklabs · Cloud Shell 탭 바로가기)](https://agent-gateway-codelab-1080321871308.us-central1.run.app/?mode=qwiklabs)**
 
 ---
 
