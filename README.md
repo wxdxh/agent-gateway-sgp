@@ -3,7 +3,7 @@
 본 저장소는 Google Cloud의 **Gemini Enterprise**, **Agent Gateway**, **Semantic Governance Policies (SGP)**를 결합하여 자율형 AI 에이전트의 도구 호출(Tool Invocation)을 네트워크 경계에서 실시간으로 통제하고 감사하는 종합 레퍼런스 아키텍처 및 실습 코드셋입니다.
 
 > 📘 **상세 아키텍처 & 코드랩 실습 지침서**: **[`CODELAB_INSTRUCTIONS_KO.md`](./CODELAB_INSTRUCTIONS_KO.md)**  
-> ☁️ **Qwiklabs · Cloud Shell 전용 핸즈온 인스트럭션 (Google Docs 템플릿 규격)**: **[`QWIKLABS_CLOUD_SHELL_KO.md`](./QWIKLABS_CLOUD_SHELL_KO.md)** | **[웹 코드랩 (Qwiklabs · Cloud Shell 탭 바로가기)](https://agent-gateway-codelab-1080321871308.us-central1.run.app/?mode=qwiklabs)**  
+> ☁️ **Qwiklabs · Cloud Shell 전용 핸즈온 인스트럭션**: **[`QWIKLABS_CLOUD_SHELL_KO.md`](./QWIKLABS_CLOUD_SHELL_KO.md)** | **[Google Docs 업로드용 `.docx`](./QWIKLABS_CLOUD_SHELL_KO.docx)** | **[Google Docs 서식 무손실 원클릭 복사 페이지](https://agent-gateway-codelab-1080321871308.us-central1.run.app/gdocs-paste.html)**  
 > 🛠️ **Qwiklabs 저작(Authoring) & Terraform Startup Script 가이드**: **[`QWIKLABS_AUTHORING_GUIDE_KO.md`](./QWIKLABS_AUTHORING_GUIDE_KO.md)** | **[`terraform.zip`](./terraform.zip)** ([`qwiklabs-terraform/`](./qwiklabs-terraform))
 
 ---
@@ -60,7 +60,9 @@ flowchart LR
 ```text
 agentgateway/
 ├── CODELAB_INSTRUCTIONS_KO.md      # 📘 단계별 한국어 상세 실습 지침서 (Markdown)
-├── QWIKLABS_CLOUD_SHELL_KO.md      # ☁️ Qwiklabs 공식 Google Docs 템플릿 규격 Cloud Shell 매뉴얼
+├── QWIKLABS_CLOUD_SHELL_KO.md      # ☁️ Qwiklabs 공식 Google Docs 템플릿 기반 Cloud Shell 매뉴얼
+├── QWIKLABS_CLOUD_SHELL_KO.docx    # 📄 Google Drive 업로드 및 Google Docs 변환용 네이티브 문서 (서식 무손실)
+├── gdocs-paste.html                # 📋 Google Docs 원클릭 서식 복사(Rich HTML) 웹 도우미 페이지
 ├── QWIKLABS_AUTHORING_GUIDE_KO.md  # 🛠️ Google Docs 및 Terraform Startup Script Qwiklabs 저작 가이드
 ├── terraform.zip                   # 📦 Qwiklabs Startup Script 업로드용 압축 번들 (Root 직압축)
 ├── qwiklabs-terraform/             # 🏗️ Qwiklabs Startup Script 원본 Terraform 소스 (1.0.1)

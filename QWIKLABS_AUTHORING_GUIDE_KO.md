@@ -193,18 +193,33 @@ zip -j terraform.zip \
 
 ## **3. Step-by-Step: Google Docs 및 Startup Script로 Qwiklabs 랩 등록하기**
 
-### **Task 1. Google Docs 매뉴얼 문서 생성 및 권한 공유**
+### **Task 1. 서식 깨짐 없는 Google Docs 매뉴얼 문서 생성 및 권한 공유**
 
-1. 개인 또는 기업용 Google 계정으로 로그인한 브라우저에서 [Google Docs](https://docs.google.com/)를 열고 새 문서를 생성합니다(또는 기존 Qwiklabs Lab Manual 템플릿을 **사본 만들기(Make a copy)** 합니다).
-2. 본 레포지토리의 [`QWIKLABS_CLOUD_SHELL_KO.md`](./QWIKLABS_CLOUD_SHELL_KO.md) 내용을 Google Docs 문서에 붙여넣습니다.
-   * **팁:** Google Docs의 **파일(File) > 열기(Open)** 또는 Markdown 붙여넣기(`마크다운에서 붙여넣기` 활성화) 기능을 사용하면 `# Heading 1`, `## Heading 2`, `### Heading 3` 계층과 코드 블록 표기가 자동으로 스타일링됩니다.
-   * 문서 내 `[[ import labmanuallogo ]]`, `[[ import startqwiklab ]]`, `[[ import gcpconsole ]]`, `[[ import cloudshell ]]`, `[[ import TrainingCertificationOverview ]]`, `[[ import copyright ]]` 매크로 문자열이 그대로 유지되어 있는지 확인합니다.
-3. 우측 상단의 **공유(Share)** 버튼을 클릭하고 다음 이메일 주소를 추가하여 공유합니다:
+일반 마크다운(`.md`) 파일의 원문을 그대로 복사하여 Google Docs에 일반 붙여넣기(`Ctrl+V` / `Cmd+V`)하면 `#`, `**`, ```` ``` ```` 기호가 일반 텍스트로 노출되거나, Qwiklabs Google Docs 파서(`qwiklabs-publisher@google.com`)가 요구하는 **1x1 단일 셀 표(Code Block Table)** 서식이 누락됩니다. 이를 완벽히 해결하기 위해 아래 **3가지 서식 무손실 방법** 중 하나를 선택하여 Google Docs 문서를 준비하세요.
+
+#### **방법 A (가장 권장 · 서식 깨짐 0%): Google Docs 전용 `.docx` 파일 업로드 및 변환**
+본 레포지토리의 **[`QWIKLABS_CLOUD_SHELL_KO.docx`](./QWIKLABS_CLOUD_SHELL_KO.docx)** 파일은 모든 제목(`Heading 1`, `Heading 2`), 번호 매기기, 표, 그리고 Qwiklabs 표준 **1x1 회색 코드 블록 표(`Courier New`, `#F3F3F3` 배경)** 및 **1x1 파란색 안내 상자 표(`#E8F0FE` 배경)**가 네이티브 문서 규격으로 미리 변환되어 있습니다.
+1. [`QWIKLABS_CLOUD_SHELL_KO.docx`](https://github.com/wxdxh/agent-gateway-sgp/raw/main/QWIKLABS_CLOUD_SHELL_KO.docx) 파일을 로컬 컴퓨터에 다운로드합니다.
+2. 개인 또는 기업용 Google 계정으로 [Google Drive](https://drive.google.com/)에 접속한 뒤 **새로 만들기(+) > 파일 업로드**를 클릭하여 `QWIKLABS_CLOUD_SHELL_KO.docx`를 업로드합니다.
+3. 업로드된 파일을 더블클릭하여 **Google 문서로 열기(Open with Google Docs)**를 선택한 다음, 상단 메뉴에서 **파일(File) > Google 문서로 저장(Save as Google Docs)**을 클릭합니다.
+   > **주의:** Qwiklabs에 등록할 때는 `.docx` 뷰어 상태가 아니라 변환된 **네이티브 Google Docs 문서**의 URL을 사용해야 합니다.
+
+#### **방법 B (원클릭 클립보드 서식 복사): 웹 도우미 페이지(`gdocs-paste.html`)에서 원클릭 복사 후 `Ctrl+V`**
+1. 브라우저에서 **[Google Docs 서식 무손실 복사 도우미 (`gdocs-paste.html`)](https://agent-gateway-codelab-1080321871308.us-central1.run.app/gdocs-paste.html)** 페이지를 엽니다.
+2. 상단 툴바의 **[📋 Google Docs 서식 그대로 원클릭 복사]** 버튼을 클릭합니다. (일반 텍스트가 아닌 `text/html` 서식 데이터가 클립보드에 복사됩니다.)
+3. 빈 [Google Docs](https://docs.google.com/) 문서를 새로 열고 **`Ctrl+V` (Mac은 `Cmd+V`)**를 누르면, `Heading 1 / 2` 제목 계층과 **1x1 회색 코드 블록 표(`Courier New`)**가 깨짐 없이 그대로 붙여넣어집니다.
+
+#### **방법 C (Markdown 원본 사용 시): Google Docs의 `마크다운에서 붙여넣기` 기능 사용**
+* 만약 [`QWIKLABS_CLOUD_SHELL_KO.md`](./QWIKLABS_CLOUD_SHELL_KO.md) 원본 텍스트를 직접 붙여넣으려면, 반드시 Google Docs 상단 메뉴 **도구(Tools) > 환경설정(Preferences)**에서 **'마크다운 사용(Enable Markdown)'**을 먼저 체크한 뒤, 문서 화면에서 **우클릭 > 마크다운에서 붙여넣기(Paste from Markdown)**를 선택하세요. (본 `.md` 파일에서도 Google Docs 파서를 깨뜨리는 `GSPxxxx`, `&nbsp;`, `mermaid`, 중첩 인용구 블록을 모두 제거해 두었습니다.)
+
+#### **공통 마무리: `qwiklabs-publisher@google.com` 공유**
+1. 생성된 Google Docs 문서 내에 `[[ import labmanuallogo ]]`, `[[ import startqwiklab ]]`, `[[ import gcpconsole ]]`, `[[ import cloudshell ]]`, `[[ import TrainingCertificationOverview ]]`, `[[ import copyright ]]` 매크로 문자열이 그대로 포함되어 있는지 확인합니다.
+2. 우측 상단의 **공유(Share)** 버튼을 클릭하고 다음 이메일 주소를 추가하여 공유합니다:
    ```text
    qwiklabs-publisher@google.com
    ```
    > **참고:** `qwiklabs-publisher@google.com`에 공유해야 Qwiklabs Publisher 서비스가 Google Docs 문서를 읽어 웹 실습 매뉴얼로 변환할 수 있습니다.
-4. 브라우저 주소창에서 해당 Google Docs 문서의 **URL**을 복사해 둡니다.
+3. 브라우저 주소창에서 해당 Google Docs 문서의 **URL**을 복사해 둡니다.
 
 ---
 
