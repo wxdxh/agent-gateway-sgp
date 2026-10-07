@@ -2361,27 +2361,36 @@ gcloud network-services agent-gateways import agent-egress \
         <h2 class="section-heading">🛠️ 옵션 B: Cloud Shell에서 개별 CLI 명령어로 직접 실행</h2>
         <div class="code-container">
           <div class="code-header">
-            <span>Cloud Shell — Cloud Run에 banking-mcp-server 배포 및 URL 저장</span>
+            <span>Cloud Shell — Cloud Run에 banking-mcp-server 배포 및 Invoker 권한 부여</span>
             <button class="copy-btn" type="button">복사</button>
           </div>
           <pre><code>cd ~/agent-gateway-sgp
 source env.sh
 
-# 1. Cloud Run에 뱅킹 MCP 서버 배포
+# 1. Cloud Run에 뱅킹 MCP 서버 컨테이너 빌드 및 배포
+cd ~/agent-gateway-sgp/banking-mcp-server
 gcloud run deploy banking-mcp-server \
-  --source=mcp_server \
+  --source=. \
   --region="${LOCATION}" \
   --project="${PROJECT_ID}" \
   --allow-unauthenticated \
   --quiet
+cd ~/agent-gateway-sgp
 
 # 2. 배포된 Cloud Run 엔드포인트 URL을 .env.runtime에 저장
 export MCP_URL="$(gcloud run services describe banking-mcp-server \
   --region="${LOCATION}" \
   --project="${PROJECT_ID}" \
   --format="value(status.url)")"
-echo "export MCP_URL=\"${MCP_URL}\"" &gt; .env.runtime
-echo "MCP_URL=${MCP_URL}"</code></pre>
+echo "export MCP_URL=\"${MCP_URL}\"" &gt; ~/agent-gateway-sgp/.env.runtime
+echo "MCP_URL=${MCP_URL}"
+
+# 3. Agent Gateway 서비스 에이전트에 Cloud Run Invoker 권한 부여
+gcloud run services add-iam-policy-binding banking-mcp-server \
+  --region="${LOCATION}" \
+  --member="${AGW_SA}" \
+  --role="roles/run.servicesInvoker" \
+  --project="${PROJECT_ID}"</code></pre>
         </div>
 
         <div class="qwik-verify-box">
@@ -2392,8 +2401,8 @@ echo "MCP_URL=${MCP_URL}"</code></pre>
               <button class="copy-btn" type="button">복사</button>
             </div>
             <pre><code>source ~/agent-gateway-sgp/.env.runtime
-ID_TOKEN="$(gcloud auth print-identity-token)"
-curl -fsS -H "Authorization: Bearer ${ID_TOKEN}" "${MCP_URL}/tools" | python3 -m json.tool | head -n 25</code></pre>
+ID_TOKEN="$(gcloud auth print-identity-token 2&gt;/dev/null || true)"
+curl -fsS -H "Authorization: Bearer ${ID_TOKEN}" "${MCP_URL}/tools" | python3 -m json.tool</code></pre>
           </div>
         </div>
 
@@ -2612,50 +2621,50 @@ cd ~/agent-gateway-sgp</code></pre>
           <pre><code>cd ~/agent-gateway-sgp
 source env.sh
 
-# 1. SGP 정책 엔진 활성화 및 전용 Service Attachment URI 조회
-TOKEN="$(gcloud auth print-access-token)"
-curl -fsS -X PATCH \
-  -H "Authorization: Bearer ${TOKEN}" \
-  -H "Content-Type: application/json" \
-  -H "X-Goog-User-Project: ${PROJECT_ID}" \
-  "https://networksecurity.googleapis.com/v1alpha1/projects/${PROJECT_ID}/locations/${LOCATION}/semanticGovernancePolicyEngine?updateMask=state" \
-  -d '{"state": "ENABLED"}'
-
-export SERVICE_ATTACHMENT="$(curl -fsS \
-  -H "Authorization: Bearer ${TOKEN}" \
-  -H "X-Goog-User-Project: ${PROJECT_ID}" \
-  "https://networksecurity.googleapis.com/v1alpha1/projects/${PROJECT_ID}/locations/${LOCATION}/semanticGovernancePolicyEngine" | \
-  python3 -c 'import sys, json; print(json.load(sys.stdin).get("serviceAttachment", ""))')"
-echo "SERVICE_ATTACHMENT=${SERVICE_ATTACHMENT}"
-
-# 2. VPC 내부 고정 IP 예약 및 PSC Forwarding Rule 생성
+# 1. VPC 내부 고정 IP 예약
 gcloud compute addresses create sgp-psc-ip \
   --region="${LOCATION}" \
   --subnet="${SUBNET_NAME}" \
+  --purpose=GCE_ENDPOINT \
   --project="${PROJECT_ID}" || true
 
 export PSC_IP="$(gcloud compute addresses describe sgp-psc-ip \
   --region="${LOCATION}" \
   --project="${PROJECT_ID}" \
   --format="value(address)")"
+echo "PSC_IP=${PSC_IP}"
 
+# 2. SGP 정책 엔진 활성화 및 전용 Service Attachment URI 조회
+SERVICE_ATTACHMENT="$(gcloud beta ai semantic-governance-policy-engine describe \
+  --location="${LOCATION}" --project="${PROJECT_ID}" \
+  --format="value(pscServiceAttachment)" 2&gt;/dev/null || true)"
+if [[ -z "${SERVICE_ATTACHMENT}" ]]; then
+  gcloud beta ai semantic-governance-policy-engine update \
+    --location="${LOCATION}" --project="${PROJECT_ID}" --quiet
+  SERVICE_ATTACHMENT="$(gcloud beta ai semantic-governance-policy-engine describe \
+    --location="${LOCATION}" --project="${PROJECT_ID}" \
+    --format="value(pscServiceAttachment)" 2&gt;/dev/null || true)"
+fi
+echo "SERVICE_ATTACHMENT=${SERVICE_ATTACHMENT}"
+
+# 3. PSC Forwarding Rule 생성
 gcloud compute forwarding-rules create sgp-psc-endpoint \
   --region="${LOCATION}" \
   --network="${NETWORK_NAME}" \
-  --address=sgp-psc-ip \
+  --address="sgp-psc-ip" \
   --target-service-attachment="${SERVICE_ATTACHMENT}" \
   --project="${PROJECT_ID}" || true
 
-# 3. Cloud DNS 프라이빗 존(policy.internal.) 및 와일드카드 A 레코드 생성
-gcloud dns managed-zones create sgp-private-zone \
+# 4. Cloud DNS 프라이빗 존(policy-engine-zone) 및 policy.internal. A 레코드 생성
+gcloud dns managed-zones create policy-engine-zone \
+  --description="Private zone for internal SGP service" \
   --dns-name="policy.internal." \
-  --description="Private zone for SGP endpoint" \
   --visibility=private \
   --networks="${NETWORK_NAME}" \
   --project="${PROJECT_ID}" || true
 
-gcloud dns record-sets create "*.${LOCATION}.policy.internal." \
-  --zone=sgp-private-zone \
+gcloud dns record-sets create policy.internal. \
+  --zone=policy-engine-zone \
   --type=A \
   --ttl=300 \
   --rrdatas="${PSC_IP}" \
@@ -2706,6 +2715,59 @@ gcloud dns record-sets create "*.${LOCATION}.policy.internal." \
 ./07-create-sgp-policy.sh</code></pre>
         </div>
 
+        <h2 class="section-heading">🛠️ 옵션 B: Cloud Shell에서 개별 CLI 명령어로 직접 실행</h2>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Cloud Shell — AuthzExtension, CONTENT_AUTHZ 정책 및 high-value-limit SGP 정책 생성</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-sgp
+source env.sh
+source .env.runtime
+
+# 1. SGP 인가 확장(sgp-authzextension) 등록
+ACCESS_TOKEN="$(gcloud auth print-access-token)"
+curl -fsS -X POST \
+  "https://networkservices.googleapis.com/v1beta1/projects/${PROJECT_ID}/locations/${LOCATION}/authzExtensions?authzExtensionId=sgp-authzextension" \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "service": "policy.internal",
+    "authority": "policy.internal",
+    "failOpen": false,
+    "loadBalancingScheme": "LOAD_BALANCING_SCHEME_UNSPECIFIED"
+  }' || true
+
+# 2. 콘텐츠 인가 정책(agent-egress-sgp-authzpolicy) 생성 및 임포트
+cat &gt; agent-egress-sgp-authzpolicy.yaml &lt;&lt; EOF
+name: projects/${PROJECT_ID}/locations/${LOCATION}/authzPolicies/agent-egress-sgp-authzpolicy
+target:
+  loadBalancingScheme: LOAD_BALANCING_SCHEME_UNSPECIFIED
+  resources:
+    - "projects/${PROJECT_NUM}/locations/${LOCATION}/agentGateways/agent-egress"
+httpRules:
+  - to:
+      operations:
+        - paths:
+            - prefix: "/"
+    when: '!request.headers["content-type"].startsWith("application/grpc") &amp;&amp; (request.path.endsWith(":generateContent") || request.path.endsWith(":streamGenerateContent"))'
+action: CUSTOM
+policyProfile: CONTENT_AUTHZ
+customProvider:
+  authzExtension:
+    resources:
+      - "projects/${PROJECT_NUM}/locations/${LOCATION}/authzExtensions/sgp-authzextension"
+EOF
+
+gcloud beta network-security authz-policies import agent-egress-sgp-authzpolicy \
+  --source=agent-egress-sgp-authzpolicy.yaml \
+  --location="${LOCATION}" \
+  --project="${PROJECT_ID}"
+
+# 3. 에이전트 등록 대기 및 100만 원 한도 SGP 정책(high-value-limit) 생성
+./07-create-sgp-policy.sh</code></pre>
+        </div>
+
         <div class="qwik-verify-box">
           <div class="qwik-verify-title">✅ Task 7 완료 확인 (Cloud Shell 검증 명령어)</div>
           <div class="code-container" style="margin:0;">
@@ -2713,7 +2775,7 @@ gcloud dns record-sets create "*.${LOCATION}.policy.internal." \
               <span>Cloud Shell — 생성된 SGP 정책(high-value-limit) 상세 확인</span>
               <button class="copy-btn" type="button">복사</button>
             </div>
-            <pre><code>gcloud beta network-security semantic-governance-policies describe high-value-limit \
+            <pre><code>gcloud beta ai semantic-governance-policies describe high-value-limit \
   --location="${LOCATION}" \
   --project="${PROJECT_ID}"</code></pre>
           </div>
@@ -2738,7 +2800,7 @@ gcloud dns record-sets create "*.${LOCATION}.policy.internal." \
         <h2 class="section-heading">1. Cloud Shell에서 3-Turn 시나리오 검증 실행 (08-test.sh)</h2>
         <div class="code-container">
           <div class="code-header">
-            <span>Cloud Shell — 08-test.sh 실행 (잔액 조회 → 5만 원 허용 → 500만 원 차단)</span>
+            <span>Cloud Shell — 08-test.sh 실행 (잔액 조회 → 5만 원 허용 → 200만 원 차단)</span>
             <button class="copy-btn" type="button">복사</button>
           </div>
           <pre><code>cd ~/agent-gateway-sgp
@@ -2749,30 +2811,33 @@ gcloud dns record-sets create "*.${LOCATION}.policy.internal." \
           <div class="code-header">
             <span>Cloud Shell 예상 출력 (Turn 1 ALLOW · Turn 2 ALLOW · Turn 3 DENY)</span>
           </div>
-          <pre><code>--- [Turn 1] Account Inquiry (get_account) ---
-  [Tool Call]   get_account(args={'customer_id': 'CUST005'})
-  [Tool Result] get_account -&gt; {'balance': 10000.0, 'customer_id': 'CUST005', 'name': 'Eva Green'}
+          <pre><code>[Turn 1 - Identify Customer]
+Prompt: I am customer CUST005
+✓ Turn 1 PASSED (Customer identified &amp; balance retrieved)
 
---- [Turn 2] Low-Value Transfer: 50,000 KRW (Expected: ALLOW) ---
-  [Tool Call]   transfer_to_phone(args={'amount': 50, 'customer_id': 'CUST005', 'target_phone': '555-0001'})
-  [Tool Result] transfer_to_phone -&gt; {'amount': 50.0, 'sender_new_balance': 9950.0, 'status': 'success'}
+[Turn 2 - Allowed Transfer (&lt; $1,000 USD)]
+Prompt: transfer 50 to 555-0001
+✓ Turn 2 PASSED (Under-limit transfer of $50 allowed and processed)
 
---- [Turn 3] High-Value Transfer: 5,000,000 KRW (Expected: DENY by SGP) ---
-  [Tool Call]   transfer_to_phone(args={'amount': 5000, 'customer_id': 'CUST005', 'target_phone': '555-0001'})
-  [Tool Result] transfer_to_phone -&gt; {'error': 'Tool call transfer_to_phone rejected by semantic governance policy.'}</code></pre>
+[Turn 3 - Blocked Transfer (&gt; $1,000 USD by SGP)]
+Prompt: transfer 2000 to 555-0002
+✓ Turn 3 PASSED (Over-limit transfer of $2000 blocked by SGP!)</code></pre>
         </div>
 
         <h2 class="section-heading">2. Cloud Logging 감사 로그 조회 (Cloud Shell)</h2>
         <div class="code-container">
           <div class="code-header">
-            <span>Cloud Shell — SGP 정책 차단 감사 로그 확인</span>
+            <span>Cloud Shell — SGP 정책 차단 감사 로그(semantic-governance-policy) 확인</span>
             <button class="copy-btn" type="button">복사</button>
           </div>
-          <pre><code>gcloud logging read \
-  'jsonPayload.enforcedSecurityPolicy.matchedRules.name:"high-value-limit" OR textPayload:"transfer_to_phone"' \
+          <pre><code>cd ~/agent-gateway-sgp
+source env.sh
+
+gcloud logging read \
+  "logName=\"projects/${PROJECT_ID}/logs/semantic-governance-policy\"" \
   --project="${PROJECT_ID}" \
-  --limit=10 \
-  --format="yaml(timestamp,httpRequest.status,jsonPayload)"</code></pre>
+  --limit=5 \
+  --format=json</code></pre>
         </div>
 
         <div class="callout callout-success">
