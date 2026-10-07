@@ -3,7 +3,8 @@
 본 저장소는 Google Cloud의 **Gemini Enterprise**, **Agent Gateway**, **Semantic Governance Policies (SGP)**를 결합하여 자율형 AI 에이전트의 도구 호출(Tool Invocation)을 네트워크 경계에서 실시간으로 통제하고 감사하는 종합 레퍼런스 아키텍처 및 실습 코드셋입니다.
 
 > 📘 **상세 아키텍처 & 코드랩 실습 지침서**: **[`CODELAB_INSTRUCTIONS_KO.md`](./CODELAB_INSTRUCTIONS_KO.md)**  
-> ☁️ **Qwiklabs · Cloud Shell 전용 핸즈온 인스트럭션**: **[`QWIKLABS_CLOUD_SHELL_KO.md`](./QWIKLABS_CLOUD_SHELL_KO.md)** | **[웹 코드랩 (Qwiklabs · Cloud Shell 탭 바로가기)](https://agent-gateway-codelab-1080321871308.us-central1.run.app/?mode=qwiklabs)**
+> ☁️ **Qwiklabs · Cloud Shell 전용 핸즈온 인스트럭션 (Google Docs 템플릿 규격)**: **[`QWIKLABS_CLOUD_SHELL_KO.md`](./QWIKLABS_CLOUD_SHELL_KO.md)** | **[웹 코드랩 (Qwiklabs · Cloud Shell 탭 바로가기)](https://agent-gateway-codelab-1080321871308.us-central1.run.app/?mode=qwiklabs)**  
+> 🛠️ **Qwiklabs 저작(Authoring) & Terraform Startup Script 가이드**: **[`QWIKLABS_AUTHORING_GUIDE_KO.md`](./QWIKLABS_AUTHORING_GUIDE_KO.md)** | **[`terraform.zip`](./terraform.zip)** ([`qwiklabs-terraform/`](./qwiklabs-terraform))
 
 ---
 
@@ -58,7 +59,16 @@ flowchart LR
 
 ```text
 agentgateway/
-├── CODELAB_INSTRUCTIONS_KO.md      # 📘 단계별 한국어 Quicklab 실습 지침서 (Markdown)
+├── CODELAB_INSTRUCTIONS_KO.md      # 📘 단계별 한국어 상세 실습 지침서 (Markdown)
+├── QWIKLABS_CLOUD_SHELL_KO.md      # ☁️ Qwiklabs 공식 Google Docs 템플릿 규격 Cloud Shell 매뉴얼
+├── QWIKLABS_AUTHORING_GUIDE_KO.md  # 🛠️ Google Docs 및 Terraform Startup Script Qwiklabs 저작 가이드
+├── terraform.zip                   # 📦 Qwiklabs Startup Script 업로드용 압축 번들 (Root 직압축)
+├── qwiklabs-terraform/             # 🏗️ Qwiklabs Startup Script 원본 Terraform 소스 (1.0.1)
+│   ├── main.tf                     # 사전 스테이징 리소스 (13개 API, apex-wealth-vpc, apex-subnet, SA)
+│   ├── variables.tf                # Qwiklabs 필수 변수 (gcp_project_id, gcp_region, gcp_zone)
+│   ├── providers.tf                # Google Provider (v3.90.1)
+│   ├── outputs.tf                  # Lab Details 패널 노출용 Environment Outputs
+│   └── runtime.yaml                # Qwiklabs Script Runner 런타임 설정 (terraform 1.0.1)
 ├── codelab-ko.html                 # 🌐 대화형 한국어 Codelab 웹 가이드 (SVG 다이어그램 포함)
 ├── index.html                      # GitHub Pages / Cloud Run용 대화형 Codelab 메인 페이지
 │

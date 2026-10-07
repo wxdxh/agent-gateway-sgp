@@ -16,8 +16,11 @@ export AGW_SA="serviceAccount:service-${PROJECT_NUM}@gcp-sa-agentgateway.iam.gse
 # Managed SGP Service Attachment (auto-detected from policy engine if empty)
 export SERVICE_ATTACHMENT="${SERVICE_ATTACHMENT:-}"
 
-# VPC Network and Subnet auto-detection (prefers 'default', falls back to active VPC)
-if gcloud compute networks describe default --project="${PROJECT_ID}" &>/dev/null; then
+# VPC Network and Subnet auto-detection (prefers pre-provisioned 'apex-wealth-vpc', then 'default', then active VPC)
+if gcloud compute networks describe apex-wealth-vpc --project="${PROJECT_ID}" &>/dev/null; then
+  DEFAULT_NET="apex-wealth-vpc"
+  DEFAULT_SUBNET="apex-subnet"
+elif gcloud compute networks describe default --project="${PROJECT_ID}" &>/dev/null; then
   DEFAULT_NET="default"
   DEFAULT_SUBNET="default"
 else

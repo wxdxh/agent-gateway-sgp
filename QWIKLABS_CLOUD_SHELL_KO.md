@@ -63,7 +63,9 @@ flowchart LR
 
 [[ import cloudshell ]]
 
-## **프로젝트 ID 확인 및 실습 리포지토리 준비**
+## **사전 프로비저닝(Startup Script) 리소스 확인 및 실습 리포지토리 준비**
+
+**Start Lab** 버튼을 클릭하면 Qwiklabs Terraform Startup Script(`terraform.zip`)가 백그라운드에서 실행되어 실습에 필요한 기본 인프라(**핵심 GCP API 13종 활성화, 전용 VPC 네트워크 `apex-wealth-vpc`, 리전 서브넷 `apex-subnet` (`10.10.0.0/24`), 기본 서비스 계정 `apex-agent-lab-sa`**)를 자동으로 사전 프로비저닝합니다.
 
 모든 실습 과정은 별도의 로컬 환경 설정 없이 **Google Cloud Shell**에서 완결됩니다. Cloud Shell 터미널이 열리면 아래 단계를 순서대로 실행하여 환경을 준비하세요.
 
@@ -74,7 +76,7 @@ gcloud auth list
 gcloud config list project
 ```
 
-2. 만약 프로젝트 ID가 설정되어 있지 않다면, Qwiklabs 좌측 패널에 표시된 **GCP Project ID**로 프로젝트를 설정합니다.
+2. 만약 프로젝트 ID가 설정되어 있지 않다면, Qwiklabs 좌측 **Lab details** 패널에 표시된 **Project ID**로 프로젝트를 설정합니다.
 
 ```bash
 gcloud config set project [YOUR_QWIKLABS_PROJECT_ID]
@@ -100,7 +102,7 @@ uv tool install google-agents-cli
 agents-cli --version
 ```
 
-5. 실습 전반에서 공통으로 사용할 환경 변수 스크립트(`env.sh`)를 로드하고 프로젝트 메타데이터가 정상 출력되는지 확인합니다.
+5. 실습 전반에서 공통으로 사용할 환경 변수 스크립트(`env.sh`)를 로드하고, Startup Script가 사전 생성한 VPC(`apex-wealth-vpc`) 및 서브넷(`apex-subnet`)을 포함한 프로젝트 메타데이터가 정상 감지되는지 확인합니다.
 
 ```bash
 cd ~/agent-gateway-sgp
@@ -114,8 +116,8 @@ source env.sh
  Project ID:     qwiklabs-gcp-xx-xxxxxxxxxxxx
  Project Number: 1080321871308
  Location:       us-central1
- VPC Network:    default
- VPC Subnet:     default
+ VPC Network:    apex-wealth-vpc
+ VPC Subnet:     apex-subnet
  Agent GW SA:    serviceAccount:service-1080321871308@gcp-sa-agentgateway.iam.gserviceaccount.com
 ==================================================
 ```
@@ -129,11 +131,11 @@ source env.sh
 
 # **Task 1. 필수 Google Cloud API 활성화 및 서비스 에이전트 IAM 구성**
 
-실습을 시작합니다! 첫 번째 작업에서는 Agent Gateway, Agent Registry, SGP 정책 엔진, Cloud Run, 그리고 Gemini Enterprise Agent Runtime이 상호 연동하는 데 필요한 16종의 Google Cloud API를 활성화하고, Google 관리형 Agent Gateway 서비스 에이전트(`service-${PROJECT_NUM}@gcp-sa-agentgateway.iam.gserviceaccount.com`)를 프로비저닝하여 필수 IAM 권한을 부여합니다.
+실습을 시작합니다! Qwiklabs Startup Script가 기본 API들을 사전 활성화해 두었으며, 첫 번째 작업에서는 Agent Registry, Model Armor, Telemetry 등 확장 API를 포함한 전체 16종의 API 활성화 상태를 최종 확인하고, Google 관리형 Agent Gateway 서비스 에이전트(`service-${PROJECT_NUM}@gcp-sa-agentgateway.iam.gserviceaccount.com`)를 프로비저닝하여 필수 IAM 권한을 부여합니다.
 
 ## **필수 API 활성화 및 Network Services 서비스 ID 생성**
 
-1. Cloud Shell에서 아래 명령어를 실행하여 네트워킹, 보안, 에이전트 레지스트리 및 Gemini Enterprise 관련 필수 API 16종을 일괄 활성화합니다.
+1. Cloud Shell에서 아래 명령어를 실행하여 네트워킹, 보안, 에이전트 레지스트리 및 Gemini Enterprise 관련 필수 API 16종을 일괄 활성화(및 확인)합니다.
 
 ```bash
 cd ~/agent-gateway-sgp
