@@ -40,7 +40,7 @@ qwiklabs-bundle/apex-agent-gateway-sgp/
 
 ```text
 # Owner
-daehanwee@gmail.com # Lab Owner (Qwiklabs account with creator access)
+dhwee@google.com # Lab Owner (Qwiklabs account with creator access)
 # Collaborators
 ```
 
