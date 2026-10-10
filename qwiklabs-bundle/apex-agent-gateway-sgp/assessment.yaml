@@ -27,6 +27,7 @@ steps:
       psc_missing: "작업 6의 안내에 따라 sgp-psc-ip 주소를 예약하고 sgp-psc-endpoint 전달 규칙을 생성해 주세요."
     services:
       - project_0.ComputeV1
+      - project_0.LoggingV2
     method_name: step_three_check
   - title: "작업 7~8: 시맨틱 거버넌스 정책(high-value-limit) 생성 및 3-Turn 시나리오 검증 확인"
     locale_id: step-4

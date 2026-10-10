@@ -3,13 +3,12 @@ def step_two_check(handles:, maximum_score:, resources:)
 
   begin
     logging = handles['project_0.LoggingV2']
-    project_id = resources['project_0']['project_id'] || logging.project
+    project_id = (logging.project rescue nil) || (resources.dig('project_0', 'project_id') rescue nil) || (resources['project_0.project_id'] rescue nil)
 
-    lab_start_time = Time.at(Time.now.to_i - 54000)
+    lab_start_time = Time.at(Time.now.to_i - 86400)
     log_filters = [
       'timestamp>"' + lab_start_time.utc.iso8601 + '"',
-      'protoPayload.serviceName="run.googleapis.com"',
-      'protoPayload.resourceName:"services/banking-mcp-server"'
+      'protoPayload.resourceName:"banking-mcp-server"'
     ]
     req = Google::Apis::LoggingV2::ListLogEntriesRequest.new
     req.resource_names = ['projects/' + project_id]

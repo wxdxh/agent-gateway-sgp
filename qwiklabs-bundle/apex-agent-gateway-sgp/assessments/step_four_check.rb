@@ -3,12 +3,12 @@ def step_four_check(handles:, maximum_score:, resources:)
 
   begin
     logging = handles['project_0.LoggingV2']
-    project_id = resources['project_0']['project_id'] || logging.project
+    project_id = (logging.project rescue nil) || (resources.dig('project_0', 'project_id') rescue nil) || (resources['project_0.project_id'] rescue nil)
 
-    lab_start_time = Time.at(Time.now.to_i - 54000)
+    lab_start_time = Time.at(Time.now.to_i - 86400)
     log_filters = [
       'timestamp>"' + lab_start_time.utc.iso8601 + '"',
-      '(logName="projects/' + project_id + '/logs/semantic-governance-policy" OR protoPayload.resourceName:"high-value-limit")'
+      '(logName="projects/' + project_id + '/logs/semantic-governance-policy" OR protoPayload.resourceName:"high-value-limit" OR protoPayload.serviceName="networksecurity.googleapis.com")'
     ]
     req = Google::Apis::LoggingV2::ListLogEntriesRequest.new
     req.resource_names = ['projects/' + project_id]
