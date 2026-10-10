@@ -31,6 +31,14 @@ gcloud compute network-attachments create agent-gateway-na \
   --connection-preference=ACCEPT_AUTOMATIC \
   --project="${PROJECT_ID}" || true
 
+echo "==> Step 2: Creating Private Cloud DNS Zone (policy.internal.) for DNS Peering..."
+gcloud dns managed-zones create policy-engine-zone \
+  --description="Private zone for internal SGP service" \
+  --dns-name="policy.internal." \
+  --visibility=private \
+  --networks="${NETWORK_NAME}" \
+  --project="${PROJECT_ID}" || true
+
 echo "==> Step 2: Generating Agent Gateway definition..."
 cat > "${SCRIPT_DIR}/agent-gateway-vpc-egress.yaml" << YAML_EOF
 name: projects/${PROJECT_ID}/locations/${LOCATION}/agentGateways/agent-egress

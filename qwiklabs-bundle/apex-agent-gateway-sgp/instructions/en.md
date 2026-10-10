@@ -206,6 +206,17 @@ gcloud compute network-attachments create agent-gateway-na \
   --project="${PROJECT_ID}" || true
 </ql-code-block>
 
+3. `agent-egress` 게이트웨이의 DNS 피어링 구성(`dnsPeeringConfig`)이 참조할 프라이빗 Cloud DNS 영역(`policy-engine-zone`, 도메인 `policy.internal.`)을 VPC 네트워크에 생성합니다.
+
+<ql-code-block language="bash">
+gcloud dns managed-zones create policy-engine-zone \
+  --description="Private zone for internal SGP service" \
+  --dns-name="policy.internal." \
+  --visibility=private \
+  --networks="${NETWORK_NAME}" \
+  --project="${PROJECT_ID}" || true
+</ql-code-block>
+
 ### agent-egress 게이트웨이 구성 파일 작성 및 배포
 
 1. `AGENT_TO_ANYWHERE` 거버넌스 경로, Agent Registry 연동, Network Attachment 및 `policy.internal.` 도메인에 대한 DNS 피어링 설정이 포함된 `agent-gateway-vpc-egress.yaml` 파일을 작성합니다.
