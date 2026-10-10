@@ -30,29 +30,32 @@ def get_access_token():
         sys.exit(1)
 
 
-def resolve_reasoning_engine_id(project_id: str, location: str) -> str:
+def resolve_reasoning_engine_id(project_id: str, location: str, token: str) -> str:
     env_re_id = os.environ.get("REASONING_ENGINE_ID")
     if env_re_id:
         return env_re_id
     try:
-        res = subprocess.run(
-            [
-                "gcloud", "ai", "reasoning-engines", "list",
-                f"--project={project_id}",
-                f"--region={location}",
-                "--filter=displayName:conversational-banking",
-                "--sort-by=~createTime",
-                "--format=value(name.basename())",
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
+        url = f"https://{location}-aiplatform.googleapis.com/v1beta1/projects/{project_id}/locations/{location}/reasoningEngines"
+        req = urllib.request.Request(
+            url,
+            headers={"Authorization": f"Bearer {token}"},
+            method="GET",
         )
-        lines = [line.strip() for line in res.stdout.splitlines() if line.strip()]
-        if lines:
-            return lines[0]
-    except Exception:
-        pass
+        with urllib.request.urlopen(req) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            engines = data.get("reasoningEngines", [])
+            matches = [
+                e for e in engines
+                if e.get("displayName") == "conversational-banking"
+            ]
+            target_list = matches if matches else engines
+            if target_list:
+                target_list.sort(key=lambda x: x.get("createTime", ""), reverse=True)
+                full_name = target_list[0].get("name", "")
+                if full_name:
+                    return full_name.split("/")[-1]
+    except Exception as e:
+        print(f"Warning resolving reasoning engine ID via API: {e}")
     return "378064324431708160"
 
 
@@ -109,7 +112,8 @@ def stream_query(project_id: str, location: str, re_id: str, token: str, session
 def main():
     project_id = os.environ.get("PROJECT_ID", "elevate-security-dhwee")
     location = os.environ.get("LOCATION", "us-central1")
-    re_id = resolve_reasoning_engine_id(project_id, location)
+    token = get_access_token()
+    re_id = resolve_reasoning_engine_id(project_id, location, token)
 
     print("=" * 80)
     print(" Running Automated End-to-End Verification of Gemini Enterprise Agent Gateway + SGP")
@@ -118,7 +122,6 @@ def main():
     print(f" Reasoning Engine: {re_id}")
     print("=" * 80)
 
-    token = get_access_token()
     session_id = f"sgp-eval-{int(time.time())}"
     print(f"Session ID: {session_id}\n")
 

@@ -29,7 +29,7 @@ gcloud beta services identity create \
   --project="${PROJECT_ID}" || true
 
 echo "==> Step 1: Granting IAM roles to Agent Gateway Service Agent..."
-for ROLE in "roles/agentgateway.serviceAgent" "roles/aiplatform.user" "roles/modelarmor.user"; do
+for ROLE in "roles/agentgateway.serviceAgent" "roles/aiplatform.user" "roles/modelarmor.user" "roles/agentregistry.viewer"; do
   echo "Granting ${ROLE} to ${AGW_SA}..."
   gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
     --member="${AGW_SA}" \

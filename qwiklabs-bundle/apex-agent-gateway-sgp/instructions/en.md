@@ -151,10 +151,10 @@ gcloud beta services identity create \
 
 ### Agent Gateway 서비스 에이전트 IAM 역할 바인딩
 
-1. 생성된 Agent Gateway 서비스 에이전트(`AGW_SA`)가 에이전트 트래픽을 중계하고 SGP 정책 엔진 및 Gemini Enterprise와 통신할 수 있도록 `roles/agentgateway.serviceAgent`, `roles/aiplatform.user`, `roles/modelarmor.user` 역할을 부여합니다.
+1. 생성된 Agent Gateway 서비스 에이전트(`AGW_SA`)가 에이전트 트래픽을 중계하고 Agent Registry, SGP 정책 엔진 및 Gemini Enterprise와 통신할 수 있도록 `roles/agentgateway.serviceAgent`, `roles/aiplatform.user`, `roles/modelarmor.user`, `roles/agentregistry.viewer` 역할을 부여합니다.
 
 <ql-code-block language="bash">
-for ROLE in "roles/agentgateway.serviceAgent" "roles/aiplatform.user" "roles/modelarmor.user"; do
+for ROLE in "roles/agentgateway.serviceAgent" "roles/aiplatform.user" "roles/modelarmor.user" "roles/agentregistry.viewer"; do
   echo "Granting ${ROLE} to ${AGW_SA}..."
   gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
     --member="${AGW_SA}" \
@@ -417,14 +417,6 @@ for entry in "${ENDPOINTS[@]}"; do
       --member="${AGW_SA}" \
       --role="roles/iap.egressor" \
       --quiet >/dev/null || true
-    gcloud alpha iap web add-iam-policy-binding \
-      --resource-type=agent-registry \
-      --endpoint="${ep_id}" \
-      --region="${LOCATION}" \
-      --project="${PROJECT_ID}" \
-      --member="serviceAccount:service-${PROJECT_NUM}@gcp-sa-aiplatform-re.iam.gserviceaccount.com" \
-      --role="roles/iap.egressor" \
-      --quiet >/dev/null || true
   fi
 done
 </ql-code-block>
@@ -446,7 +438,7 @@ Gemini Enterprise Agent Runtime 컨테이너 빌드 및 배포는 백엔드에�
 
 ### 에이전트 코드의 Global 엔드포인트 및 모델 설정 확인
 
-1. Cloud Shell에서 `conversational-banking/app/agent.py`의 구현을 확인합니다. 에이전트는 `GOOGLE_CLOUD_LOCATION="global"`을 설정하여 `gemini-3.8-flash` 모델 추론 요청이 Gemini Enterprise Global API(`https://aiplatform.googleapis.com`)로 전송되도록 하고, `AgentRegistry`를 통해 리전(`us-central1`)에 등록된 뱅킹 MCP 도구 세트를 동적으로 불러옵니다.
+1. Cloud Shell에서 `conversational-banking/app/agent.py`의 구현을 확인합니다. 에이전트는 `GOOGLE_CLOUD_LOCATION="global"`을 설정하여 `gemini-3.8-flash` 모델 추론 요청이 Gemini Enterprise Global API(`https://aiplatform.googleapis.com`)로 전송되도록 하고, `AgentRegistry`를 통해 실습 리전에 등록된 뱅킹 MCP 도구 세트를 동적으로 불러옵니다.
 
 <ql-code-block language="bash">
 cd ~/agent-gateway-sgp
@@ -468,27 +460,14 @@ gcloud network-services agent-gateways describe agent-egress \
   --format="value(agentGatewayCard.rootCertificates[0])" > conversational-banking/agent-gateway-ca.crt
 </ql-code-block>
 
-2. `agents-cli deploy` 명령어에 `--agent-identity`, `--agent-gateway-egress`, `GOOGLE_CLOUD_LOCATION=global`, `MODEL=gemini-3.8-flash`, `--no-wait` 플래그를 지정하여 Gemini Enterprise Agent Runtime 배포를 시작합니다.
+2. `agents-cli deploy` 명령어에 `--agent-identity`, `--agent-gateway-egress`, `GOOGLE_CLOUD_LOCATION=global`, `MODEL=gemini-3.8-flash`, `--no-wait` 플래그를 지정하여 Gemini Enterprise Agent Runtime 배포를 시작하고, 생성된 에이전트 ID(`principal://...`)와 Reasoning Engine 서비스 에이전트에 Agent Registry 및 Cloud Run 호출 권한을 부여합니다.
 
 <ql-code-block language="bash">
-export PATH="$HOME/.local/bin:$PATH"
-cd ~/agent-gateway-sgp/conversational-banking
-export UV_NO_CONFIG=1
-export PIP_CONFIG_FILE=/dev/null
-
-agents-cli deploy \
-  --project="${PROJECT_ID}" \
-  --region="${LOCATION}" \
-  --deployment-target="agent_runtime" \
-  --agent-identity \
-  --agent-gateway-egress="projects/${PROJECT_ID}/locations/${LOCATION}/agentGateways/agent-egress" \
-  --update-env-vars="MCP_SERVER_NAME=${MCP_SERVER_NAME},GOOGLE_CLOUD_LOCATION=global,LOCATION=${LOCATION},MODEL=gemini-3.8-flash,PROJECT_ID=${PROJECT_ID},GOOGLE_API_USE_MTLS_ENDPOINT=never,GOOGLE_API_USE_CLIENT_CERTIFICATE=false" \
-  --no-wait
-
 cd ~/agent-gateway-sgp
+./05-deploy-agent.sh
 </ql-code-block>
 
-<ql-infobox><strong>팁:</strong> 위 과정은 <code>./05-deploy-agent.sh</code> 스크립트로도 실행할 수 있습니다. 배포 요청이 접수되면 완료될 때까지 기다리지 말고 바로 작업 6으로 넘어가세요.</ql-infobox>
+<ql-infobox><strong>팁:</strong> 배포 요청이 접수되면 백그라운드에서 컨테이너 빌드가 진행됩니다. 완료될 때까지 기다리지 말고 바로 작업 6으로 넘어가세요.</ql-infobox>
 
 ## 작업 6. SGP 정책 엔진 활성화, PSC 엔드포인트 및 프라이빗 Cloud DNS 구성
 

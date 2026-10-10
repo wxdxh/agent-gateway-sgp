@@ -47,6 +47,56 @@ agents-cli deploy \
   --update-env-vars="MCP_SERVER_NAME=${MCP_SERVER_NAME},GOOGLE_CLOUD_LOCATION=global,LOCATION=${LOCATION},MODEL=gemini-3.8-flash,PROJECT_ID=${PROJECT_ID},GOOGLE_API_USE_MTLS_ENDPOINT=never,GOOGLE_API_USE_CLIENT_CERTIFICATE=false" \
   --no-wait
 
+echo "==> Step 5: Granting Agent Registry & Cloud Run permissions to Agent Identity..."
+TOKEN="$(gcloud auth print-access-token)"
+EFFECTIVE_ID="$(curl -fsS -H "Authorization: Bearer ${TOKEN}" \
+  "https://${LOCATION}-aiplatform.googleapis.com/v1beta1/projects/${PROJECT_ID}/locations/${LOCATION}/reasoningEngines" | \
+  python3 -c 'import sys, json; engines=json.load(sys.stdin).get("reasoningEngines", []); matches=[e for e in engines if e.get("displayName")=="conversational-banking"]; print(matches[0].get("spec", {}).get("effectiveIdentity", "") if matches else "")' 2>/dev/null || true)"
+
+if [[ -n "${EFFECTIVE_ID}" ]]; then
+  AGENT_PRINCIPAL="principal://${EFFECTIVE_ID}"
+  echo "Detected Agent Identity: ${AGENT_PRINCIPAL}"
+  for ROLE in "roles/agentregistry.viewer" "roles/agentregistry.user" "roles/aiplatform.user"; do
+    gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+      --member="${AGENT_PRINCIPAL}" \
+      --role="${ROLE}" \
+      --condition=None \
+      --quiet >/dev/null || true
+  done
+  gcloud run services add-iam-policy-binding banking-mcp-server \
+    --region="${LOCATION}" \
+    --member="${AGENT_PRINCIPAL}" \
+    --role="roles/run.servicesInvoker" \
+    --project="${PROJECT_ID}" \
+    --quiet >/dev/null || true
+fi
+
+RE_SA="serviceAccount:service-${PROJECT_NUM}@gcp-sa-aiplatform-re.iam.gserviceaccount.com"
+for ROLE in "roles/agentregistry.viewer" "roles/aiplatform.user"; do
+  gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+    --member="${RE_SA}" \
+    --role="${ROLE}" \
+    --condition=None \
+    --quiet >/dev/null 2>&1 || true
+done
+gcloud run services add-iam-policy-binding banking-mcp-server \
+  --region="${LOCATION}" \
+  --member="${RE_SA}" \
+  --role="roles/run.servicesInvoker" \
+  --project="${PROJECT_ID}" \
+  --quiet >/dev/null 2>&1 || true
+
+for ep_id in $(gcloud alpha agent-registry endpoints list --project="${PROJECT_ID}" --location="${LOCATION}" --format="value(name.basename())" 2>/dev/null || true); do
+  gcloud alpha iap web add-iam-policy-binding \
+    --resource-type=agent-registry \
+    --endpoint="${ep_id}" \
+    --region="${LOCATION}" \
+    --project="${PROJECT_ID}" \
+    --member="${RE_SA}" \
+    --role="roles/iap.egressor" \
+    --quiet >/dev/null 2>&1 || true
+done
+
 echo "================================================================================"
 echo " Gemini Enterprise Agent Runtime deployment initiated in the background."
 echo " Proceed to Step 6 (06-setup-sgp-networking.sh) and Step 7 (07-create-sgp-policy.sh)."
