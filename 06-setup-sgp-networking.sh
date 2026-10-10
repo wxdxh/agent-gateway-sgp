@@ -36,13 +36,15 @@ gcloud compute forwarding-rules create sgp-psc-endpoint \
   --target-service-attachment="${SERVICE_ATTACHMENT}" \
   --project="${PROJECT_ID}" || true
 
-echo "==> Step 6: Configuring private Cloud DNS for policy.internal..."
-gcloud dns managed-zones create policy-engine-zone \
-  --description="Private zone for internal SGP service" \
-  --dns-name="policy.internal." \
-  --visibility=private \
-  --networks="${NETWORK_NAME}" \
-  --project="${PROJECT_ID}" || true
+echo "==> Step 6: Configuring private Cloud DNS A record for policy.internal..."
+if ! gcloud dns managed-zones describe policy-engine-zone --project="${PROJECT_ID}" &>/dev/null; then
+  gcloud dns managed-zones create policy-engine-zone \
+    --description="Private zone for internal SGP service" \
+    --dns-name="policy.internal." \
+    --visibility=private \
+    --networks="${NETWORK_NAME}" \
+    --project="${PROJECT_ID}" || true
+fi
 
 gcloud dns record-sets create policy.internal. \
   --zone=policy-engine-zone \

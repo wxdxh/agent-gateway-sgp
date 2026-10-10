@@ -533,16 +533,9 @@ gcloud compute forwarding-rules create sgp-psc-endpoint \
   --project="${PROJECT_ID}" || true
 </ql-code-block>
 
-2. `agent-egress` 게이트웨이가 `policy.internal.` 도메인을 질의했을 때 PSC 엔드포인트 IP(`${PSC_IP}`)로 응답하도록 프라이빗 Cloud DNS 영역(`policy-engine-zone`)과 A 레코드를 생성합니다.
+2. 작업 2에서 생성한 프라이빗 Cloud DNS 영역(`policy-engine-zone`)에 `agent-egress` 게이트웨이가 `policy.internal.` 도메인을 질의했을 때 PSC 엔드포인트 IP(`${PSC_IP}`)로 응답하도록 A 레코드를 생성합니다.
 
 <ql-code-block language="bash">
-gcloud dns managed-zones create policy-engine-zone \
-  --description="Private zone for internal SGP service" \
-  --dns-name="policy.internal." \
-  --visibility=private \
-  --networks="${NETWORK_NAME}" \
-  --project="${PROJECT_ID}" || true
-
 gcloud dns record-sets create policy.internal. \
   --zone=policy-engine-zone \
   --type=A \
