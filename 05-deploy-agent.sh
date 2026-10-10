@@ -23,6 +23,21 @@ gcloud network-services agent-gateways describe agent-egress \
   --project="${PROJECT_ID}" \
   --format="value(agentGatewayCard.rootCertificates[0])" > "${SCRIPT_DIR}/conversational-banking/agent-gateway-ca.crt"
 
+echo "==> Step 5: Ensuring Vertex AI Service Agent identity is provisioned..."
+gcloud beta services identity create \
+  --service=aiplatform.googleapis.com \
+  --project="${PROJECT_ID}" || true
+
+for SA_EM in \
+  "service-${PROJECT_NUM}@gcp-sa-aiplatform.iam.gserviceaccount.com" \
+  "service-${PROJECT_NUM}@gcp-sa-aiplatform-re.iam.gserviceaccount.com"; do
+  gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+    --member="serviceAccount:${SA_EM}" \
+    --role="roles/aiplatform.serviceAgent" \
+    --condition=None \
+    --quiet >/dev/null 2>&1 || true
+done
+
 echo "==> Step 5: Deploying Conversational Banking Agent to Gemini Enterprise Agent Runtime..."
 if ! command -v uv &>/dev/null; then
   curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -38,14 +53,33 @@ rm -f deployment_metadata.json
 export UV_NO_CONFIG=1
 export PIP_CONFIG_FILE=/dev/null
 
-agents-cli deploy \
-  --project="${PROJECT_ID}" \
-  --region="${LOCATION}" \
-  --deployment-target="agent_runtime" \
-  --agent-identity \
-  --agent-gateway-egress="projects/${PROJECT_ID}/locations/${LOCATION}/agentGateways/agent-egress" \
-  --update-env-vars="MCP_SERVER_NAME=${MCP_SERVER_NAME},GOOGLE_CLOUD_LOCATION=global,LOCATION=${LOCATION},MODEL=gemini-3.8-flash,PROJECT_ID=${PROJECT_ID},GOOGLE_API_USE_MTLS_ENDPOINT=never,GOOGLE_API_USE_CLIENT_CERTIFICATE=false" \
-  --no-wait
+for attempt in 1 2 3 4; do
+  if agents-cli deploy \
+    --project="${PROJECT_ID}" \
+    --region="${LOCATION}" \
+    --deployment-target="agent_runtime" \
+    --agent-identity \
+    --agent-gateway-egress="projects/${PROJECT_ID}/locations/${LOCATION}/agentGateways/agent-egress" \
+    --update-env-vars="MCP_SERVER_NAME=${MCP_SERVER_NAME},GOOGLE_CLOUD_LOCATION=global,LOCATION=${LOCATION},MODEL=gemini-3.8-flash,PROJECT_ID=${PROJECT_ID},GOOGLE_API_USE_MTLS_ENDPOINT=never,GOOGLE_API_USE_CLIENT_CERTIFICATE=false" \
+    --no-wait; then
+    break
+  fi
+  if [[ "${attempt}" -eq 4 ]]; then
+    echo "Error: agents-cli deploy failed after ${attempt} attempts."
+    exit 1
+  fi
+  echo "Waiting 20s for Vertex AI Service Agent IAM permissions to propagate before retrying (attempt ${attempt}/4)..."
+  for SA_EM in \
+    "service-${PROJECT_NUM}@gcp-sa-aiplatform.iam.gserviceaccount.com" \
+    "service-${PROJECT_NUM}@gcp-sa-aiplatform-re.iam.gserviceaccount.com"; do
+    gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+      --member="serviceAccount:${SA_EM}" \
+      --role="roles/aiplatform.serviceAgent" \
+      --condition=None \
+      --quiet >/dev/null 2>&1 || true
+  done
+  sleep 20
+done
 
 echo "==> Step 5: Granting Agent Registry & Cloud Run permissions to Agent Identity..."
 TOKEN="$(gcloud auth print-access-token)"

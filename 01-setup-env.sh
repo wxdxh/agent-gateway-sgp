@@ -23,10 +23,20 @@ gcloud services enable \
   logging.googleapis.com \
   --project="${PROJECT_ID}"
 
-echo "==> Step 1: Creating Network Services service identity..."
+echo "==> Step 1: Creating Network Services and Vertex AI service identities..."
 gcloud beta services identity create \
   --service=networkservices.googleapis.com \
   --project="${PROJECT_ID}" || true
+
+gcloud beta services identity create \
+  --service=aiplatform.googleapis.com \
+  --project="${PROJECT_ID}" || true
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:service-${PROJECT_NUM}@gcp-sa-aiplatform.iam.gserviceaccount.com" \
+  --role="roles/aiplatform.serviceAgent" \
+  --condition=None \
+  --quiet >/dev/null 2>&1 || true
 
 echo "==> Step 1: Granting IAM roles to Agent Gateway Service Agent..."
 for ROLE in "roles/agentgateway.serviceAgent" "roles/aiplatform.user" "roles/modelarmor.user" "roles/agentregistry.viewer"; do

@@ -141,11 +141,15 @@ gcloud services enable \
   --project="${PROJECT_ID}"
 </ql-code-block>
 
-2. `networkservices.googleapis.com` API를 위한 Google 관리형 서비스 에이전트 ID를 생성합니다.
+2. `networkservices.googleapis.com` 및 `aiplatform.googleapis.com` API를 위한 Google 관리형 서비스 에이전트 ID를 생성합니다.
 
 <ql-code-block language="bash">
 gcloud beta services identity create \
   --service=networkservices.googleapis.com \
+  --project="${PROJECT_ID}" || true
+
+gcloud beta services identity create \
+  --service=aiplatform.googleapis.com \
   --project="${PROJECT_ID}" || true
 </ql-code-block>
 
