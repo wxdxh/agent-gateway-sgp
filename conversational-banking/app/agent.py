@@ -67,12 +67,12 @@ try:
         _orig_async_httpx_init(self, *args, **kwargs)
     httpx.AsyncClient.__init__ = _custom_async_httpx_init
 
-    def _get_cloud_run_auth_token():
+    def _get_cloud_run_auth_token(audience_url: str):
         # 1. Try Compute Engine metadata server
         try:
             import urllib.request
             req = urllib.request.Request(
-                "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=https://banking-mcp-server-vd47jgunrq-uc.a.run.app",
+                f"http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience={audience_url}",
                 headers={"Metadata-Flavor": "Google"}
             )
             with urllib.request.urlopen(req, timeout=2) as resp:
@@ -85,7 +85,7 @@ try:
             import google.oauth2.id_token
             auth_req = google.auth.transport.requests.Request()
             return google.oauth2.id_token.fetch_id_token(
-                auth_req, "https://banking-mcp-server-vd47jgunrq-uc.a.run.app"
+                auth_req, audience_url
             )
         except Exception:
             pass
@@ -102,7 +102,8 @@ try:
     _orig_async_send = httpx.AsyncClient.send
     async def _custom_async_send(self, request, *args, **kwargs):
         if "banking-mcp-server" in str(request.url) and "Authorization" not in request.headers:
-            tok = _get_cloud_run_auth_token()
+            audience_url = f"{request.url.scheme}://{request.url.host}"
+            tok = _get_cloud_run_auth_token(audience_url)
             if tok:
                 request.headers["Authorization"] = f"Bearer {tok}"
         return await _orig_async_send(self, request, *args, **kwargs)

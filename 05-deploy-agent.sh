@@ -34,6 +34,7 @@ if ! command -v agents-cli &>/dev/null; then
 fi
 
 cd "${SCRIPT_DIR}/conversational-banking"
+rm -f deployment_metadata.json
 export UV_NO_CONFIG=1
 export PIP_CONFIG_FILE=/dev/null
 
