@@ -1,0 +1,69 @@
+---
+entity_type: Lab
+schema_version: 2
+default_locale: en
+title:
+  locales:
+    en: 'Autonomous AI Agent Governance with Gemini Enterprise, Agent Gateway, and SGP (Apex Asset Management)'
+    ko: 'Gemini Enterprise와 Agent Gateway · 시맨틱 거버넌스 정책(SGP)을 활용한 자율형 AI 에이전트 거버넌스'
+description:
+  locales:
+    en: 'In this lab, you build a zero-trust governance layer for a Gemini Enterprise conversational banking agent using Google Cloud Agent Gateway (agent-egress), Agent Registry, Private Service Connect, and Semantic Governance Policies (SGP).'
+    ko: '에이펙스 자산운용(Apex Asset Management) 시나리오를 바탕으로 Gemini Enterprise 에이전트의 아웃바운드 MCP 도구 호출을 Agent Gateway(agent-egress)와 시맨틱 거버넌스 정책(SGP)으로 통제하고 감사하는 제로 트러스트 아키텍처를 구축합니다.'
+duration: 90
+max_duration: 120
+credits: 0
+level: intermediate
+tags:
+  - GCP
+  - Gemini Enterprise
+  - Agent Gateway
+  - Network Security
+  - Qwiklabs
+instruction:
+  type: md
+  uri:
+    locales:
+      en: instructions/en.md
+      ko: instructions/ko.md
+environment:
+  resources:
+    - type: gcp_project
+      id: project_0
+      variant: gcpd
+      ssh_key_user: user_0
+      allowed_locations:
+        - us-central1
+        - us-west1
+        - us-east1
+        - us-east4
+      startup_script:
+        type: qwiklabs
+        path: ./terraform
+    - type: gcp_user
+      id: user_0
+      permissions:
+        - project: project_0
+          roles:
+            - roles/owner
+            - roles/editor
+            - roles/iam.securityAdmin
+            - roles/run.admin
+            - roles/aiplatform.admin
+            - roles/dns.admin
+  student_visible_outputs:
+    - label: Open Google Cloud console
+      reference: project_0.console_url
+    - label: Username
+      reference: user_0.username
+    - label: Password
+      reference: user_0.password
+    - label: GCP Project ID
+      reference: project_0.project_id
+    - label: Default Region
+      reference: project_0.startup_script.gcp_region
+    - label: Pre-provisioned VPC Network
+      reference: project_0.startup_script.vpc_network_name
+    - label: Pre-provisioned Subnet
+      reference: project_0.startup_script.vpc_subnet_name
+assessment: assessment.yaml

@@ -1,0 +1,39 @@
+passing_percentage: 75
+steps:
+  - title: Deploy Agent Gateway Networking and agent-egress Gateway
+    locale_id: step-1
+    maximum_score: 25
+    student_messages:
+      success: "Assessment completed! Proxy-only subnet, Network Attachment, and agent-egress gateway verified."
+      agw_missing: "Please create proxy-only-subnet, agent-gateway-na, and import the agent-egress gateway."
+    services:
+      - project_0.ComputeV1
+      - project_0.LoggingV2
+    method_name: step_one_check
+  - title: Deploy Apex Asset Management Banking MCP Server on Cloud Run
+    locale_id: step-2
+    maximum_score: 25
+    student_messages:
+      success: "Assessment completed! banking-mcp-server is deployed on Cloud Run."
+      mcp_missing: "Please deploy the banking-mcp-server service to Cloud Run and grant roles/run.servicesInvoker."
+    services:
+      - project_0.LoggingV2
+    method_name: step_two_check
+  - title: Configure SGP Private Service Connect Endpoint and Private DNS
+    locale_id: step-3
+    maximum_score: 25
+    student_messages:
+      success: "Assessment completed! SGP PSC IP (sgp-psc-ip) and PSC endpoint (sgp-psc-endpoint) verified."
+      psc_missing: "Please reserve sgp-psc-ip and create the sgp-psc-endpoint forwarding rule for SGP."
+    services:
+      - project_0.ComputeV1
+    method_name: step_three_check
+  - title: Create Semantic Governance Policy and Verify 3-Turn Scenario
+    locale_id: step-4
+    maximum_score: 25
+    student_messages:
+      success: "Assessment completed! Semantic Governance Policy (high-value-limit) and audit logs verified."
+      sgp_missing: "Please create the high-value-limit Semantic Governance Policy and run ./08-test.sh."
+    services:
+      - project_0.LoggingV2
+    method_name: step_four_check

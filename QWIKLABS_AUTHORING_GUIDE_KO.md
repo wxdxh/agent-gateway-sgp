@@ -1,297 +1,139 @@
-# **Google Docs 및 Terraform Startup Script 기반 Qwiklabs 저작(Authoring) 가이드**
+# Qwiklabs Markdown 기반 핸즈온 랩 번들(Lab Bundle) 저작 및 배포 가이드
 
-본 문서는 Qwiklabs 공식 저작 과정(**AUTHLAB004: Using Startup Scripts to Stage Resources in a Google Docs-Based Hands-on Lab**)의 표준 규격에 맞춰, **에이펙스 자산운용(Apex Asset Management) 엔터프라이즈 AI 에이전트 거버넌스** 실습을 **Google Docs 매뉴얼 + Terraform Startup Script(`terraform.zip`)** 조합으로 Qwiklabs Staging 환경에 등록·배포하는 전 과정을 안내합니다.
-
----
-
-## **1. 사전 프로비저닝(Resource Staging) 설계 전략**
-
-Qwiklabs 환경에서 학습자가 **Start Lab** 버튼을 클릭했을 때 백그라운드에서 실행되는 **Terraform Startup Script(`terraform.zip`)**와, 학습자가 **Cloud Shell**에서 직접 수행하는 **핵심 실습(Task 1 ~ Task 9)**의 역할을 다음과 같이 분리하여 학습 몰입도와 안정성을 극대화합니다.
-
-| 구분 | 실행 주체 및 시점 | 포함 리소스 및 작업 | 설계 의도 |
-| :--- | :--- | :--- | :--- |
-| **사전 프로비저닝 (Staging)** | **Qwiklabs Startup Script (`terraform.zip`)**<br>*(Start Lab 클릭 시 자동 실행)* | • **핵심 GCP API 13종** 사전 활성화<br>• 전용 커스텀 VPC(`apex-wealth-vpc`) 생성<br>• 리전 서브넷(`apex-subnet`, `10.10.0.0/24`) 생성<br>• 실습 기본 서비스 계정(`apex-agent-lab-sa`) 및 IAM 권한 부여 | API 활성화 전파 대기 시간(약 3~4분) 및 기초 네트워크 생성 시간을 단축하고, 초기 권한 오류를 방지합니다. |
-| **핵심 핸즈온 실습 (Lab Tasks)** | **학습자 (Google Cloud Shell)**<br>*(Task 1 ~ Task 9 직접 수행)* | • Network Services Identity 및 전용 프록시 서브넷 구성<br>• **Agent Gateway (`agent-egress`)** 배포<br>• **Cloud Run MCP 서버 (`banking-mcp-server`)** 배포 및 등록<br>• **Gemini Enterprise ADK 에이전트 (`gemini-3.8-flash`, Global Endpoint)** 비동기 배포<br>• **SGP PSC 엔드포인트 + Cloud DNS (`policy.internal.`)** 구성<br>• **SGP CEL 정책 (`amount <= 1000.0`, 100만 원 한도)** 생성 및 검증 | 아키텍처의 핵심인 양방향 제로 트러스트 거버넌스(Agent Gateway + SGP + ADK)는 학습자가 직접 구축하고 검증하도록 유지합니다. |
-
-> **참고 (완벽한 멱등성 보장):** 레포지토리의 `env.sh`, `01-setup-env.sh`, `02-setup-agent-gateway.sh`는 Qwiklabs Startup Script가 미리 생성해 둔 `apex-wealth-vpc` 및 `apex-subnet`을 자동으로 최우선 감지하여 재사용하며, Startup Script가 없는 일반 GCP 프로젝트에서 실행하더라도 동일하게 생성·동작하도록 설계되어 있습니다.
+본 문서는 **Authoring Markdown-Based Hands-on Labs (Course 615868: AUTHLAB007 ~ AUTHLAB012)** 공식 표준 규격에 따라, **에이펙스 자산운용(Apex Asset Management) 자율형 AI 에이전트 거버넌스 실습**을 GitHub 기반 **Markdown Lab Bundle (`qwiklabs-bundle/apex-agent-gateway-sgp/`)**로 구성·검증·배포하고 학습자에게 전달(Classroom)하는 전체 절차를 안내합니다.
 
 ---
 
-## **2. Qwiklabs Terraform Startup Script 파일 구조 해설**
+## 1. Markdown Lab Bundle 디렉터리 구조 (AUTHLAB007 · AUTHLAB008)
 
-본 레포지토리의 `qwiklabs-terraform/` 디렉토리와 루트의 `terraform.zip` 파일에는 Qwiklabs Startup Script 표준 규격을 준수하는 5개의 필수 파일이 포함되어 있습니다.
+Qwiklabs Markdown 기반 랩은 단일 폴더(**Slug**: `apex-agent-gateway-sgp`) 내에 설정 파일(`qwiklabs.yaml`), 소유자 정의(`QL_OWNER`), 지침서(`instructions/`), Terraform 스타트업 스크립트(`terraform/`), 그리고 Activity Tracking 루비 검증 코드(`assessment.yaml`, `assessments/`)를 포함하는 표준 번들 구조를 따릅니다.
 
 ```text
-qwiklabs-terraform/          (압축 파일: ./terraform.zip)
-├── main.tf                  # 사전 프로비저닝할 GCP 인프라 정의 (API, VPC/Subnet, SA/IAM)
-├── variables.tf             # Qwiklabs 플랫폼이 자동 주입하는 필수 변수 3종 선언
-├── providers.tf             # Google Terraform Provider 버전 및 프로젝트/리전 바인딩
-├── outputs.tf               # Qwiklabs Lab Details 패널에 노출할 환경 출력값 정의
-└── runtime.yaml             # Qwiklabs Script Runner용 Terraform 런타임 버전 명시 (필수)
-```
-
-### **2.1 `runtime.yaml` (필수 런타임 정의)**
-Qwiklabs Script Runner가 사용할 Terraform 버전을 지정합니다.
-```yaml
-runtime: terraform
-version: 1.0.1
-```
-
-### **2.2 `variables.tf` (Qwiklabs 필수 자동 주입 변수)**
-Qwiklabs 플랫폼이 랩 시작 시점에 자동으로 값을 채워주는 3가지 필수 변수(`gcp_project_id`, `gcp_region`, `gcp_zone`)를 선언합니다.
-```hcl
-variable "gcp_project_id" {
-  type        = string
-  description = "The GCP project ID to apply this config to."
-}
-
-variable "gcp_region" {
-  type        = string
-  description = "The GCP region to apply this config to."
-  default     = "us-central1"
-}
-
-variable "gcp_zone" {
-  type        = string
-  description = "The GCP zone to apply this config to."
-  default     = "us-central1-a"
-}
-```
-
-### **2.3 `providers.tf` (Provider 버전 고정)**
-예기치 않은 호환성 문제를 방지하기 위해 Qwiklabs 권장 사항에 따라 `google` 정식 프로바이더의 정확한 버전을 명시합니다.
-```hcl
-terraform {
-  required_providers {
-    google = {
-      version = "3.90.1"
-    }
-  }
-}
-
-provider "google" {
-  project = var.gcp_project_id
-  region  = var.gcp_region
-  zone    = var.gcp_zone
-}
-```
-
-### **2.4 `main.tf` (기반 인프라 사전 스테이징)**
-랩이 시작될 때 핵심 GCP API 13종을 활성화하고, 에이펙스 자산운용 전용 VPC(`apex-wealth-vpc`) 및 서브넷(`apex-subnet`), 기본 서비스 계정(`apex-agent-lab-sa`)을 생성합니다.
-```hcl
-data "google_project" "project" {
-  project_id = var.gcp_project_id
-}
-
-locals {
-  required_apis = [
-    "compute.googleapis.com",
-    "networksecurity.googleapis.com",
-    "networkservices.googleapis.com",
-    "dns.googleapis.com",
-    "iam.googleapis.com",
-    "iap.googleapis.com",
-    "aiplatform.googleapis.com",
-    "run.googleapis.com",
-    "cloudbuild.googleapis.com",
-    "artifactregistry.googleapis.com",
-    "storage.googleapis.com",
-    "cloudtrace.googleapis.com",
-    "logging.googleapis.com"
-  ]
-
-  lab_iam_roles = [
-    "roles/aiplatform.user",
-    "roles/run.admin",
-    "roles/cloudbuild.builds.editor",
-    "roles/dns.admin"
-  ]
-}
-
-resource "google_project_service" "required_apis" {
-  for_each           = toset(local.required_apis)
-  project            = var.gcp_project_id
-  service            = each.value
-  disable_on_destroy = false
-}
-
-resource "google_compute_network" "apex_wealth_vpc" {
-  name                    = "apex-wealth-vpc"
-  auto_create_subnetworks = false
-  project                 = var.gcp_project_id
-  description             = "VPC network for Apex Asset Management Agent Gateway and SGP lab"
-  depends_on              = [google_project_service.required_apis]
-}
-
-resource "google_compute_subnetwork" "apex_subnet" {
-  name          = "apex-subnet"
-  ip_cidr_range = "10.10.0.0/24"
-  region        = var.gcp_region
-  network       = google_compute_network.apex_wealth_vpc.id
-  project       = var.gcp_project_id
-  description   = "Regional subnet for Agent Gateway Network Attachment and SGP PSC endpoint"
-}
-
-resource "google_service_account" "apex_lab_sa" {
-  account_id   = "apex-agent-lab-sa"
-  display_name = "Apex Asset Management Lab Service Account"
-  project      = var.gcp_project_id
-  depends_on   = [google_project_service.required_apis]
-}
-
-resource "google_project_iam_member" "apex_lab_sa_roles" {
-  for_each = toset(local.lab_iam_roles)
-  project  = var.gcp_project_id
-  role     = each.value
-  member   = "serviceAccount:${google_service_account.apex_lab_sa.email}"
-}
-```
-
-### **2.5 `outputs.tf` (Environment Outputs 노출)**
-Terraform이 생성한 리소스 정보를 Qwiklabs 좌측 **Lab details** 패널에 표시할 수 있도록 출력값을 정의합니다.
-```hcl
-output "gcp_project_id" {
-  value       = var.gcp_project_id
-  description = "The GCP Project ID provisioned for the Apex Asset Management lab."
-}
-
-output "gcp_region" {
-  value       = var.gcp_region
-  description = "The default GCP region for Agent Gateway, Cloud Run MCP, and SGP resources."
-}
-
-output "vpc_network_name" {
-  value       = google_compute_network.apex_wealth_vpc.name
-  description = "Pre-provisioned VPC network name (apex-wealth-vpc)."
-}
-
-output "vpc_subnet_name" {
-  value       = google_compute_subnetwork.apex_subnet.name
-  description = "Pre-provisioned regional subnet name (apex-subnet)."
-}
-
-output "lab_service_account" {
-  value       = google_service_account.apex_lab_sa.email
-  description = "Pre-provisioned service account email for the lab."
-}
-```
-
-### **2.6 `terraform.zip` 번들 생성 방법 (수정 시 재압축 명령어)**
-> **주의:** Qwiklabs에 업로드하는 `terraform.zip`은 **상위 디렉토리(폴더) 없이 5개의 파일만 압축 파일의 최상위(Root)에 위치**해야 합니다(`-j` 옵션 사용).
-
-```bash
-rm -f terraform.zip
-zip -j terraform.zip \
-  qwiklabs-terraform/main.tf \
-  qwiklabs-terraform/variables.tf \
-  qwiklabs-terraform/providers.tf \
-  qwiklabs-terraform/outputs.tf \
-  qwiklabs-terraform/runtime.yaml
+qwiklabs-bundle/apex-agent-gateway-sgp/
+├── QL_OWNER                         # 랩 소유자(Owner) 및 공동 작업자(Collaborators) 이메일 정의
+├── qwiklabs.yaml                    # Schema v2 랩 메타데이터, 리소스(gcp_project/gcp_user), 입출력 및 참조 설정
+├── assessment.yaml                  # Overlay Activity Tracking 단계별 배점, 메시지, 서비스 핸들 정의
+├── assessments/                     # 단계별 진행 상황 검증용 Ruby 스크립트 (ComputeV1, LoggingV2 핸들 활용)
+│   ├── step_one_check.rb            # Step 1 (25점): proxy-only-subnet 및 agent-egress 게이트웨이 생성 검증
+│   ├── step_two_check.rb            # Step 2 (25점): Cloud Run banking-mcp-server 배포 검증
+│   ├── step_three_check.rb          # Step 3 (25점): SGP PSC IP(sgp-psc-ip) 및 엔드포인트(sgp-psc-endpoint) 검증
+│   └── step_four_check.rb           # Step 4 (25점): 시맨틱 거버넌스 정책(high-value-limit) 및 감사 로그 검증
+├── instructions/                    # Markdown 실습 지침서 및 이미지 디렉터리
+│   ├── en.md                        # 기본 로케일(en) 호환용 지침서 (단일 # H1 제목, <ql-code-block>, <ql-infobox> 적용)
+│   ├── ko.md                        # 한국어 로케일(ko) 지침서
+│   └── img/                         # 지침서 내 참조 이미지 폴더 (PNG 권장, 300x600px 이하)
+└── terraform/                       # Qwiklabs Terraform Startup Script (수동 압축 불필요, 폴더 직접 참조)
+    ├── runtime.yaml                 # runtime: terraform / version: 1.0.1
+    ├── variables.tf                 # Qwiklabs 필수 주입 변수 3종 (gcp_project_id, gcp_region, gcp_zone)
+    ├── providers.tf                 # hashicorp/google 프로바이더 (v3.90.1) 설정
+    ├── main.tf                      # 사전 프로비저닝 리소스 (핵심 API 13종, apex-wealth-vpc, apex-subnet, SA/IAM)
+    └── outputs.tf                   # student_visible_outputs 및 지침서 동적 변수 바인딩용 출력값
 ```
 
 ---
 
-## **3. Step-by-Step: Google Docs 및 Startup Script로 Qwiklabs 랩 등록하기**
+## 2. 핵심 구성 파일 상세 명세
 
-### **Task 1. 서식 깨짐 없는 Google Docs 매뉴얼 문서 생성 및 권한 공유**
+### 2.1 `QL_OWNER` (소유자 및 공동 작업자)
+* 첫 번째 이메일이 **Lab Owner**, 이후 이메일들이 **Collaborators**로 지정됩니다.
+* 등록되는 모든 계정은 [Qwiklabs Google Staging](https://googlestaging.qwiklabs.com/)에 계정이 존재해야 하며 최소 **Creator** 역할이 부여되어 있어야 합니다 (`User xyz@gmail.com isn't a Qwiklabs author` 오류 방지).
 
-일반 마크다운(`.md`) 파일의 원문을 그대로 복사하여 Google Docs에 일반 붙여넣기(`Ctrl+V` / `Cmd+V`)하면 `#`, `**`, ```` ``` ```` 기호가 일반 텍스트로 노출되거나, Qwiklabs Google Docs 파서(`qwiklabs-publisher@google.com`)가 요구하는 **1x1 단일 셀 표(Code Block Table)** 서식이 누락됩니다. 이를 완벽히 해결하기 위해 아래 **3가지 서식 무손실 방법** 중 하나를 선택하여 Google Docs 문서를 준비하세요.
+```text
+# Owner
+daehanwee@gmail.com # Lab Owner (Qwiklabs account with creator access)
+# Collaborators
+```
 
-#### **방법 A (가장 권장 · 서식 깨짐 0%): Google Docs 전용 `.docx` 파일 업로드 및 변환**
-본 레포지토리의 **[`QWIKLABS_CLOUD_SHELL_KO.docx`](./QWIKLABS_CLOUD_SHELL_KO.docx)** 파일은 모든 제목(`Heading 1`, `Heading 2`), 번호 매기기, 표, 그리고 Qwiklabs 표준 **1x1 회색 코드 블록 표(`Courier New`, `#F3F3F3` 배경)** 및 **1x1 파란색 안내 상자 표(`#E8F0FE` 배경)**가 네이티브 문서 규격으로 미리 변환되어 있습니다.
-1. [`QWIKLABS_CLOUD_SHELL_KO.docx`](https://github.com/wxdxh/agent-gateway-sgp/raw/main/QWIKLABS_CLOUD_SHELL_KO.docx) 파일을 로컬 컴퓨터에 다운로드합니다.
-2. 개인 또는 기업용 Google 계정으로 [Google Drive](https://drive.google.com/)에 접속한 뒤 **새로 만들기(+) > 파일 업로드**를 클릭하여 `QWIKLABS_CLOUD_SHELL_KO.docx`를 업로드합니다.
-3. 업로드된 파일을 더블클릭하여 **Google 문서로 열기(Open with Google Docs)**를 선택한 다음, 상단 메뉴에서 **파일(File) > Google 문서로 저장(Save as Google Docs)**을 클릭합니다.
-   > **주의:** Qwiklabs에 등록할 때는 `.docx` 뷰어 상태가 아니라 변환된 **네이티브 Google Docs 문서**의 URL을 사용해야 합니다.
+### 2.2 `qwiklabs.yaml` (Schema Version 2 표준 설정)
+* **`entity_type: Lab`** 및 **`schema_version: 2`**를 명시합니다.
+* **`variant: gcpd`**: 기본 Google Cloud 프로젝트 Fleet을 사용하며, 리전 인프라 생성을 위해 권장 리전 목록(`us-central1`, `us-west1`, `us-east1`, `us-east4`)을 `allowed_locations`에 지정합니다.
+* **`startup_script`**: `gcp_project` 리소스 블록 내부에 `type: qwiklabs`와 `path: ./terraform`을 지정합니다.
+* **`assessment`**: 루트 레벨에 `assessment: assessment.yaml`을 연결합니다.
 
-#### **방법 B (원클릭 클립보드 서식 복사): 웹 도우미 페이지(`gdocs-paste.html`)에서 원클릭 복사 후 `Ctrl+V`**
-1. 브라우저에서 **[Google Docs 서식 무손실 복사 도우미 (`gdocs-paste.html`)](https://agent-gateway-codelab-1080321871308.us-central1.run.app/gdocs-paste.html)** 페이지를 엽니다.
-2. 상단 툴바의 **[📋 Google Docs 서식 그대로 원클릭 복사]** 버튼을 클릭합니다. (일반 텍스트가 아닌 `text/html` 서식 데이터가 클립보드에 복사됩니다.)
-3. 빈 [Google Docs](https://docs.google.com/) 문서를 새로 열고 **`Ctrl+V` (Mac은 `Cmd+V`)**를 누르면, `Heading 1 / 2` 제목 계층과 **1x1 회색 코드 블록 표(`Courier New`)**가 깨짐 없이 그대로 붙여넣어집니다.
-
-#### **방법 C (Markdown 원본 사용 시): Google Docs의 `마크다운에서 붙여넣기` 기능 사용**
-* 만약 [`QWIKLABS_CLOUD_SHELL_KO.md`](./QWIKLABS_CLOUD_SHELL_KO.md) 원본 텍스트를 직접 붙여넣으려면, 반드시 Google Docs 상단 메뉴 **도구(Tools) > 환경설정(Preferences)**에서 **'마크다운 사용(Enable Markdown)'**을 먼저 체크한 뒤, 문서 화면에서 **우클릭 > 마크다운에서 붙여넣기(Paste from Markdown)**를 선택하세요. (본 `.md` 파일에서도 Google Docs 파서를 깨뜨리는 `GSPxxxx`, `&nbsp;`, `mermaid`, 중첩 인용구 블록을 모두 제거해 두었습니다.)
-
-#### **공통 마무리: `qwiklabs-publisher@google.com` 공유**
-1. 생성된 Google Docs 문서 내에 `[[ import labmanuallogo ]]`, `[[ import startqwiklab ]]`, `[[ import gcpconsole ]]`, `[[ import cloudshell ]]`, `[[ import TrainingCertificationOverview ]]`, `[[ import copyright ]]` 매크로 문자열이 그대로 포함되어 있는지 확인합니다.
-2. 우측 상단의 **공유(Share)** 버튼을 클릭하고 다음 이메일 주소를 추가하여 공유합니다:
-   ```text
-   qwiklabs-publisher@google.com
-   ```
-   > **참고:** `qwiklabs-publisher@google.com`에 공유해야 Qwiklabs Publisher 서비스가 Google Docs 문서를 읽어 웹 실습 매뉴얼로 변환할 수 있습니다.
-3. 브라우저 주소창에서 해당 Google Docs 문서의 **URL**을 복사해 둡니다.
-
----
-
-### **Task 2. Google Staging에서 신규 Lab 생성 및 Google Docs 연동**
-
-1. Creator 권한이 있는 계정으로 [Google Staging (googlestaging.qwiklabs.com)](https://googlestaging.qwiklabs.com/labs)에 로그인합니다.
-2. 좌측 상단 **Menu (☰)** > **Authoring**을 클릭합니다.
-3. 우측 상단의 **Add (+)** 버튼을 클릭하여 새 랩을 추가합니다.
-4. **Create new lab** 페이지에서 **Google Cloud Platform**을 선택합니다.
-5. 속성 대화상자에서 다음 값을 입력하고 **Create Lab**을 클릭합니다:
-
-| Property | Value |
-| :--- | :--- |
-| **Title** | `엔터프라이즈 AI 에이전트 거버넌스: Agent Gateway와 Semantic Governance Policy` *(고유한 제목)* |
-| **Description** | `에이펙스 자산운용 시나리오를 바탕으로 Agent Gateway, Cloud Run MCP 서버, Gemini Enterprise ADK 에이전트(gemini-3.8-flash), SGP를 연동하여 제로 트러스트 런타임 거버넌스를 구축하는 실습입니다.` |
-| **Level** | `Intermediate` (또는 `Introductory`) |
-| **Price** | `0` |
-| **Max Duration** | `90` (minutes) |
-
-6. 생성된 랩의 **Edit** 화면 좌측 패널에서 **Instructions**를 클릭합니다.
-7. 옵션에서 **Google Doc**이 선택된 상태를 유지하고, **Instruction URL** 입력란에 **Task 1**에서 복사한 Google Docs URL을 붙여넣은 뒤 **Submit**을 클릭합니다.
-   * 만약 가져오기 직후 오류가 표시되면 상단의 **Refresh Instructions**를 클릭합니다.
-8. 우측 상단의 **Preview (👁️)** 아이콘을 클릭하여 학습자에게 보이는 매뉴얼 화면이 정상적으로 렌더링되는지 확인한 후, 다시 **Edit lab (✏️)** 아이콘을 클릭해 편집 화면으로 돌아옵니다.
+### 2.3 `instructions/en.md` 및 `instructions/ko.md` 작성 규칙 (MD-template 준수)
+1. **단일 `#` (H1) 제목 원칙**: 문서 전체에서 `#` (Heading 1)으로 시작하는 줄은 **맨 첫 줄(랩 제목) 단 1개만** 존재해야 합니다.
+2. **단계별 `##` (H2) 구성**: `## Overview`, `## Setup and requirements`, `## Task 1. ...` ~ `## Task 9. ...`, `## Congratulations!` 등 모든 주요 단계는 `##`로 작성하며, 이 제목들이 좌측 목차(Table of Contents)로 렌더링됩니다.
+3. **공통 Fragment (`![[/fragments/...]]`) 활용**:
+   * Setup 섹션: `![[/fragments/startqwiklab]]`, `![[/fragments/gcpconsole]]`, `![[/fragments/cloudshell]]`
+   * 종료 섹션: `![[/fragments/endqwiklab]]`, `![[/fragments/copyright]]`
+4. **코드 블록 및 출력 블록 구분**:
+   * 실행할 명령어: `<ql-code-block language="bash">...</ql-code-block>` (복사 버튼 제공 및 번호 매기기 목록 유지)
+   * 터미널 실행 결과 예시: `<ql-code-block output>...</ql-code-block>` (복사 버튼 미표시, 출력 전용 스타일 적용)
+5. **안내/경고 박스 (`<ql-infobox>`, `<ql-warningbox>`)**:
+   * `<ql-infobox>` 내부에서 Markdown 문법이 렌더링되지 않는 현상(AUTHLAB007)을 방지하기 위해 내부 강조와 코드는 `<strong>`, `<code>` 등 HTML 태그로 작성합니다.
+6. **자가 점검 퀴즈(Probes) 및 인라인 Activity Tracking**:
+   * `<ql-multiple-choice-probe>`, `<ql-true-false-probe>` 태그로 학습자 이해도 점검 문제를 제공합니다.
+   * 각 주요 Task 말미에 `<ql-activity-tracking step=1~4>` 태그를 배치하여 본문 내에서도 **Check my progress** 버튼을 제공합니다.
 
 ---
 
-### **Task 3. Lab Resources (`project_0`) 및 Startup Script (`terraform.zip`) 구성**
+## 3. Terraform Startup Script 설계 및 디버깅 (AUTHLAB009)
 
-1. 좌측 패널에서 **Lab Resources**를 클릭하고 기본 생성된 `project_0`와 `user_0` 리소스를 확인합니다.
-2. **`project_0`** Resource ID를 클릭하여 설정 화면을 엽니다:
-   * **Allowed Locations:** `us-central1`을 기본 리전으로 추가합니다(필요 시 `us-west1`, `us-east1`, `us-east4` 추가 가능하나, 본 실습의 SGP 및 Agent Gateway 테스트는 `us-central1` 기준).
-   * **Startup Scripts:** **Choose File** 버튼을 클릭하고 본 레포지토리 루트에 준비된 **`terraform.zip`** 파일을 선택하여 업로드합니다.
-   * **Update Lab resource** 버튼을 클릭하여 저장합니다.
-3. 좌측 패널에서 **Environment Outputs**를 클릭합니다:
-   * **To add the typical default environment outputs click here** 링크를 클릭하여 기본 출력값 4종을 추가합니다:
-     * `Open Console` -> 라벨을 **`Open Google Cloud console`**로 변경
-     * `Username`
-     * `Password`
-     * `Project ID`
-   * (선택 사항) Startup Script(`outputs.tf`)에서 정의한 출력값을 Lab details 패널에 함께 표시하려면 다음 출력 매핑을 추가할 수 있습니다:
-     * `project_0.startup_script.gcp_region` (Label: `Region`)
-     * `project_0.startup_script.vpc_network_name` (Label: `VPC Network`)
-     * `project_0.startup_script.vpc_subnet_name` (Label: `VPC Subnet`)
-   * **Update Environment Outputs** 버튼을 클릭하여 저장합니다.
+### 3.1 사전 프로비저닝(Startup Script) vs 학습자 직접 수행 범위
+
+| 구분 | 프로비저닝 시점 | 포함 리소스 | 설계 의도 |
+| :--- | :--- | :--- | :--- |
+| **Terraform Startup Script (`./terraform`)** | **Start Lab** 클릭 시 자동 생성 | • 핵심 GCP API 13종 사전 활성화<br>• 커스텀 VPC (`apex-wealth-vpc`)<br>• 리전 서브넷 (`apex-subnet`, `10.10.0.0/24`)<br>• 기본 서비스 계정 (`apex-agent-lab-sa`) 및 IAM 역할 | API 활성화 전파 지연 및 기본 VPC 생성 대기 시간을 줄여 실습자가 핵심 보안·거버넌스 아키텍처에 집중하도록 지원 |
+| **학습자 Cloud Shell 실습 (Task 1 ~ Task 8)** | 실습자가 Cloud Shell에서 직접 실행 | • `proxy-only-subnet` & Network Attachment (`agent-gateway-na`)<br>• **Agent Gateway (`agent-egress`)**<br>• **Cloud Run 뱅킹 MCP 서버 (`banking-mcp-server`)**<br>• **Agent Registry** 도구/엔드포인트 등록 및 IAP Egressor 바인딩<br>• **Gemini Enterprise Agent Runtime (`gemini-3.8-flash`, Global)** 비동기 배포<br>• **SGP PSC 엔드포인트 (`sgp-psc-endpoint`)** & 프라이빗 DNS (`policy.internal.`)<br>• **AuthzExtension / AuthzPolicy / SGP 자연어 정책 (`high-value-limit`)** | 실습의 핵심 학습 목표(Objectives)인 에이전트 네트워크 거버넌스와 자연어 정책 통제를 직접 구축 및 검증 |
+
+### 3.2 Google Staging에서 Startup Script 실행 로그 확인 방법
+1. GitHub 브랜치 Push 후 커밋 상세 페이지 하단의 **GitWhisperer** 코멘트에서 Google Staging 랩 링크를 클릭합니다.
+2. 우측 상단 **Edit (`.../edit`)** 아이콘을 클릭하여 편집 화면으로 이동한 뒤, 우측 상단의 **Play (`▶`)** 버튼을 눌러 랩을 시작합니다.
+3. 페이지 하단 **Qwiklabs startup script** 섹션에서 **Script Runner Status**가 `IN_USE`로 바뀌면 **Script Runner Link**를 클릭합니다.
+4. **Script Debugger** 화면 좌측의 **Executions**를 클릭하여 초록색 체크 표시(성공)와 **Logs** 탭의 Terraform `apply` 상세 출력을 확인합니다.
 
 ---
 
-### **Task 4. Script Runner로 Terraform Startup Script 실행 및 디버깅**
+## 4. Activity Tracking 구성 상세 (AUTHLAB010)
 
-랩을 학습자에게 공개하기 전에 Qwiklabs 내장 **Script Runner**를 통해 `terraform.zip`이 오류 없이 프로비저닝되는지 검증합니다.
+전용 Ruby SDK 핸들이 없는 최신 Google Cloud 서비스(Agent Gateway, Cloud Run, SGP 정책 엔진)를 정확하게 검증하기 위해, AUTHLAB010에서 권장하는 **`project_0.ComputeV1`** 및 **`project_0.LoggingV2` (`list_entry_log_entries`)** 핸들을 조합하여 총 100점(통과 기준 `passing_percentage: 75`)의 4단계 체크포인트를 구성했습니다.
 
-1. 랩 **Edit** 화면 우측 상단에서 **Startup Lab Environment (▶️)** 아이콘을 클릭합니다. 잠시 후 **Status** 페이지가 열립니다.
-2. 페이지 하단의 **Qwiklabs Startup Script** 섹션으로 스크롤합니다.
-3. **Script Runner Status**가 `IN_USE`로 표시되면 **Script Runner Link** 하이퍼링크를 클릭합니다. 새 탭에서 Script Runner UI가 열립니다.
-4. 좌측 패널에서 **Executions**를 클릭하여 Terraform 실행 내역을 확인합니다:
-   * 실행 상태에 **녹색 체크 마크(✅)**가 표시되는지 확인합니다.
-   * 해당 실행 항목을 클릭하여 3개의 탭을 점검합니다:
-
-| 탭 (Tab) | 확인 내용 (Description) |
-| :--- | :--- |
-| **Overview** | Terraform `init` / `plan` / `apply` 전체 실행 상태 및 소요 시간 확인 |
-| **Logs** | 13개 API 활성화, `apex-wealth-vpc`, `apex-subnet`, `apex-agent-lab-sa` 생성 로그 및 Outputs 결과 확인 |
-| **Files** | 업로드된 `main.tf`, `variables.tf`, `providers.tf`, `outputs.tf`, `runtime.yaml` 원본 코드 확인 |
-
-5. 검증이 완료되면 Script Debugger 브라우저 탭을 닫고 **Status** 페이지 하단 좌측의 **Back**을 클릭하여 **Edit** 페이지로 돌아옵니다.
-6. 우측 상단의 **Stop Lab Environment (⏹️)**를 클릭한 뒤 **Submit**을 눌러 테스트 환경을 종료합니다.
+| Step | 대상 Task | 배점 | 사용 서비스 핸들 | Ruby 파일 (`method_name`) | 검증 조건 |
+| :---: | :--- | :---: | :--- | :--- | :--- |
+| **1** | Task 2 (Agent Gateway 배포) | 25 | `project_0.ComputeV1`<br>`project_0.LoggingV2` | `step_one_check` | `proxy-only-subnet` 서브넷 존재 여부 및 `networkservices.googleapis.com`의 `agentGateways/agent-egress` 감사 로그 확인 |
+| **2** | Task 3 (Cloud Run MCP 서버 배포) | 25 | `project_0.LoggingV2` | `step_two_check` | `run.googleapis.com`의 `services/banking-mcp-server` 배포 감사 로그 확인 |
+| **3** | Task 6 (SGP PSC 엔드포인트 구성) | 25 | `project_0.ComputeV1` | `step_three_check` | `sgp-psc-ip` 내부 고정 IP 예약 및 `sgp-psc-endpoint` 전달 규칙(Forwarding Rule) 존재 여부 확인 |
+| **4** | Task 7~8 (SGP 정책 및 3-Turn 검증) | 25 | `project_0.LoggingV2` | `step_four_check` | `high-value-limit` 정책 생성 로그 또는 `logs/semantic-governance-policy` 감사 로그 존재 여부 확인 |
 
 ---
 
-### **Task 5. (선택 사항) Git용 Markdown 번들 내보내기**
+## 5. GitHub 브랜치 작업 · GitWhisperer 디버깅 및 PR 배포 절차 (AUTHLAB011)
 
-Google Docs로 작성하고 `terraform.zip`을 연결한 랩 전체 구성을 Git 저장소용 번들(`hol-lab.zip`)로 백업하거나 이관할 수 있습니다.
+### 5.1 로컬 리포지토리에서 브랜치 생성 및 Push
+1. **GitHub Desktop**을 열고 대상 리포지토리(예: `hol-creation` 또는 타겟 콘텐츠 리포지토리)를 선택합니다.
+   * 로컬 [`/Users/dhwee/Documents/hol-creation/labs/apex-agent-gateway-sgp`](file:///Users/dhwee/Documents/hol-creation/labs/apex-agent-gateway-sgp) 경로에도 동일한 번들 사본이 준비되어 있습니다.
+2. 상단 **Current Branch** 드롭다운을 클릭하고 고유한 작업 브랜치명(예: `feat-apex-agent-gateway-sgp`)을 입력한 뒤 **Create new branch** → **Publish branch**를 클릭합니다.
+3. 변경 사항을 확인하고 좌측 하단에 커밋 메시지를 입력한 뒤 **Commit** 및 **Push origin**을 클릭합니다.
 
-1. 랩 **Edit** 페이지 우측 상단의 **더보기(⋮)** 아이콘을 클릭합니다.
-2. **Download this lab as Markdown for Git**을 클릭하면 Google Docs 지침과 `terraform.zip` 설정이 통합된 ZIP 아카이브가 로컬 컴퓨터로 다운로드됩니다.
+### 5.2 GitWhisperer 사전 검증 체크리스트
+본 번들은 GitWhisperer가 검사하는 아래 모든 항목을 사전 통과하도록 검증되었습니다:
+* [x] **YAML 문법 및 2칸 들여쓰기**: `qwiklabs.yaml`, `assessment.yaml`, `terraform/runtime.yaml` (`python3 -c "import yaml; ..."` 검증 완료)
+* [x] **Terraform 유효성 검사**: `hashicorp/google` `v3.90.1` 기준 `terraform init -backend=false && terraform validate` 통과 (`Success! The configuration is valid.`)
+* [x] **Ruby 문법 및 함수명 일치**: `assessments/step_*_check.rb` 4종 모두 `ruby -c` (`Syntax OK`) 및 `assessment.yaml`의 `method_name`과 함수명 일치
+* [x] **단일 `#` (H1) 제목**: `instructions/en.md`, `instructions/ko.md` 모두 1행에만 `#` 제목이 존재하며 나머지 모든 Step은 `##` (H2) 사용
+* [x] **유효한 Fleet 및 Output 참조**: `variant: gcpd` 사용, `student_visible_outputs`의 모든 참조(`project_0.*`, `user_0.*`, `project_0.startup_script.*`)가 실제 정의와 일치
+
+### 5.3 Pull Request 생성 및 정식 배포
+1. GitHub 웹 페이지에서 작업 브랜치의 최신 커밋 상세 페이지 하단에 **`Everything looks good to go.`** 메시지와 Google Staging 프리뷰 링크가 표시되는지 확인합니다.
+2. Staging 프리뷰 링크를 열어 브랜치 버전의 랩을 실행하고 Startup Script와 Activity Tracking이 100% 점수로 동작하는지 확인합니다.
+3. 검증이 완료되면 GitHub에서 **`base: main` ← `compare: feat-apex-agent-gateway-sgp`**로 **New pull request**를 생성합니다.
+4. 우측 메뉴의 **Assignees**(및 **Reviewers**)에 리포지토리 관리자 그룹인 **`Qwiklabs-Sharing`**을 지정합니다.
+5. PR이 승인되어 `main` 브랜치에 병합되면 [Google Staging](https://googlestaging.qwiklabs.com/)의 **Authoring > Labs** 목록에 브랜치명 꼬리표가 없는 정식 사본으로 등록됩니다.
+
+---
+
+## 6. 학습자에게 랩 전달하기: Classroom Template 및 Classroom 운영 (AUTHLAB012)
+
+정식 배포된 랩을 워크숍이나 강의(ILT) 형태로 학습자에게 전달할 때는 **Classroom Template**과 **Classroom**을 생성합니다.
+
+1. **Classroom Template 생성 (`Google Staging > Authoring > Classroom Templates > +`)**:
+   * **Name**, **Description**을 입력하고 **Fraud Protection**과 **Enabled** 체크박스를 반드시 모두 선택합니다.
+   * 필요 시 **Student Instruction** / **Trainer Instruction** 자료를 추가하고, 실습 목록에서 본 랩을 선택한 뒤 **Create Classroom template**을 클릭합니다.
+   * 생성된 템플릿을 실제 교육 전달 플랫폼(Delivery Platform)으로 퍼블리시합니다.
+2. **Classroom 생성 및 운영 (`Delivery Platform > Classrooms > +`)**:
+   * **주의:** 실제 수강생 대상 교육은 절대 Google Staging에서 실행하지 말고 반드시 정식 Delivery Platform에서 생성하세요.
+   * 퍼블리시된 Classroom Template을 검색해 선택한 뒤 **Public Classroom** 또는 **Virtual Classroom**을 선택합니다.
+   * 강사(**Trainer**), 시작/종료 일정, **Location (`Online` 등)**, **Timezone**, **Lab Access**, **Hot labs** 수량을 지정하고 **Create Classroom**을 클릭합니다.
+3. **랩 활성화 및 수강생 등록**:
+   * Classroom의 **Labs** 탭 상단에서 **Activate all labs** 아이콘을 클릭하여 수강생이 랩을 시작할 수 있도록 활성화합니다.
+   * **Students** 탭에서 수강생의 개별 이메일 주소를 추가(또는 CSV 일괄 업로드, 도메인 와일드카드 사용 금지)하고, 수업 중 진행 상태 관리 및 종료 후 **Download Assessment Record (CSV)**로 점수를 다운로드할 수 있습니다.

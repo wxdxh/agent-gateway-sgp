@@ -3,8 +3,8 @@
 본 저장소는 Google Cloud의 **Gemini Enterprise**, **Agent Gateway**, **Semantic Governance Policies (SGP)**를 결합하여 자율형 AI 에이전트의 도구 호출(Tool Invocation)을 네트워크 경계에서 실시간으로 통제하고 감사하는 종합 레퍼런스 아키텍처 및 실습 코드셋입니다.
 
 > 📘 **상세 아키텍처 & 코드랩 실습 지침서**: **[`CODELAB_INSTRUCTIONS_KO.md`](./CODELAB_INSTRUCTIONS_KO.md)**  
-> ☁️ **Qwiklabs · Cloud Shell 전용 핸즈온 인스트럭션**: **[`QWIKLABS_CLOUD_SHELL_KO.md`](./QWIKLABS_CLOUD_SHELL_KO.md)** | **[Google Docs 업로드용 `.docx`](./QWIKLABS_CLOUD_SHELL_KO.docx)** | **[Google Docs 서식 무손실 원클릭 복사 페이지](https://agent-gateway-codelab-1080321871308.us-central1.run.app/gdocs-paste.html)**  
-> 🛠️ **Qwiklabs 저작(Authoring) & Terraform Startup Script 가이드**: **[`QWIKLABS_AUTHORING_GUIDE_KO.md`](./QWIKLABS_AUTHORING_GUIDE_KO.md)** | **[`terraform.zip`](./terraform.zip)** ([`qwiklabs-terraform/`](./qwiklabs-terraform))
+> ☁️ **Qwiklabs Markdown 랩 번들 (GitHub 표준 규격)**: **[`qwiklabs-bundle/apex-agent-gateway-sgp/`](./qwiklabs-bundle/apex-agent-gateway-sgp)** | **[`instructions/en.md`](./qwiklabs-bundle/apex-agent-gateway-sgp/instructions/en.md)** | **[`instructions/ko.md`](./qwiklabs-bundle/apex-agent-gateway-sgp/instructions/ko.md)**  
+> 🛠️ **Qwiklabs Markdown 번들 저작 & 배포 가이드 (AUTHLAB007~012)**: **[`QWIKLABS_AUTHORING_GUIDE_KO.md`](./QWIKLABS_AUTHORING_GUIDE_KO.md)** | **[`qwiklabs.yaml`](./qwiklabs-bundle/apex-agent-gateway-sgp/qwiklabs.yaml)** | **[`assessment.yaml`](./qwiklabs-bundle/apex-agent-gateway-sgp/assessment.yaml)**
 
 ---
 
@@ -60,17 +60,16 @@ flowchart LR
 ```text
 agentgateway/
 ├── CODELAB_INSTRUCTIONS_KO.md      # 📘 단계별 한국어 상세 실습 지침서 (Markdown)
-├── QWIKLABS_CLOUD_SHELL_KO.md      # ☁️ Qwiklabs 공식 Google Docs 템플릿 기반 Cloud Shell 매뉴얼
-├── QWIKLABS_CLOUD_SHELL_KO.docx    # 📄 Google Drive 업로드 및 Google Docs 변환용 네이티브 문서 (서식 무손실)
-├── gdocs-paste.html                # 📋 Google Docs 원클릭 서식 복사(Rich HTML) 웹 도우미 페이지
-├── QWIKLABS_AUTHORING_GUIDE_KO.md  # 🛠️ Google Docs 및 Terraform Startup Script Qwiklabs 저작 가이드
-├── terraform.zip                   # 📦 Qwiklabs Startup Script 업로드용 압축 번들 (Root 직압축)
-├── qwiklabs-terraform/             # 🏗️ Qwiklabs Startup Script 원본 Terraform 소스 (1.0.1)
-│   ├── main.tf                     # 사전 스테이징 리소스 (13개 API, apex-wealth-vpc, apex-subnet, SA)
-│   ├── variables.tf                # Qwiklabs 필수 변수 (gcp_project_id, gcp_region, gcp_zone)
-│   ├── providers.tf                # Google Provider (v3.90.1)
-│   ├── outputs.tf                  # Lab Details 패널 노출용 Environment Outputs
-│   └── runtime.yaml                # Qwiklabs Script Runner 런타임 설정 (terraform 1.0.1)
+├── QWIKLABS_CLOUD_SHELL_KO.md      # ☁️ Qwiklabs Markdown Lab Bundle 표준 지침서 사본
+├── QWIKLABS_AUTHORING_GUIDE_KO.md  # 🛠️ Qwiklabs Markdown 번들 저작·검증·배포 가이드 (AUTHLAB007~012)
+├── qwiklabs-bundle/                # 📦 GitHub 기반 Qwiklabs Markdown Lab Bundle (Schema v2)
+│   └── apex-agent-gateway-sgp/     # 랩 슬러그(Slug) 폴더
+│       ├── QL_OWNER                # 랩 소유자 및 공동 작업자 정의
+│       ├── qwiklabs.yaml           # Schema v2 리소스, Startup Script, Assessment 설정
+│       ├── assessment.yaml         # 4단계 Activity Tracking 설정 (100점 만점)
+│       ├── assessments/            # ComputeV1 · LoggingV2 기반 Ruby 검증 스크립트 4종
+│       ├── instructions/           # en.md 및 ko.md 지침서 (<ql-code-block>, <ql-infobox>, Probes 포함)
+│       └── terraform/              # Qwiklabs Terraform Startup Script (v1.0.1)
 ├── codelab-ko.html                 # 🌐 대화형 한국어 Codelab 웹 가이드 (SVG 다이어그램 포함)
 ├── index.html                      # GitHub Pages / Cloud Run용 대화형 Codelab 메인 페이지
 │
