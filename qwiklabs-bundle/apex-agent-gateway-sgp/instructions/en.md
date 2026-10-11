@@ -10,7 +10,7 @@
 
 ### 전체 아키텍처 및 트래픽 흐름도
 
-아래 아키텍처 다이어그램은 이 실습에서 구축할 3개의 테넌트/네트워크 영역(Zone 1: Gemini Enterprise 에이전트 런타임 테넌트, Zone 2: 고객 VPC 및 Agent Registry 컨트롤 플레인, Zone 3: Google 관리형 SGP 테넌트) 간의 전체 상호작용과 트래픽 흐름을 보여줍니다.
+아래 아키텍처 다이어그램은 이 실습에서 구축할 3개의 아키텍처 플레인 및 테넌트 환경(**Plane 1**: Gemini Enterprise 에이전트 런타임 환경, **Plane 2**: 고객 프로젝트 VPC 및 제어 플레인, **Plane 3**: Google 관리형 SGP 정책 평가 테넌트) 간의 전체 상호작용과 트래픽 흐름을 보여줍니다.
 
 ![Enterprise AI Agent Security Governance Architecture](img/00-overall-architecture.png)
 
