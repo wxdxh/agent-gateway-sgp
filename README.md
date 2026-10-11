@@ -1,6 +1,6 @@
 # Gemini Enterprise와 Agent Gateway · 시맨틱 거버넌스 정책(SGP)을 활용한 엔터프라이즈 AI 에이전트 거버넌스
 
-본 저장소는 Google Cloud의 **Gemini Enterprise**, **Agent Gateway**, **Semantic Governance Policies (SGP)**를 결합하여 자율형 AI 에이전트의 도구 호출(Tool Invocation)을 네트워크 경계에서 실시간으로 통제하고 감사하는 종합 레퍼런스 아키텍처 및 실습 코드셋입니다.
+본 저장소는 Google Cloud의 **Gemini Enterprise**, **Agent Gateway**, **Semantic Governance Policies**(SGP)를 결합하여 자율형 AI 에이전트의 도구 호출(Tool Invocation)을 네트워크 경계에서 실시간으로 통제하고 감사하는 종합 레퍼런스 아키텍처 및 실습 코드셋입니다.
 
 > 📘 **상세 아키텍처 & 코드랩 실습 지침서**: **[`CODELAB_INSTRUCTIONS_KO.md`](./CODELAB_INSTRUCTIONS_KO.md)**  
 > ☁️ **Qwiklabs Markdown 랩 번들 (GitHub 표준 규격)**: **[`qwiklabs-bundle/apex-agent-gateway-sgp/`](./qwiklabs-bundle/apex-agent-gateway-sgp)** | **[`instructions/en.md`](./qwiklabs-bundle/apex-agent-gateway-sgp/instructions/en.md)** | **[`instructions/ko.md`](./qwiklabs-bundle/apex-agent-gateway-sgp/instructions/ko.md)**  
@@ -12,7 +12,7 @@
 
 국내 금융사인 **에이펙스 자산운용**은 고객이 대화만으로 계좌 조회, 간편 송금, 공과금 납부를 수행할 수 있도록 **Gemini Enterprise** 기반의 대화형 뱅킹 에이전트를 도입했습니다. 금융보안 및 준법감시팀은 보이스피싱 및 고액 오송금 사고를 예방하기 위해, 에이전트 코드를 수정하지 않고도 다음의 비즈니스 규정을 네트워크 경계에서 강제합니다:
 
-> **핵심 거버넌스 규정**: *"1회 이체 금액이 100만 원(1,000,000 KRW / 1,000 USD)을 초과하는 모든 송금 요청은 네트워크 경계에서 즉시 차단하고 감사 로그를 남긴다."*
+> **핵심 거버넌스 규정**: "*1회 이체 금액이 100만 원(1,000,000 KRW / 1,000 USD)을 초과하는 모든 송금 요청은 네트워크 경계에서 즉시 차단하고 감사 로그를 남긴다.*"
 
 ```mermaid
 flowchart LR
@@ -39,7 +39,7 @@ flowchart LR
 ## ⏱️ 한눈에 보는 실습 로드맵 (총 예상 시간: 약 45분)
 
 > **⚡ 병렬 파이프라인 설계 안내**:  
-> **Gemini Enterprise Agent Runtime** 프로비저닝은 백엔드에서 약 15~20분이 소요됩니다. 본 코드랩은 에이전트 배포에 필수적인 최소 선행 리소스(`agent-egress` 게이트웨이 및 MCP 도구 등록)를 먼저 완료한 뒤, **Step 6(`05-deploy-agent.sh`)에서 에이전트 배포를 비동기(`--no-wait`)로 시작**하고 백그라운드에서 빌드되는 동안 **Step 7(SGP PSC 네트워킹 및 DNS 구성)**과 **Step 8(인가 확장 및 SGP 정책 생성)**을 병렬로 진행합니다.
+> **Gemini Enterprise Agent Runtime** 프로비저닝은 백엔드에서 약 15~20분이 소요됩니다. 본 코드랩은 에이전트 배포에 필수적인 최소 선행 리소스(`agent-egress` 게이트웨이 및 MCP 도구 등록)를 먼저 완료한 뒤, **Step 6(`05-deploy-agent.sh`)에서 에이전트 배포를 비동기(`--no-wait`)로 시작**하고 백그라운드에서 빌드되는 동안 **Step 7**(SGP PSC 네트워킹 및 DNS 구성)과 **Step 8**(인가 확장 및 SGP 정책 생성)을 병렬로 진행합니다.
 
 | 단계 | 실행 스크립트 | 핵심 작업 | 예상 시간 | 실무 체크포인트 |
 | :---: | :--- | :--- | :---: | :--- |
@@ -130,9 +130,9 @@ agentgateway/
 
 | 대화 순서 | 고객 입력 프롬프트 | SGP 판정 | 에이전트 최종 응답 |
 | :---: | :--- | :---: | :--- |
-| **Turn 1**<br/>(본인 확인) | `저는 고객번호 CUST005입니다`<br/>*(또는 `I am customer CUST005`)* | **`ALLOW`** | 안녕하세요! 계좌(`ACT-1005`)의 현재 잔액은 **10,000,000원(10,000 USD)**입니다. 무엇을 도와드릴까요? |
-| **Turn 2**<br/>(소액 송금) | `555-0001로 5만 원(50) 이체해 줘`<br/>*(또는 `transfer 50 to 555-0001`)* | **`ALLOW`** | 수취인(`555-0001`)에게 정상 이체되었습니다. 거래번호: `TXN-C0832A85`, 남은 잔액: **9,950,000원(9,950 USD)** |
-| **Turn 3**<br/>(고액 차단) | `555-0002로 200만 원(2000) 이체해 줘`<br/>*(또는 `transfer 2000 to 555-0002`)* | **`DENY`** | 죄송합니다. 요청하신 이체 금액이 **'고액 이체 한도 정책(High Value Transfer Limit)'의 1회 한도(100만 원 / 1,000 USD)를 초과**하여 거래를 진행할 수 없습니다. |
+| **Turn 1**<br/>(본인 확인) | `저는 고객번호 CUST005입니다`<br/>*(또는 `I am customer CUST005`)* | **`ALLOW`** | 안녕하세요! 계좌(`ACT-1005`)의 현재 잔액은 **10,000,000원**(10,000 USD)입니다. 무엇을 도와드릴까요? |
+| **Turn 2**<br/>(소액 송금) | `555-0001로 5만 원(50) 이체해 줘`<br/>*(또는 `transfer 50 to 555-0001`)* | **`ALLOW`** | 수취인(`555-0001`)에게 정상 이체되었습니다. 거래번호: `TXN-C0832A85`, 남은 잔액: **9,950,000원**(9,950 USD) |
+| **Turn 3**<br/>(고액 차단) | `555-0002로 200만 원(2000) 이체해 줘`<br/>*(또는 `transfer 2000 to 555-0002`)* | **`DENY`** | 죄송합니다. 요청하신 이체 금액이 **고액 이체 한도 정책(High Value Transfer Limit)의 1회 한도(100만 원 / 1,000 USD)를 초과**하여 거래를 진행할 수 없습니다. |
 
 ---
 

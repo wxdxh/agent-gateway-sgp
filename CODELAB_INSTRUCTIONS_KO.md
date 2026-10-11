@@ -11,7 +11,7 @@
 ## Step 1. 개요 및 아키텍처 (⏱ 5분)
 
 ### 1.1 비즈니스 시나리오: 에이펙스 자산운용 (Apex Asset Management)
-금융권에서 자율형 AI 에이전트가 단순 상담을 넘어 **계좌 잔액 조회, 실시간 계좌 이체, 공과금 납부**와 같은 핵심 원장 API를 직접 호출하기 시작하면서, 전통적인 IAM이나 RBAC만으로는 *"누가 호출했는가"*만 확인할 뿐 *"얼마를 어떤 맥락으로 이체하려 하는가"*를 통제하기 어렵습니다.
+금융권에서 자율형 AI 에이전트가 단순 상담을 넘어 **계좌 잔액 조회, 실시간 계좌 이체, 공과금 납부**와 같은 핵심 원장 API를 직접 호출하기 시작하면서, 전통적인 IAM이나 RBAC만으로는 "*누가 호출했는가*"만 확인할 뿐 "*얼마를 어떤 맥락으로 이체하려 하는가*"를 통제하기 어렵습니다.
 
 국내 금융사인 **에이펙스 자산운용**은 고객이 대화만으로 간편 송금과 계좌 관리를 수행할 수 있도록 **Gemini Enterprise** 기반의 대화형 뱅킹 에이전트를 도입했습니다. 금융보안 및 준법감시팀은 보이스피싱 및 고액 오송금 사고를 예방하기 위해 에이전트 코드를 수정하지 않고도 다음 규정을 강제하고자 합니다:
 
@@ -46,7 +46,7 @@ flowchart LR
 ### 1.3 한눈에 보는 실습 로드맵 (총 9단계 · 약 45분)
 
 > **⚡ 병렬 파이프라인 설계 안내**
-> Gemini Enterprise Agent Runtime 프로비저닝은 컨테이너 빌드 및 샌드박스 할당으로 인해 백엔드에서 약 15~20분이 소요됩니다. 본 실습은 에이전트 배포에 필요한 선행 리소스(`agent-egress` 게이트웨이 및 MCP 도구 등록)를 먼저 구성한 뒤 **Step 6(`05-deploy-agent.sh`)에서 비동기(`--no-wait`)로 에이전트 배포를 시작**하고, 에이전트가 백그라운드에서 빌드되는 동안 **Step 7(SGP PSC 네트워킹 및 DNS 구성)**과 **Step 8(인가 확장 및 SGP 정책 생성)**을 병렬로 진행합니다.
+> Gemini Enterprise Agent Runtime 프로비저닝은 컨테이너 빌드 및 샌드박스 할당으로 인해 백엔드에서 약 15~20분이 소요됩니다. 본 실습은 에이전트 배포에 필요한 선행 리소스(`agent-egress` 게이트웨이 및 MCP 도구 등록)를 먼저 구성한 뒤 **Step 6(`05-deploy-agent.sh`)에서 비동기(`--no-wait`)로 에이전트 배포를 시작**하고, 에이전트가 백그라운드에서 빌드되는 동안 **Step 7**(SGP PSC 네트워킹 및 DNS 구성)과 **Step 8**(인가 확장 및 SGP 정책 생성)을 병렬로 진행합니다.
 
 | 단계 | 실행 스크립트 | 핵심 작업 | 예상 시간 | 실무 체크포인트 |
 | :---: | :--- | :--- | :---: | :--- |
@@ -132,7 +132,7 @@ done
 
 ## Step 3. Agent Gateway Egress 기반 구축 (⏱ 3분)
 
-에이전트 런타임 배포(`05-deploy-agent.sh`)를 조기에 시작하려면, 에이전트가 연결될 **Agent Gateway(`agent-egress`)**와 이를 뒷받침하는 VPC 프록시 서브넷 및 Network Attachment가 먼저 준비되어야 합니다.
+에이전트 런타임 배포(`05-deploy-agent.sh`)를 조기에 시작하려면, 에이전트가 연결될 **Agent Gateway**(`agent-egress`)와 이를 뒷받침하는 VPC 프록시 서브넷 및 Network Attachment가 먼저 준비되어야 합니다.
 
 ### 3.1 스크립트 실행 (`02-setup-agent-gateway.sh`)
 
@@ -145,7 +145,7 @@ done
 이 스크립트는 에이전트의 아웃바운드(Egress) 통제를 담당하는 핵심 게이트웨이 인프라 3가지를 생성합니다:
 
 #### ① Regional Managed Proxy Subnet 및 Network Attachment 생성
-Agent Gateway(Google 관리형 테넌트에서 실행됨)가 고객 VPC 내부의 프라이빗 리소스(후속 단계에서 구성할 SGP PSC 엔드포인트)와 통신하려면, VPC 내부에 프록시 전용 대역(`REGIONAL_MANAGED_PROXY`)과 진입 인터페이스인 **Network Attachment(`agent-gateway-na`)**가 있어야 합니다.
+Agent Gateway(Google 관리형 테넌트에서 실행됨)가 고객 VPC 내부의 프라이빗 리소스(후속 단계에서 구성할 SGP PSC 엔드포인트)와 통신하려면, VPC 내부에 프록시 전용 대역(`REGIONAL_MANAGED_PROXY`)과 진입 인터페이스인 **Network Attachment**(`agent-gateway-na`)가 있어야 합니다.
 
 ```bash
 # 1. 리전 내부 Envoy 프록시 전용 대역(10.11.13.0/24) 할당
@@ -287,7 +287,7 @@ gcloud alpha iap web add-iam-policy-binding \
 
 > **💡 실습 가이드라인: `--no-wait` 비동기 배포 트리거 후 즉시 Step 7 진행**
 > **Gemini Enterprise Agent Runtime**은 컨테이너 이미지 빌드, 격리된 보안 샌드박스 할당, Agent Gateway 프록시 마운트, 그리고 고유한 **Agent Identity(`principal://agents.global...`)** 발급까지 백엔드에서 **약 15~20분**이 소요됩니다.
-> `05-deploy-agent.sh`는 `--no-wait` 플래그를 사용하여 **백그라운드 배포 작업만 즉시 트리거하고 종료(약 1~2분)**됩니다. 스크립트가 완료되면 에이전트가 만들어질 때까지 기다리지 말고 **곧바로 Step 7(`06-setup-sgp-networking.sh`)로 넘어가 SGP 네트워킹 및 정책 구성을 병렬로 진행**하세요!
+> `05-deploy-agent.sh`는 `--no-wait` 플래그를 사용하여 **백그라운드 배포 작업만 즉시 트리거하고 종료**(약 1~2분)됩니다. 스크립트가 완료되면 에이전트가 만들어질 때까지 기다리지 말고 **곧바로 Step 7(`06-setup-sgp-networking.sh`)로 넘어가 SGP 네트워킹 및 정책 구성을 병렬로 진행**하세요!
 
 ### 6.1 스크립트 실행 (`05-deploy-agent.sh`)
 
@@ -298,7 +298,7 @@ gcloud alpha iap web add-iam-policy-binding \
 ### 6.2 🔍 스크립트 및 에이전트 내부 구동 원리 (`05-deploy-agent.sh` & `app/agent.py`)
 
 #### ① Agent Gateway TLS Inspection Root CA 인증서 추출 및 컨테이너 주입
-Agent Gateway는 에이전트가 외부로 보내는 HTTPS 패킷 내부의 JSON 페이로드(도구 이름 및 이체 금액)를 검사하기 위해 **TLS 인터셉션(SSL 복호화 후 재암호화)**을 수행합니다. 에이전트 컨테이너가 게이트웨이의 사설 인증서를 신뢰할 수 있도록, `05-deploy-agent.sh`는 Step 3에서 생성한 `agent-egress` 리소스에서 Root CA 인증서를 추출하여 `conversational-banking/agent-gateway-ca.crt`로 저장합니다.
+Agent Gateway는 에이전트가 외부로 보내는 HTTPS 패킷 내부의 JSON 페이로드(도구 이름 및 이체 금액)를 검사하기 위해 **TLS 인터셉션**(SSL 복호화 후 재암호화)을 수행합니다. 에이전트 컨테이너가 게이트웨이의 사설 인증서를 신뢰할 수 있도록, `05-deploy-agent.sh`는 Step 3에서 생성한 `agent-egress` 리소스에서 Root CA 인증서를 추출하여 `conversational-banking/agent-gateway-ca.crt`로 저장합니다.
 
 ```bash
 # Agent Gateway의 사설 Root CA 인증서를 추출하여 에이전트 빌드 디렉터리에 저장
@@ -322,11 +322,11 @@ agents-cli deploy \
 ```
 - `--agent-identity`: 에이전트 인스턴스만의 고유 암호화 ID(`principal://agents.global.org-...`)를 프로비저닝합니다.
 - `--agent-gateway-egress`: 에이전트 런타임 샌드박스의 모든 아웃바운드 트래픽이 `agent-egress` 게이트웨이를 강제로 경유하도록 네트워크를 바인딩합니다.
-- `--update-env-vars="...,GOOGLE_CLOUD_LOCATION=global,LOCATION=${LOCATION},MODEL=gemini-3.8-flash,..."`: Gemini 3.8 Flash 모델 호출은 **Global 엔드포인트(`https://aiplatform.googleapis.com`, `GOOGLE_CLOUD_LOCATION=global`)**를 사용하고, Agent Registry MCP 도구 조회는 리전(`LOCATION=us-central1`)을 사용하도록 분리 전달합니다.
+- `--update-env-vars="...,GOOGLE_CLOUD_LOCATION=global,LOCATION=${LOCATION},MODEL=gemini-3.8-flash,..."`: Gemini 3.8 Flash 모델 호출은 **Global 엔드포인트**(`https://aiplatform.googleapis.com`, `GOOGLE_CLOUD_LOCATION=global`)를 사용하고, Agent Registry MCP 도구 조회는 리전(`LOCATION=us-central1`)을 사용하도록 분리 전달합니다.
 - `--no-wait`: 백엔드 프로비저닝 완료를 블로킹 대기하지 않고 즉시 제어권을 반환하여, 실습자가 Step 7과 Step 8을 동시에 진행할 수 있도록 합니다.
 
 #### ③ ADK 에이전트의 동적 도구 바인딩 및 Global 엔드포인트 설정 (`conversational-banking/app/agent.py`)
-에이전트 코드는 `GOOGLE_CLOUD_LOCATION="global"`을 고정하여 `gemini-3.8-flash` 모델 추론이 **Gemini Enterprise Global API(`https://aiplatform.googleapis.com`)**를 향하도록 설정하고, `AgentRegistry`에서는 리전(`LOCATION`)의 `MCP_SERVER_NAME`으로 도구 세트를 동적 조회합니다. 또한 Cloud Run으로 요청을 보낼 때 Compute Engine 메타데이터 서버에서 대상 URL을 Audience로 하는 **OIDC ID 토큰**을 자동 발급받아 `Authorization: Bearer` 헤더에 주입합니다.
+에이전트 코드는 `GOOGLE_CLOUD_LOCATION="global"`을 고정하여 `gemini-3.8-flash` 모델 추론이 **Gemini Enterprise Global API**(`https://aiplatform.googleapis.com`)를 향하도록 설정하고, `AgentRegistry`에서는 리전(`LOCATION`)의 `MCP_SERVER_NAME`으로 도구 세트를 동적 조회합니다. 또한 Cloud Run으로 요청을 보낼 때 Compute Engine 메타데이터 서버에서 대상 URL을 Audience로 하는 **OIDC ID 토큰**을 자동 발급받아 `Authorization: Bearer` 헤더에 주입합니다.
 
 ```python
 import os
@@ -358,7 +358,7 @@ root_agent = Agent(
 
 ## Step 7. (병렬 진행 1) SGP 정책 엔진 활성화 · PSC 엔드포인트 및 프라이빗 DNS 구성 (⏱ 5분)
 
-백그라운드에서 Gemini Enterprise 에이전트 런타임이 빌드되는 동안, **Agent Gateway(`agent-egress`)**가 외부 인터넷을 거치지 않는 **Private Service Connect (PSC)** 전용 터널을 통해 SGP 정책 엔진과 통신하도록 구성합니다.
+백그라운드에서 Gemini Enterprise 에이전트 런타임이 빌드되는 동안, **Agent Gateway**(`agent-egress`)가 외부 인터넷을 거치지 않는 **Private Service Connect (PSC)** 전용 터널을 통해 SGP 정책 엔진과 통신하도록 구성합니다.
 
 ```mermaid
 flowchart LR
@@ -441,7 +441,7 @@ gcloud dns record-sets create policy.internal. \
 ### 8.2 🔍 스크립트 내부 구동 원리 (`07-create-sgp-policy.sh`)
 
 #### ① SGP Authorization Extension 등록 (`sgp-authzextension`)
-게이트웨이가 트래픽을 가로챘을 때 외부 심사관(Callout Server)으로 호출할 대상을 `policy.internal`로 지정합니다. 특히 **`"failOpen": false`**로 설정하여, 정책 엔진 장애나 위반 시 트래픽을 무조건 차단(Fail-Closed)하도록 강제합니다.
+게이트웨이가 트래픽을 가로챘을 때 외부 심사관(Callout Server)으로 호출할 대상을 `policy.internal`로 지정합니다. 특히 `"failOpen": false`로 설정하여, 정책 엔진 장애나 위반 시 트래픽을 무조건 차단(Fail-Closed)하도록 강제합니다.
 
 ```bash
 curl -fsS -X POST \
@@ -541,7 +541,7 @@ payload = {
 
 | 대화 순서 | 고객 입력 프롬프트 | SGP 판정 | 에이전트 최종 응답 |
 | :---: | :--- | :---: | :--- |
-| **Turn 1**<br/>(본인 확인) | `저는 고객번호 CUST005입니다`<br/>*(또는 `I am customer CUST005`)* | **`ALLOW`** | 안녕하세요! 계좌(`ACT-1005`)의 현재 잔액은 **10,000,000원(10,000 USD)**입니다. 무엇을 도와드릴까요? |
+| **Turn 1**<br/>(본인 확인) | `저는 고객번호 CUST005입니다`<br/>*(또는 `I am customer CUST005`)* | **`ALLOW`** | 안녕하세요! 계좌(`ACT-1005`)의 현재 잔액은 **10,000,000원**(10,000 USD)입니다. 무엇을 도와드릴까요? |
 | **Turn 2**<br/>(소액 송금) | `555-0001로 5만 원(50) 이체해 줘`<br/>*(또는 `transfer 50 to 555-0001`)* | **`ALLOW`** | 수취인(`555-0001`)에게 정상 이체되었습니다. 거래번호: `TXN-C0832A85`, 남은 잔액: **9,950,000원(9,950 USD)** |
 | **Turn 3**<br/>(고액 차단) | `555-0002로 200만 원(2000) 이체해 줘`<br/>*(또는 `transfer 2000 to 555-0002`)* | **`DENY`** | 죄송합니다. 요청하신 이체 금액이 **'고액 이체 한도 정책(High Value Transfer Limit)'의 1회 한도(100만 원 / 1,000 USD)를 초과**하여 거래를 진행할 수 없습니다. |
 

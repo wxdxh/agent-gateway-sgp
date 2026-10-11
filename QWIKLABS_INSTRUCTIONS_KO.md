@@ -6,7 +6,7 @@
 
 이 실습에서는 에이펙스 자산운용(Apex Asset Management)의 금융 보안 시나리오를 바탕으로, **에이전트 애플리케이션 코드를 수정하지 않고 네트워크 경계(Network Boundary)에서 자연어 기반의 비즈니스 규정을 실시간으로 강제하는 엔터프라이즈 거버넌스 아키텍처**를 직접 구축합니다. Gemini Enterprise Agent Runtime에서 동작하는 대화형 뱅킹 에이전트(`gemini-3.8-flash`, Global 엔드포인트)가 Google Cloud Agent Gateway(`agent-egress`)와 시맨틱 거버넌스 정책(Semantic Governance Policies, SGP)을 경유하여 Cloud Run 기반의 뱅킹 MCP(Model Context Protocol) 서버를 호출하도록 구성합니다.
 
-에이전트 내부의 시스템 프롬프트만으로는 우회 공격이나 런타임 오작동을 완벽히 통제하기 어렵습니다. Agent Gateway와 SGP를 결합하면 모든 아웃바운드 도구 호출을 네트워크 경계에서 가로채어 **"1회 이체 금액이 100만 원(`amount <= 1000.0`)을 초과하는 모든 송금 요청은 차단한다"**와 같은 자연어 비즈니스 정책을 코드 변경 없이 강제하고 Cloud Logging에 감사 로그를 기록할 수 있습니다.
+에이전트 내부의 시스템 프롬프트만으로는 우회 공격이나 런타임 오작동을 완벽히 통제하기 어렵습니다. Agent Gateway와 SGP를 결합하면 모든 아웃바운드 도구 호출을 네트워크 경계에서 가로채어 "**1회 이체 금액이 100만 원(`amount <= 1000.0`)을 초과하는 모든 송금 요청은 차단한다**"와 같은 자연어 비즈니스 정책을 코드 변경 없이 강제하고 Cloud Logging에 감사 로그를 기록할 수 있습니다.
 
 ### 전체 아키텍처 및 트래픽 흐름도
 
@@ -137,7 +137,7 @@ Agent GW SA:    serviceAccount:service-1080321871308@gcp-sa-agentgateway.iam.gse
 | :--- | :--- | :--- |
 | **1. Agent Gateway 서비스 에이전트** (`AGW_SA`) | `service-${PROJECT_NUM}@gcp-sa-agentgateway.iam.gserviceaccount.com` | 에이전트의 아웃바운드 트래픽을 중계하고 Agent Registry(`roles/agentregistry.viewer`) 조회 및 SGP 정책 엔진(`roles/aiplatform.user`) 심사를 요청합니다. |
 | **2. Vertex AI 서비스 에이전트** | `service-${PROJECT_NUM}@gcp-sa-aiplatform.iam.gserviceaccount.com` | Gemini Enterprise Agent Runtime을 생성하고 해당 런타임의 아웃바운드 경로에 `agent-egress` 게이트웨이를 연결(`roles/aiplatform.serviceAgent`)합니다. |
-| **3. 에이전트 고유 ID (Agent Identity)** | `principal://agents.global.org-.../reasoningEngines/...` | 범용 서비스 계정 대신 `conversational-banking` 에이전트 인스턴스에만 발급되는 고유 ID로, 허가된 도구 조회(`roles/agentregistry.user`) 및 모델 추론 권한만 가집니다. |
+| **3. 에이전트 고유 ID** (`Agent Identity`) | `principal://agents.global.org-.../reasoningEngines/...` | 범용 서비스 계정 대신 `conversational-banking` 에이전트 인스턴스에만 발급되는 고유 ID로, 허가된 도구 조회(`roles/agentregistry.user`) 및 모델 추론 권한만 가집니다. |
 
 ### `./01-setup-env.sh` 스크립트 내부 동작 상세 분석
 
@@ -178,10 +178,10 @@ nohup gcloud run deploy banking-mcp-server --source=./banking-mcp-server ... >/t
 nohup gcloud beta ai semantic-governance-policy-engine update --location="${LOCATION}" ... >/tmp/sgp-engine-warmup.log 2>&1 &
 </ql-code-block>
 
-* **단계 1 (필수 API 19종 활성화)**: Agent Gateway(`networkservices`), AuthzPolicy(`networksecurity`), Agent Identity(`agentidentity`), Service Extensions(`serviceextensions`), IAP Egress 제어(`iap`) 등 거버넌스 스택을 구성하는 API들을 활성화합니다.
-* **단계 2 (관리형 서비스 에이전트 생성 및 권한 부여)**: `gcloud beta services identity create` 명령으로 프로젝트 전용 Google 관리형 서비스 에이전트를 깨우고(Identity Provisioning), `AGW_SA`와 Vertex AI 서비스 에이전트에 프로젝트 IAM 역할을 바인딩합니다.
-* **단계 3 (에이전트 고유 ID `principal://...` 선행 생성)**: `reasoningEngines` REST API에 소스 코드 없이 `{"identityType": "AGENT_IDENTITY"}`만 지정하여 빈 Reasoning Engine 리소스를 먼저 생성합니다. 이렇게 하면 고유 ID(`principal://...`)가 즉시 발급되어 IAM 권한을 미리 부여할 수 있으므로, 이후 작업 5에서 실제 에이전트 컨테이너를 배포(`agents-cli deploy`)할 때 **글로벌 IAM 권한 전파 지연(Propagation Delay, 통상 1~2분)으로 인한 초기 부팅 실패를 원천 방지**합니다.
-* **단계 4 (백그라운드 리소스 예열)**: 학습자가 작업 2의 네트워킹 구성을 진행하는 동안 백그라운드(`nohup ... &`)에서 Cloud Run 뱅킹 MCP 서버 컨테이너 빌드(약 2분 소요)와 SGP 정책 엔진 초기화(약 3분 소요)를 병렬로 시작하여 전체 실습 대기 시간을 단축합니다.
+* **단계 1 - 필수 API 19종 활성화**: Agent Gateway(`networkservices`), AuthzPolicy(`networksecurity`), Agent Identity(`agentidentity`), Service Extensions(`serviceextensions`), IAP Egress 제어(`iap`) 등 거버넌스 스택을 구성하는 API들을 활성화합니다.
+* **단계 2 - 관리형 서비스 에이전트 생성 및 권한 부여**: `gcloud beta services identity create` 명령으로 프로젝트 전용 Google 관리형 서비스 에이전트를 깨우고(Identity Provisioning), `AGW_SA`와 Vertex AI 서비스 에이전트에 프로젝트 IAM 역할을 바인딩합니다.
+* **단계 3 - 에이전트 고유 ID(`principal://...`) 선행 생성**: `reasoningEngines` REST API에 소스 코드 없이 `{"identityType": "AGENT_IDENTITY"}`만 지정하여 빈 Reasoning Engine 리소스를 먼저 생성합니다. 이렇게 하면 고유 ID(`principal://...`)가 즉시 발급되어 IAM 권한을 미리 부여할 수 있으므로, 이후 작업 5에서 실제 에이전트 컨테이너를 배포(`agents-cli deploy`)할 때 **글로벌 IAM 권한 전파 지연(Propagation Delay, 통상 1~2분)으로 인한 초기 부팅 실패를 원천 방지**합니다.
+* **단계 4 - 백그라운드 리소스 예열**: 학습자가 작업 2의 네트워킹 구성을 진행하는 동안 백그라운드(`nohup ... &`)에서 Cloud Run 뱅킹 MCP 서버 컨테이너 빌드(약 2분 소요)와 SGP 정책 엔진 초기화(약 3분 소요)를 병렬로 시작하여 전체 실습 대기 시간을 단축합니다.
 
 <ql-infobox><strong>자사 인프라 적용 시 핵심 설계 포인트 (CI/CD 파이프라인):</strong> 실제 기업 환경에서 Terraform이나 CI/CD 파이프라인으로 에이전트를 최초 배포할 때도 <strong>단계 3의 선행 ID 발급 패턴</strong>이 매우 유용합니다. 인프라 배포 단계(Terraform)에서 빈 Reasoning Engine(<code>identityType: AGENT_IDENTITY</code>)과 IAM 바인딩을 먼저 생성해 두고, 애플리케이션 배포 단계(GitHub Actions / Cloud Build)에서 <code>agents-cli deploy</code>로 코드만 업데이트하면, 보안팀의 IAM 승인 절차와 개발팀의 코드 배포 주기를 깔끔하게 분리(Decoupling)할 수 있습니다.</ql-infobox>
 
@@ -400,7 +400,7 @@ gcloud run services add-iam-policy-binding banking-mcp-server \
 
 ## 작업 4. Agent Registry에 MCP 도구 및 Gemini Enterprise Global API 등록
 
-`AGENT_TO_ANYWHERE` 모드로 동작하는 Agent Gateway는 **기본 거부(Default Deny, Zero-Trust Egress)** 원칙을 따릅니다. 즉, 에이전트의 모든 아웃바운드 트래픽은 게이트웨이를 통과해야 하며, **Agent Registry에 등록되고 IAP Egress(`roles/iap.egressor`) 권한이 부여된 목적지**로만 통신이 허용됩니다.
+`AGENT_TO_ANYWHERE` 모드로 동작하는 Agent Gateway는 **기본 거부**(Default Deny, Zero-Trust Egress) 원칙을 따릅니다. 즉, 에이전트의 모든 아웃바운드 트래픽은 게이트웨이를 통과해야 하며, **Agent Registry에 등록되고 IAP Egress(`roles/iap.egressor`) 권한이 부여된 목적지**로만 통신이 허용됩니다.
 
 심지어 에이전트가 추론을 위해 호출하는 Gemini 모델 API(`https://aiplatform.googleapis.com`)나 로그 전송 API(`https://logging.googleapis.com`)조차 게이트웨이를 경유하므로, 이 시스템 API들도 반드시 Agent Registry에 Allowlist로 등록해야 에이전트가 정상 작동합니다.
 
@@ -511,7 +511,7 @@ Gemini Enterprise Agent Runtime 컨테이너 빌드 및 배포는 백엔드에�
 
 ### TLS 복호화(Inspection) 및 에이전트 런타임 배포 구조
 
-Agent Gateway가 에이전트의 HTTPS 아웃바운드 요청 안에 담긴 JSON-RPC 도구 호출 인자(예: `amount: 2000`)를 검사하려면 **TLS Inspection(복호화 후 재암호화)**을 수행해야 합니다. 이를 위해 게이트웨이의 자체 Root CA 인증서(`agent-gateway-ca.crt`)를 추출하여 에이전트 컨테이너 내부에 신뢰할 수 있는 인증서로 탑재합니다.
+Agent Gateway가 에이전트의 HTTPS 아웃바운드 요청 안에 담긴 JSON-RPC 도구 호출 인자(예: `amount: 2000`)를 검사하려면 **TLS Inspection**(복호화 후 재암호화)을 수행해야 합니다. 이를 위해 게이트웨이의 자체 Root CA 인증서(`agent-gateway-ca.crt`)를 추출하여 에이전트 컨테이너 내부에 신뢰할 수 있는 인증서로 탑재합니다.
 
 ![TLS Inspection Root CA Injection & Async Agent Runtime Deployment](img/05-tls-inspection-agent-deploy.png)
 
@@ -590,7 +590,7 @@ cd ~/agent-gateway-sgp
 
 ## 작업 6. SGP 정책 엔진 활성화, PSC 엔드포인트 및 프라이빗 Cloud DNS 구성
 
-백그라운드에서 에이전트가 배포되는 동안 `agent-egress` 게이트웨이가 Google 관리형 SGP 정책 엔진과 사설망으로 통신할 수 있도록 **Private Service Connect(PSC) 엔드포인트(`sgp-psc-endpoint`)**와 **프라이빗 Cloud DNS(`policy.internal.`)**를 구성합니다.
+백그라운드에서 에이전트가 배포되는 동안 `agent-egress` 게이트웨이가 Google 관리형 SGP 정책 엔진과 사설망으로 통신할 수 있도록 **Private Service Connect(PSC) 엔드포인트**(`sgp-psc-endpoint`)와 **프라이빗 Cloud DNS**(`policy.internal.`)를 구성합니다.
 
 ### 왜 SGP 연결에 PSC와 프라이빗 DNS를 사용합니까?
 
@@ -687,7 +687,7 @@ gcloud compute forwarding-rules describe sgp-psc-endpoint \
 
 ## 작업 7. 인가 확장(AuthzExtension), 인가 정책 및 자연어 SGP 정책 생성
 
-이 작업에서는 `agent-egress` 게이트웨이를 통과하는 도구 호출 페이로드를 PSC 터널(`policy.internal`) 너머의 SGP 정책 엔진으로 전달하고, 실제로 어떤 에이전트의 어떤 도구를 어떤 자연어 규칙으로 통제할지 정의하는 **3단계 정책 체인(3-Layer Policy Enforcement Chain)**을 완성합니다.
+이 작업에서는 `agent-egress` 게이트웨이를 통과하는 도구 호출 페이로드를 PSC 터널(`policy.internal`) 너머의 SGP 정책 엔진으로 전달하고, 실제로 어떤 에이전트의 어떤 도구를 어떤 자연어 규칙으로 통제할지 정의하는 **3단계 정책 체인**(3-Layer Policy Enforcement Chain)을 완성합니다.
 
 ![Private Service Connect & 3-Layer SGP Policy Chain](img/07-sgp-policy-chain.png)
 
@@ -714,7 +714,7 @@ curl -fsS -X POST \
 </ql-code-block>
 
 * `"service": "policy.internal"` 및 `"authority": "policy.internal"`: 작업 6에서 프라이빗 Cloud DNS에 등록한 SGP PSC 엔드포인트 도메인을 가리킵니다.
-* `"failOpen": false`: 금융 거래와 같은 고위험 워크로드에서 필수적인 **Fail-Closed(장애 시 차단)** 설정입니다. 만약 네트워크 설정 오류나 정책 엔진 장애로 심사 결과를 받을 수 없는 경우 요청을 통과시키지 않고 안전하게 차단합니다.
+* `"failOpen": false`: 금융 거래와 같은 고위험 워크로드에서 필수적인 **Fail-Closed**(장애 시 차단) 설정입니다. 만약 네트워크 설정 오류나 정책 엔진 장애로 심사 결과를 받을 수 없는 경우 요청을 통과시키지 않고 안전하게 차단합니다.
 
 2. `agent-egress` 게이트웨이를 대상으로 비-gRPC 콘텐츠 생성 및 MCP 도구 호출을 `sgp-authzextension`으로 위임하는 `agent-egress-sgp-authzpolicy.yaml` 매니페스트를 작성하고 임포트합니다.
 
@@ -874,9 +874,9 @@ gcloud logging read \
 </ql-code-block>
 
 2. 출력된 JSON 감사 로그에서 `jsonPayload` 내부의 핵심 필드를 확인합니다.
-   * **정책 이름 (`policyName` / `appliedPolicies`)**: `high-value-limit` 정책이 매칭되었음을 보여줍니다.
-   * **판정 결과 (`verdict` / `action`)**: Turn 2(`amount: 50`)에 대해서는 `ALLOW`, Turn 3(`amount: 2000`)에 대해서는 `DENY`가 기록됩니다.
-   * **판단 근거 (`rationale` / `explanation`)**: SGP 엔진이 왜 해당 도구 호출을 허용하거나 차단했는지 자연어 설명(예: *"The requested transfer amount of 2000 exceeds the maximum allowed limit of USD 1000."*)을 함께 기록합니다.
+   * **정책 이름** (`policyName` / `appliedPolicies`): `high-value-limit` 정책이 매칭되었음을 보여줍니다.
+   * **판정 결과** (`verdict` / `action`): Turn 2(`amount: 50`)에 대해서는 `ALLOW`, Turn 3(`amount: 2000`)에 대해서는 `DENY`가 기록됩니다.
+   * **판단 근거** (`rationale` / `explanation`): SGP 엔진이 왜 해당 도구 호출을 허용하거나 차단했는지 자연어 설명(예: `"The requested transfer amount of 2000 exceeds the maximum allowed limit of USD 1000."`)을 함께 기록합니다.
 
 <ql-infobox><strong>자사 인프라 적용 시 핵심 설계 포인트 (SIEM 연동 및 금융 컴플라이언스 감사):</strong> 기업 보안 운영 센터(SOC)에서는 Cloud Logging의 Log Sink 기능을 사용하여 <code>logName="projects/.../logs/semantic-governance-policy"</code> 로그를 <strong>BigQuery(장기 감사 보관용)</strong> 또는 <strong>Google Security Operations (Chronicle) / 사내 SIEM</strong>으로 실시간 스트리밍할 수 있습니다. 특히 <code>DENY</code> 판정이 반복 발생하는 세션이나 에이전트 ID에 대해 Cloud Monitoring 알림(Alerting)을 설정하면 비정상적인 프롬프트 인젝션 시도나 에이전트 오작동을 즉시 탐지하고 대응할 수 있습니다.</ql-infobox>
 

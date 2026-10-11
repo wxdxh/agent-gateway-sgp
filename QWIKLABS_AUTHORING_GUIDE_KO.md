@@ -1,6 +1,6 @@
 # Qwiklabs Markdown 기반 핸즈온 랩 번들(Lab Bundle) 저작 및 배포 가이드
 
-본 문서는 **Authoring Markdown-Based Hands-on Labs (Course 615868: AUTHLAB007 ~ AUTHLAB012)** 공식 표준 규격에 따라, **에이펙스 자산운용(Apex Asset Management) 자율형 AI 에이전트 거버넌스 실습**을 GitHub 기반 **Markdown Lab Bundle (`qwiklabs-bundle/apex-agent-gateway-sgp/`)**로 구성·검증·배포하고 학습자에게 전달(Classroom)하는 전체 절차를 안내합니다.
+본 문서는 **Authoring Markdown-Based Hands-on Labs**(Course 615868: AUTHLAB007 ~ AUTHLAB012) 공식 표준 규격에 따라, **에이펙스 자산운용(Apex Asset Management) 자율형 AI 에이전트 거버넌스 실습**을 GitHub 기반 **Markdown Lab Bundle**(`qwiklabs-bundle/apex-agent-gateway-sgp/`)로 구성·검증·배포하고 학습자에게 전달(Classroom)하는 전체 절차를 안내합니다.
 
 ---
 
@@ -45,10 +45,10 @@ dhwee@google.com # Lab Owner (Qwiklabs account with creator access)
 ```
 
 ### 2.2 `qwiklabs.yaml` (Schema Version 2 표준 설정)
-* **`entity_type: Lab`** 및 **`schema_version: 2`**를 명시합니다.
-* **`variant: gcpd`**: 기본 Google Cloud 프로젝트 Fleet을 사용하며, 리전 인프라 생성을 위해 권장 리전 목록(`us-central1`, `us-west1`, `us-east1`, `us-east4`)을 `allowed_locations`에 지정합니다.
-* **`startup_script`**: `gcp_project` 리소스 블록 내부에 `type: qwiklabs`와 `path: ./terraform`을 지정합니다.
-* **`assessment`**: 루트 레벨에 `assessment: assessment.yaml`을 연결합니다.
+* `entity_type: Lab` 및 `schema_version: 2`를 명시합니다.
+* `variant: gcpd`: 기본 Google Cloud 프로젝트 Fleet을 사용하며, 리전 인프라 생성을 위해 권장 리전 목록(`us-central1`, `us-west1`, `us-east1`, `us-east4`)을 `allowed_locations`에 지정합니다.
+* `startup_script`: `gcp_project` 리소스 블록 내부에 `type: qwiklabs`와 `path: ./terraform`을 지정합니다.
+* `assessment`: 루트 레벨에 `assessment: assessment.yaml`을 연결합니다.
 
 ### 2.3 `instructions/en.md` 및 `instructions/ko.md` 작성 규칙 (MD-template 준수)
 1. **단일 `#` (H1) 제목 원칙**: 문서 전체에서 `#` (Heading 1)으로 시작하는 줄은 **맨 첫 줄(랩 제목) 단 1개만** 존재해야 합니다.
@@ -59,7 +59,7 @@ dhwee@google.com # Lab Owner (Qwiklabs account with creator access)
 4. **코드 블록 및 출력 블록 구분**:
    * 실행할 명령어: `<ql-code-block language="bash">...</ql-code-block>` (복사 버튼 제공 및 번호 매기기 목록 유지)
    * 터미널 실행 결과 예시: `<ql-code-block output>...</ql-code-block>` (복사 버튼 미표시, 출력 전용 스타일 적용)
-5. **안내/경고 박스 (`<ql-infobox>`, `<ql-warningbox>`)**:
+5. **안내/경고 박스** (`<ql-infobox>`, `<ql-warningbox>`):
    * `<ql-infobox>` 내부에서 Markdown 문법이 렌더링되지 않는 현상(AUTHLAB007)을 방지하기 위해 내부 강조와 코드는 `<strong>`, `<code>` 등 HTML 태그로 작성합니다.
 6. **자가 점검 퀴즈(Probes) 및 인라인 Activity Tracking**:
    * `<ql-multiple-choice-probe>`, `<ql-true-false-probe>` 태그로 학습자 이해도 점검 문제를 제공합니다.
@@ -73,12 +73,12 @@ dhwee@google.com # Lab Owner (Qwiklabs account with creator access)
 
 | 구분 | 프로비저닝 시점 | 포함 리소스 | 설계 의도 |
 | :--- | :--- | :--- | :--- |
-| **Terraform Startup Script (`./terraform`)** | **Start Lab** 클릭 시 자동 생성 | • 핵심 GCP API 13종 사전 활성화<br>• 커스텀 VPC (`apex-wealth-vpc`)<br>• 리전 서브넷 (`apex-subnet`, `10.10.0.0/24`)<br>• 기본 서비스 계정 (`apex-agent-lab-sa`) 및 IAM 역할 | API 활성화 전파 지연 및 기본 VPC 생성 대기 시간을 줄여 실습자가 핵심 보안·거버넌스 아키텍처에 집중하도록 지원 |
-| **학습자 Cloud Shell 실습 (Task 1 ~ Task 8)** | 실습자가 Cloud Shell에서 직접 실행 | • `proxy-only-subnet` & Network Attachment (`agent-gateway-na`)<br>• **Agent Gateway (`agent-egress`)**<br>• **Cloud Run 뱅킹 MCP 서버 (`banking-mcp-server`)**<br>• **Agent Registry** 도구/엔드포인트 등록 및 IAP Egressor 바인딩<br>• **Gemini Enterprise Agent Runtime (`gemini-3.8-flash`, Global)** 비동기 배포<br>• **SGP PSC 엔드포인트 (`sgp-psc-endpoint`)** & 프라이빗 DNS (`policy.internal.`)<br>• **AuthzExtension / AuthzPolicy / SGP 자연어 정책 (`high-value-limit`)** | 실습의 핵심 학습 목표(Objectives)인 에이전트 네트워크 거버넌스와 자연어 정책 통제를 직접 구축 및 검증 |
+| **Terraform Startup Script** (`./terraform`) | **Start Lab** 클릭 시 자동 생성 | • 핵심 GCP API 13종 사전 활성화<br>• 커스텀 VPC (`apex-wealth-vpc`)<br>• 리전 서브넷 (`apex-subnet`, `10.10.0.0/24`)<br>• 기본 서비스 계정 (`apex-agent-lab-sa`) 및 IAM 역할 | API 활성화 전파 지연 및 기본 VPC 생성 대기 시간을 줄여 실습자가 핵심 보안·거버넌스 아키텍처에 집중하도록 지원 |
+| **학습자 Cloud Shell 실습** (Task 1 ~ Task 8) | 실습자가 Cloud Shell에서 직접 실행 | • `proxy-only-subnet` & Network Attachment (`agent-gateway-na`)<br>• **Agent Gateway** (`agent-egress`)<br>• **Cloud Run 뱅킹 MCP 서버** (`banking-mcp-server`)<br>• **Agent Registry** 도구/엔드포인트 등록 및 IAP Egressor 바인딩<br>• **Gemini Enterprise Agent Runtime** (`gemini-3.8-flash`, Global) 비동기 배포<br>• **SGP PSC 엔드포인트** (`sgp-psc-endpoint`) & 프라이빗 DNS (`policy.internal.`)<br>• **AuthzExtension / AuthzPolicy / SGP 자연어 정책** (`high-value-limit`) | 실습의 핵심 학습 목표(Objectives)인 에이전트 네트워크 거버넌스와 자연어 정책 통제를 직접 구축 및 검증 |
 
 ### 3.2 Google Staging에서 Startup Script 실행 로그 확인 방법
 1. GitHub 브랜치 Push 후 커밋 상세 페이지 하단의 **GitWhisperer** 코멘트에서 Google Staging 랩 링크를 클릭합니다.
-2. 우측 상단 **Edit (`.../edit`)** 아이콘을 클릭하여 편집 화면으로 이동한 뒤, 우측 상단의 **Play (`▶`)** 버튼을 눌러 랩을 시작합니다.
+2. 우측 상단 **Edit** (`.../edit`) 아이콘을 클릭하여 편집 화면으로 이동한 뒤, 우측 상단의 **Play** (`▶`) 버튼을 눌러 랩을 시작합니다.
 3. 페이지 하단 **Qwiklabs startup script** 섹션에서 **Script Runner Status**가 `IN_USE`로 바뀌면 **Script Runner Link**를 클릭합니다.
 4. **Script Debugger** 화면 좌측의 **Executions**를 클릭하여 초록색 체크 표시(성공)와 **Logs** 탭의 Terraform `apply` 상세 출력을 확인합니다.
 
@@ -86,7 +86,7 @@ dhwee@google.com # Lab Owner (Qwiklabs account with creator access)
 
 ## 4. Activity Tracking 구성 상세 (AUTHLAB010)
 
-전용 Ruby SDK 핸들이 없는 최신 Google Cloud 서비스(Agent Gateway, Cloud Run, SGP 정책 엔진)를 정확하게 검증하기 위해, AUTHLAB010에서 권장하는 **`project_0.ComputeV1`** 및 **`project_0.LoggingV2` (`list_entry_log_entries`)** 핸들을 조합하여 총 100점(통과 기준 `passing_percentage: 75`)의 4단계 체크포인트를 구성했습니다.
+전용 Ruby SDK 핸들이 없는 최신 Google Cloud 서비스(Agent Gateway, Cloud Run, SGP 정책 엔진)를 정확하게 검증하기 위해, AUTHLAB010에서 권장하는 `project_0.ComputeV1` 및 `project_0.LoggingV2` (`list_entry_log_entries`) 핸들을 조합하여 총 100점(통과 기준 `passing_percentage: 75`)의 4단계 체크포인트를 구성했습니다.
 
 | Step | 대상 Task | 배점 | 사용 서비스 핸들 | Ruby 파일 (`method_name`) | 검증 조건 |
 | :---: | :--- | :---: | :--- | :--- | :--- |
@@ -114,10 +114,10 @@ dhwee@google.com # Lab Owner (Qwiklabs account with creator access)
 * [x] **유효한 Fleet 및 Output 참조**: `variant: gcpd` 사용, `student_visible_outputs`의 모든 참조(`project_0.*`, `user_0.*`, `project_0.startup_script.*`)가 실제 정의와 일치
 
 ### 5.3 Pull Request 생성 및 정식 배포
-1. GitHub 웹 페이지에서 작업 브랜치의 최신 커밋 상세 페이지 하단에 **`Everything looks good to go.`** 메시지와 Google Staging 프리뷰 링크가 표시되는지 확인합니다.
+1. GitHub 웹 페이지에서 작업 브랜치의 최신 커밋 상세 페이지 하단에 `Everything looks good to go.` 메시지와 Google Staging 프리뷰 링크가 표시되는지 확인합니다.
 2. Staging 프리뷰 링크를 열어 브랜치 버전의 랩을 실행하고 Startup Script와 Activity Tracking이 100% 점수로 동작하는지 확인합니다.
-3. 검증이 완료되면 GitHub에서 **`base: main` ← `compare: feat-apex-agent-gateway-sgp`**로 **New pull request**를 생성합니다.
-4. 우측 메뉴의 **Assignees**(및 **Reviewers**)에 리포지토리 관리자 그룹인 **`Qwiklabs-Sharing`**을 지정합니다.
+3. 검증이 완료되면 GitHub에서 `base: main` ← `compare: feat-apex-agent-gateway-sgp`로 **New pull request**를 생성합니다.
+4. 우측 메뉴의 **Assignees**(및 **Reviewers**)에 리포지토리 관리자 그룹인 `Qwiklabs-Sharing`을 지정합니다.
 5. PR이 승인되어 `main` 브랜치에 병합되면 [Google Staging](https://googlestaging.qwiklabs.com/)의 **Authoring > Labs** 목록에 브랜치명 꼬리표가 없는 정식 사본으로 등록됩니다.
 
 ---
@@ -126,14 +126,14 @@ dhwee@google.com # Lab Owner (Qwiklabs account with creator access)
 
 정식 배포된 랩을 워크숍이나 강의(ILT) 형태로 학습자에게 전달할 때는 **Classroom Template**과 **Classroom**을 생성합니다.
 
-1. **Classroom Template 생성 (`Google Staging > Authoring > Classroom Templates > +`)**:
+1. **Classroom Template 생성** (`Google Staging > Authoring > Classroom Templates > +`):
    * **Name**, **Description**을 입력하고 **Fraud Protection**과 **Enabled** 체크박스를 반드시 모두 선택합니다.
    * 필요 시 **Student Instruction** / **Trainer Instruction** 자료를 추가하고, 실습 목록에서 본 랩을 선택한 뒤 **Create Classroom template**을 클릭합니다.
    * 생성된 템플릿을 실제 교육 전달 플랫폼(Delivery Platform)으로 퍼블리시합니다.
-2. **Classroom 생성 및 운영 (`Delivery Platform > Classrooms > +`)**:
-   * **주의:** 실제 수강생 대상 교육은 절대 Google Staging에서 실행하지 말고 반드시 정식 Delivery Platform에서 생성하세요.
+2. **Classroom 생성 및 운영** (`Delivery Platform > Classrooms > +`):
+   * **주의**: 실제 수강생 대상 교육은 절대 Google Staging에서 실행하지 말고 반드시 정식 Delivery Platform에서 생성하세요.
    * 퍼블리시된 Classroom Template을 검색해 선택한 뒤 **Public Classroom** 또는 **Virtual Classroom**을 선택합니다.
-   * 강사(**Trainer**), 시작/종료 일정, **Location (`Online` 등)**, **Timezone**, **Lab Access**, **Hot labs** 수량을 지정하고 **Create Classroom**을 클릭합니다.
+   * 강사(**Trainer**), 시작/종료 일정, **Location** (`Online` 등), **Timezone**, **Lab Access**, **Hot labs** 수량을 지정하고 **Create Classroom**을 클릭합니다.
 3. **랩 활성화 및 수강생 등록**:
    * Classroom의 **Labs** 탭 상단에서 **Activate all labs** 아이콘을 클릭하여 수강생이 랩을 시작할 수 있도록 활성화합니다.
-   * **Students** 탭에서 수강생의 개별 이메일 주소를 추가(또는 CSV 일괄 업로드, 도메인 와일드카드 사용 금지)하고, 수업 중 진행 상태 관리 및 종료 후 **Download Assessment Record (CSV)**로 점수를 다운로드할 수 있습니다.
+   * **Students** 탭에서 수강생의 개별 이메일 주소를 추가(또는 CSV 일괄 업로드, 도메인 와일드카드 사용 금지)하고, 수업 중 진행 상태 관리 및 종료 후 **Download Assessment Record**(CSV)로 점수를 다운로드할 수 있습니다.
