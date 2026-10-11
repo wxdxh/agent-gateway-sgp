@@ -52,7 +52,7 @@ Google Cloud 콘솔 우측 상단 툴바에서 **Activate Cloud Shell** 아이�
 
 ### 실습 리포지토리 및 CLI 도구 준비
 
-실습을 시작하면 사전 프로비저닝 스크립트가 백그라운드에서 실행되어 전용 VPC 네트워크(`apex-wealth-vpc`), 리전 서브넷(`apex-subnet`, `10.10.0.0/24`), 기본 서비스 계정(`apex-agent-lab-sa`)을 자동으로 생성합니다.
+실습을 시작하면 사전 프로비저닝 스크립트(`terraform/main.tf`)가 백그라운드에서 실행되어 필수 Google Cloud API, 전용 VPC 네트워크(`apex-wealth-vpc`), 리전 서브넷(`apex-subnet`, `10.10.0.0/24`), 리전 관리형 프록시 전용 서브넷(`proxy-only-subnet`, `10.11.13.0/24`), 프라이빗 Cloud DNS 영역(`policy-engine-zone`), PSC 내부 고정 IP(`sgp-psc-ip`) 및 기본 서비스 에이전트 IAM 권한을 자동으로 준비합니다.
 
 Cloud Shell 터미널이 열리면 아래 명령어를 순서대로 실행하여 환경을 준비합니다.
 
@@ -109,68 +109,21 @@ Agent GW SA:    serviceAccount:service-1080321871308@gcp-sa-agentgateway.iam.gse
 
 <ql-infobox><strong>참고:</strong> 실습 도중 Cloud Shell 세션이 재연결되더라도 <code>$HOME/agent-gateway-sgp</code> 디렉터리와 <code>.env.runtime</code> 파일은 유지됩니다. 터미널이 재시작된 경우 <code>cd ~/agent-gateway-sgp &amp;&amp; source env.sh &amp;&amp; [[ -f .env.runtime ]] &amp;&amp; source .env.runtime</code> 명령어를 실행하면 이어서 진행할 수 있습니다.</ql-infobox>
 
-## 작업 1. 필수 Google Cloud API 활성화 및 서비스 에이전트 IAM 구성
+## 작업 1. 필수 Google Cloud API 확인, 서비스 에이전트 IAM 구성 및 백그라운드 예열
 
-첫 번째 작업에서는 Agent Registry, Model Armor, Telemetry 등을 포함한 필수 API 16종의 활성화 상태를 확인하고, Google 관리형 Agent Gateway 서비스 에이전트(`service-${PROJECT_NUM}@gcp-sa-agentgateway.iam.gserviceaccount.com`)를 생성하여 IAM 권한을 부여합니다.
+첫 번째 작업에서는 Agent Registry, Model Armor, Telemetry 등을 포함한 필수 API와 Google 관리형 서비스 에이전트(`service-${PROJECT_NUM}@gcp-sa-agentgateway.iam.gserviceaccount.com`, `service-${PROJECT_NUM}@gcp-sa-aiplatform.iam.gserviceaccount.com`)의 IAM 권한을 구성합니다. 또한 실습 대기 시간을 단축하기 위해 에이전트의 고유 ID(`AGENT_IDENTITY`)를 선행 생성하고, 백그라운드에서 Cloud Run 뱅킹 MCP 서버와 SGP 정책 엔진 예열(Warm-up)을 시작합니다.
 
-### 필수 API 활성화 및 Network Services 서비스 ID 생성
+### 환경 초기화 및 서비스 에이전트 IAM 구성 스크립트 실행
 
-1. Cloud Shell에서 다음 명령어를 실행하여 네트워킹, 보안, 에이전트 레지스트리 및 Gemini Enterprise 관련 API를 활성화합니다.
+1. Cloud Shell에서 `./01-setup-env.sh` 스크립트를 실행하여 필수 API 활성화 상태 확인, Agent Gateway 및 Vertex AI 서비스 에이전트 IAM 권한 부여, `conversational-banking` 에이전트 ID(`principal://...`) 선행 생성 및 백그라운드 예열 작업을 수행합니다.
 
 <ql-code-block language="bash">
 cd ~/agent-gateway-sgp
 source env.sh
-
-gcloud services enable \
-  compute.googleapis.com \
-  networksecurity.googleapis.com \
-  networkservices.googleapis.com \
-  dns.googleapis.com \
-  iam.googleapis.com \
-  iap.googleapis.com \
-  agentregistry.googleapis.com \
-  aiplatform.googleapis.com \
-  run.googleapis.com \
-  cloudbuild.googleapis.com \
-  artifactregistry.googleapis.com \
-  storage.googleapis.com \
-  modelarmor.googleapis.com \
-  telemetry.googleapis.com \
-  cloudtrace.googleapis.com \
-  logging.googleapis.com \
-  --project="${PROJECT_ID}"
+./01-setup-env.sh
 </ql-code-block>
 
-2. `networkservices.googleapis.com` 및 `aiplatform.googleapis.com` API를 위한 Google 관리형 서비스 에이전트 ID를 생성합니다.
-
-<ql-code-block language="bash">
-gcloud beta services identity create \
-  --service=networkservices.googleapis.com \
-  --project="${PROJECT_ID}" || true
-
-gcloud beta services identity create \
-  --service=aiplatform.googleapis.com \
-  --project="${PROJECT_ID}" || true
-</ql-code-block>
-
-### Agent Gateway 서비스 에이전트 IAM 역할 바인딩
-
-1. 생성된 Agent Gateway 서비스 에이전트(`AGW_SA`)가 에이전트 트래픽을 중계하고 Agent Registry, SGP 정책 엔진 및 Gemini Enterprise와 통신할 수 있도록 `roles/agentgateway.serviceAgent`, `roles/aiplatform.user`, `roles/modelarmor.user`, `roles/agentregistry.viewer` 역할을 부여합니다.
-
-<ql-code-block language="bash">
-for ROLE in "roles/agentgateway.serviceAgent" "roles/aiplatform.user" "roles/modelarmor.user" "roles/agentregistry.viewer"; do
-  echo "Granting ${ROLE} to ${AGW_SA}..."
-  gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-    --member="${AGW_SA}" \
-    --role="${ROLE}" \
-    --condition=None \
-    --quiet
-done
-</ql-code-block>
-
-<ql-infobox><strong>팁:</strong> 위 과정은 리포지토리에 포함된 <code>./01-setup-env.sh</code> 스크립트를 실행하여 한 번에 수행할 수도 있습니다.</ql-infobox>
-
-2. IAM 정책 바인딩이 정상적으로 적용되었는지 확인합니다.
+2. Agent Gateway 서비스 에이전트(`AGW_SA`)에 에이전트 트래픽 중계 및 정책 심사에 필요한 4가지 핵심 IAM 역할(`roles/agentgateway.serviceAgent`, `roles/aiplatform.user`, `roles/modelarmor.user`, `roles/agentregistry.viewer`)이 정상적으로 바인딩되었는지 확인합니다.
 
 <ql-code-block language="bash">
 gcloud projects get-iam-policy "${PROJECT_ID}" \
@@ -181,23 +134,34 @@ gcloud projects get-iam-policy "${PROJECT_ID}" \
 
 ## 작업 2. Agent Gateway 네트워크 기반 및 agent-egress 게이트웨이 배포
 
-이 작업에서는 Gemini Enterprise Agent Runtime에서 외부 MCP 서버 및 시스템 API로 나가는 아웃바운드 트래픽을 통제하는 Agent Gateway(`agent-egress`)를 구성합니다. 리전 관리형 프록시 전용 서브넷(`proxy-only-subnet`)과 Network Attachment(`agent-gateway-na`)를 먼저 생성한 뒤, `AGENT_TO_ANYWHERE` 모드의 게이트웨이를 배포합니다.
+이 작업에서는 Gemini Enterprise Agent Runtime에서 외부 MCP 서버 및 시스템 API로 나가는 아웃바운드 트래픽을 통제하는 Agent Gateway(`agent-egress`)를 구성합니다. 사전 프로비저닝된 리전 관리형 프록시 전용 서브넷(`proxy-only-subnet`)과 프라이빗 Cloud DNS 영역(`policy-engine-zone`)을 확인하고, Network Attachment(`agent-gateway-na`)를 생성한 뒤 `AGENT_TO_ANYWHERE` 모드의 게이트웨이를 배포합니다.
 
-### 리전 관리형 프록시 서브넷 및 Network Attachment 생성
+### 리전 관리형 프록시 서브넷 확인 및 Network Attachment 생성
 
-1. Agent Gateway 내부 Envoy 프록시 인스턴스가 사용할 리전 관리형 프록시 전용 서브넷(`proxy-only-subnet`, `10.11.13.0/24`)을 생성합니다.
+1. Agent Gateway 내부 Envoy 프록시 인스턴스가 사용할 리전 관리형 프록시 전용 서브넷(`proxy-only-subnet`, `10.11.13.0/24`)과 DNS 피어링용 프라이빗 Cloud DNS 영역(`policy-engine-zone`, `policy.internal.`)이 준비되어 있는지 확인합니다(없는 경우 자동으로 생성합니다).
 
 <ql-code-block language="bash">
 cd ~/agent-gateway-sgp
 source env.sh
 
-gcloud compute networks subnets create proxy-only-subnet \
-  --network="${NETWORK_NAME}" \
-  --region="${LOCATION}" \
-  --range="10.11.13.0/24" \
-  --purpose=REGIONAL_MANAGED_PROXY \
-  --role=ACTIVE \
-  --project="${PROJECT_ID}" || true
+if ! gcloud compute networks subnets describe proxy-only-subnet --region="${LOCATION}" --project="${PROJECT_ID}" &>/dev/null; then
+  gcloud compute networks subnets create proxy-only-subnet \
+    --network="${NETWORK_NAME}" \
+    --region="${LOCATION}" \
+    --range="10.11.13.0/24" \
+    --purpose=REGIONAL_MANAGED_PROXY \
+    --role=ACTIVE \
+    --project="${PROJECT_ID}"
+fi
+
+if ! gcloud dns managed-zones describe policy-engine-zone --project="${PROJECT_ID}" &>/dev/null; then
+  gcloud dns managed-zones create policy-engine-zone \
+    --description="Private zone for internal SGP service" \
+    --dns-name="policy.internal." \
+    --visibility=private \
+    --networks="${NETWORK_NAME}" \
+    --project="${PROJECT_ID}"
+fi
 </ql-code-block>
 
 2. Google 관리형 테넌트 프로젝트에서 실행되는 Agent Gateway가 실습 프로젝트의 VPC(`apex-subnet`)로 이그레스 트래픽을 전달할 수 있도록 Network Attachment(`agent-gateway-na`)를 생성합니다.
@@ -207,17 +171,6 @@ gcloud compute network-attachments create agent-gateway-na \
   --region="${LOCATION}" \
   --subnets="${SUBNET_NAME}" \
   --connection-preference=ACCEPT_AUTOMATIC \
-  --project="${PROJECT_ID}" || true
-</ql-code-block>
-
-3. `agent-egress` 게이트웨이의 DNS 피어링 구성(`dnsPeeringConfig`)이 참조할 프라이빗 Cloud DNS 영역(`policy-engine-zone`, 도메인 `policy.internal.`)을 VPC 네트워크에 생성합니다.
-
-<ql-code-block language="bash">
-gcloud dns managed-zones create policy-engine-zone \
-  --description="Private zone for internal SGP service" \
-  --dns-name="policy.internal." \
-  --visibility=private \
-  --networks="${NETWORK_NAME}" \
   --project="${PROJECT_ID}" || true
 </ql-code-block>
 
@@ -281,59 +234,31 @@ gcloud network-services agent-gateways describe agent-egress \
     작업 1~2: Agent Gateway 네트워킹 및 agent-egress 게이트웨이 구성 확인
 </ql-activity-tracking>
 
-## 작업 3. Cloud Run에 에이펙스 자산운용 뱅킹 MCP 서버 배포
+## 작업 3. Cloud Run에 에이펙스 자산운용 뱅킹 MCP 서버 배포 및 권한 설정
 
-이 작업에서는 에이펙스 자산운용의 뱅킹 백엔드 역할을 하는 MCP 서버(`banking-mcp-server`)를 Google Cloud Run에 배포합니다. 이 서버는 계좌 조회(`get_account`), 전화번호로 고객 조회(`lookup_customer_by_phone`), 간편 송금(`transfer_to_phone`), 공과금 납부(`pay_bill`)의 4가지 도구를 JSON-RPC 2.0(`/mcp`) 및 도구 명세 조회(`/tools`) 엔드포인트로 제공합니다.
+이 작업에서는 에이펙스 자산운용의 뱅킹 백엔드 역할을 하는 MCP 서버(`banking-mcp-server`)를 Google Cloud Run에 배포하고 권한을 구성합니다. 이 서버는 계좌 조회(`get_account`), 전화번호로 고객 조회(`lookup_customer_by_phone`), 간편 송금(`transfer_to_phone`), 공과금 납부(`pay_bill`)의 4가지 도구를 JSON-RPC 2.0(`/mcp`) 및 도구 명세 조회(`/tools`) 엔드포인트로 제공합니다.
 
-### 뱅킹 MCP 서버 컨테이너 빌드 및 Cloud Run 배포
+### 뱅킹 MCP 서버 배포 확인, 도구 검증 및 Invoker 권한 부여
 
-1. `banking-mcp-server` 디렉터리로 이동하여 소스 코드로부터 컨테이너 이미지를 빌드하고 Cloud Run 서비스로 배포합니다.
+1. `./03-deploy-mcp.sh` 스크립트를 실행하여 Cloud Run `banking-mcp-server` 배포 완료 여부를 확인(작업 1에서 백그라운드로 시작된 빌드가 완료되었으면 즉시 재사용)하고, 서비스 URL(`MCP_URL`)을 `.env.runtime`에 저장한 뒤 `/tools` 스키마 검증과 `roles/run.servicesInvoker` 권한 부여를 수행합니다.
 
 <ql-code-block language="bash">
 cd ~/agent-gateway-sgp
 source env.sh
-
-cd ~/agent-gateway-sgp/banking-mcp-server
-gcloud run deploy banking-mcp-server \
-  --source=. \
-  --region="${LOCATION}" \
-  --project="${PROJECT_ID}" \
-  --allow-unauthenticated \
-  --quiet
-cd ~/agent-gateway-sgp
+./03-deploy-mcp.sh
+source .env.runtime
 </ql-code-block>
 
-2. 배포된 Cloud Run 서비스의 HTTPS URL을 조회하여 `MCP_URL` 환경 변수로 설정하고 `.env.runtime` 파일에 저장합니다.
-
-<ql-code-block language="bash">
-export MCP_URL="$(gcloud run services describe banking-mcp-server \
-  --region="${LOCATION}" \
-  --project="${PROJECT_ID}" \
-  --format="value(status.url)")"
-echo "export MCP_URL=\"${MCP_URL}\"" > ~/agent-gateway-sgp/.env.runtime
-echo "Banking MCP Server URL: ${MCP_URL}"
-</ql-code-block>
-
-### MCP 도구 엔드포인트 검증 및 Invoker 권한 부여
-
-1. 배포된 MCP 서버의 `/tools` 엔드포인트를 호출하여 4가지 뱅킹 도구의 JSON 스키마가 반환되는지 확인합니다.
+2. 배포된 MCP 서버의 `/tools` 엔드포인트를 직접 호출하여 4가지 뱅킹 도구의 JSON 스키마를 확인하고, Agent Gateway 서비스 에이전트(`AGW_SA`)에 `roles/run.servicesInvoker` 권한이 부여되었는지 확인합니다.
 
 <ql-code-block language="bash">
 ID_TOKEN="$(gcloud auth print-identity-token 2>/dev/null || true)"
 curl -fsS -H "Authorization: Bearer ${ID_TOKEN}" "${MCP_URL}/tools" | python3 -m json.tool
-</ql-code-block>
 
-2. Agent Gateway 서비스 에이전트(`AGW_SA`)가 Cloud Run의 `banking-mcp-server`를 호출할 수 있도록 `roles/run.servicesInvoker` 역할을 부여합니다.
-
-<ql-code-block language="bash">
-gcloud run services add-iam-policy-binding banking-mcp-server \
+gcloud run services get-iam-policy banking-mcp-server \
   --region="${LOCATION}" \
-  --member="${AGW_SA}" \
-  --role="roles/run.servicesInvoker" \
   --project="${PROJECT_ID}"
 </ql-code-block>
-
-<ql-infobox><strong>팁:</strong> 위 과정은 <code>./03-deploy-mcp.sh</code> 스크립트로도 실행할 수 있습니다.</ql-infobox>
 
 아래 **Check my progress** 버튼을 클릭하여 작업 완료 여부를 확인합니다.
 <ql-activity-tracking step=2>
@@ -477,19 +402,21 @@ cd ~/agent-gateway-sgp
 
 백그라운드에서 에이전트가 배포되는 동안 `agent-egress` 게이트웨이가 Google 관리형 SGP 정책 엔진과 사설망으로 통신할 수 있도록 Private Service Connect(PSC) 엔드포인트(`sgp-psc-endpoint`)와 프라이빗 Cloud DNS(`policy.internal.`)를 구성합니다.
 
-### VPC 내부 고정 IP 예약 및 SGP 엔진 Service Attachment 활성화
+### VPC 내부 고정 IP 확인 및 SGP 엔진 Service Attachment 조회
 
-1. 실습 서브넷(`apex-subnet`) 내에 SGP PSC 엔드포인트가 사용할 내부 고정 IP(`sgp-psc-ip`)를 예약하고 할당된 IP 주소를 확인합니다.
+1. 실습 서브넷(`apex-subnet`) 내에 예약된 SGP PSC 엔드포인트용 내부 고정 IP(`sgp-psc-ip`) 주소를 확인합니다(없는 경우 자동으로 예약합니다).
 
 <ql-code-block language="bash">
 cd ~/agent-gateway-sgp
 source env.sh
 
-gcloud compute addresses create sgp-psc-ip \
-  --region="${LOCATION}" \
-  --subnet="${SUBNET_NAME}" \
-  --purpose=GCE_ENDPOINT \
-  --project="${PROJECT_ID}" || true
+if ! gcloud compute addresses describe sgp-psc-ip --region="${LOCATION}" --project="${PROJECT_ID}" &>/dev/null; then
+  gcloud compute addresses create sgp-psc-ip \
+    --region="${LOCATION}" \
+    --subnet="${SUBNET_NAME}" \
+    --purpose=GCE_ENDPOINT \
+    --project="${PROJECT_ID}"
+fi
 
 export PSC_IP="$(gcloud compute addresses describe sgp-psc-ip \
   --region="${LOCATION}" \
@@ -498,7 +425,7 @@ export PSC_IP="$(gcloud compute addresses describe sgp-psc-ip \
 echo "PSC IP reserved: ${PSC_IP}"
 </ql-code-block>
 
-2. 프로젝트 리전(`us-central1`)에 SGP 정책 엔진을 활성화하고, Google 관리형 SGP 테넌트 프로젝트의 PSC Service Attachment URI를 조회합니다.
+2. 실습 리전(`${LOCATION}`)에 활성화된 SGP 정책 엔진의 PSC Service Attachment URI를 조회합니다.
 
 <ql-code-block language="bash">
 SERVICE_ATTACHMENT="$(gcloud beta ai semantic-governance-policy-engine describe \
@@ -522,7 +449,7 @@ echo "Using SGP Service Attachment: ${SERVICE_ATTACHMENT}"
 
 ### PSC 전달 규칙 및 프라이빗 Cloud DNS 구성
 
-1. 예약한 내부 IP(`sgp-psc-ip`)와 SGP 엔진의 `SERVICE_ATTACHMENT`를 연결하는 PSC 전달 규칙(`sgp-psc-endpoint`)을 생성합니다.
+1. 예약된 내부 IP(`sgp-psc-ip`)와 SGP 엔진의 `SERVICE_ATTACHMENT`를 연결하는 PSC 전달 규칙(`sgp-psc-endpoint`)을 생성합니다.
 
 <ql-code-block language="bash">
 gcloud compute forwarding-rules create sgp-psc-endpoint \
@@ -533,7 +460,7 @@ gcloud compute forwarding-rules create sgp-psc-endpoint \
   --project="${PROJECT_ID}" || true
 </ql-code-block>
 
-2. 작업 2에서 생성한 프라이빗 Cloud DNS 영역(`policy-engine-zone`)에 `agent-egress` 게이트웨이가 `policy.internal.` 도메인을 질의했을 때 PSC 엔드포인트 IP(`${PSC_IP}`)로 응답하도록 A 레코드를 생성합니다.
+2. 프라이빗 Cloud DNS 영역(`policy-engine-zone`)에 `agent-egress` 게이트웨이가 `policy.internal.` 도메인을 질의했을 때 PSC 엔드포인트 IP(`${PSC_IP}`)로 응답하도록 A 레코드를 생성합니다.
 
 <ql-code-block language="bash">
 gcloud dns record-sets create policy.internal. \

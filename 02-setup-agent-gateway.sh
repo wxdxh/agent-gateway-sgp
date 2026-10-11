@@ -15,29 +15,41 @@ if [[ -z "${NETWORK_NAME}" ]]; then
     --project="${PROJECT_ID}" || true
 fi
 
-echo "==> Step 2: Creating regional proxy-only subnet in ${NETWORK_NAME}..."
-gcloud compute networks subnets create proxy-only-subnet \
-  --network="${NETWORK_NAME}" \
-  --region="${LOCATION}" \
-  --range="10.11.13.0/24" \
-  --purpose=REGIONAL_MANAGED_PROXY \
-  --role=ACTIVE \
-  --project="${PROJECT_ID}" || true
+echo "==> Step 2: Verifying regional proxy-only subnet in ${NETWORK_NAME}..."
+if ! gcloud compute networks subnets describe proxy-only-subnet --region="${LOCATION}" --project="${PROJECT_ID}" &>/dev/null; then
+  gcloud compute networks subnets create proxy-only-subnet \
+    --network="${NETWORK_NAME}" \
+    --region="${LOCATION}" \
+    --range="10.11.13.0/24" \
+    --purpose=REGIONAL_MANAGED_PROXY \
+    --role=ACTIVE \
+    --project="${PROJECT_ID}" || true
+else
+  echo "proxy-only-subnet is already provisioned."
+fi
 
 echo "==> Step 2: Creating Network Attachment for Agent Gateway..."
-gcloud compute network-attachments create agent-gateway-na \
-  --region="${LOCATION}" \
-  --subnets="${SUBNET_NAME}" \
-  --connection-preference=ACCEPT_AUTOMATIC \
-  --project="${PROJECT_ID}" || true
+if ! gcloud compute network-attachments describe agent-gateway-na --region="${LOCATION}" --project="${PROJECT_ID}" &>/dev/null; then
+  gcloud compute network-attachments create agent-gateway-na \
+    --region="${LOCATION}" \
+    --subnets="${SUBNET_NAME}" \
+    --connection-preference=ACCEPT_AUTOMATIC \
+    --project="${PROJECT_ID}" || true
+else
+  echo "agent-gateway-na already exists."
+fi
 
-echo "==> Step 2: Creating Private Cloud DNS Zone (policy.internal.) for DNS Peering..."
-gcloud dns managed-zones create policy-engine-zone \
-  --description="Private zone for internal SGP service" \
-  --dns-name="policy.internal." \
-  --visibility=private \
-  --networks="${NETWORK_NAME}" \
-  --project="${PROJECT_ID}" || true
+echo "==> Step 2: Verifying Private Cloud DNS Zone (policy.internal.) for DNS Peering..."
+if ! gcloud dns managed-zones describe policy-engine-zone --project="${PROJECT_ID}" &>/dev/null; then
+  gcloud dns managed-zones create policy-engine-zone \
+    --description="Private zone for internal SGP service" \
+    --dns-name="policy.internal." \
+    --visibility=private \
+    --networks="${NETWORK_NAME}" \
+    --project="${PROJECT_ID}" || true
+else
+  echo "policy-engine-zone is already provisioned."
+fi
 
 echo "==> Step 2: Generating Agent Gateway definition..."
 cat > "${SCRIPT_DIR}/agent-gateway-vpc-egress.yaml" << YAML_EOF

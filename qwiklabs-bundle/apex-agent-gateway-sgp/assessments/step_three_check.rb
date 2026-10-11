@@ -56,7 +56,7 @@ def step_three_check(handles:, maximum_score:, resources:)
         lab_start_time = Time.at(Time.now.to_i - 86400)
         log_filters = [
           'timestamp>"' + lab_start_time.utc.iso8601 + '"',
-          '(protoPayload.resourceName:"sgp-psc-endpoint" OR protoPayload.resourceName:"sgp-psc-ip")'
+          'protoPayload.resourceName:"sgp-psc-endpoint"'
         ]
         req = Google::Apis::LoggingV2::ListLogEntriesRequest.new
         req.resource_names = ['projects/' + project_id]

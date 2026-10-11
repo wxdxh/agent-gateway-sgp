@@ -84,6 +84,14 @@ for entry in "${ENDPOINTS[@]}"; do
       --member="${AGW_SA}" \
       --role="roles/iap.egressor" \
       --quiet >/dev/null || true
+    gcloud alpha iap web add-iam-policy-binding \
+      --resource-type=agent-registry \
+      --endpoint="${ep_id}" \
+      --region="${LOCATION}" \
+      --project="${PROJECT_ID}" \
+      --member="serviceAccount:service-${PROJECT_NUM}@gcp-sa-aiplatform-re.iam.gserviceaccount.com" \
+      --role="roles/iap.egressor" \
+      --quiet >/dev/null 2>&1 || true
   fi
 done
 

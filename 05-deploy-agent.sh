@@ -59,6 +59,11 @@ for attempt in 1 2 3 4; do
     --region="${LOCATION}" \
     --deployment-target="agent_runtime" \
     --agent-identity \
+    --min-instances=0 \
+    --max-instances=10 \
+    --cpu=1 \
+    --memory=4Gi \
+    --concurrency=8 \
     --agent-gateway-egress="projects/${PROJECT_ID}/locations/${LOCATION}/agentGateways/agent-egress" \
     --update-env-vars="MCP_SERVER_NAME=${MCP_SERVER_NAME},GOOGLE_CLOUD_LOCATION=global,LOCATION=${LOCATION},MODEL=gemini-3.8-flash,PROJECT_ID=${PROJECT_ID},GOOGLE_API_USE_MTLS_ENDPOINT=never,GOOGLE_API_USE_CLIENT_CERTIFICATE=false" \
     --no-wait; then
