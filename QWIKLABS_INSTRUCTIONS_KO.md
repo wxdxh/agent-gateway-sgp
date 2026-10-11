@@ -10,65 +10,9 @@
 
 ### 전체 아키텍처 및 트래픽 흐름도
 
-아래 다이어그램은 이 실습에서 구축할 3개의 테넌트/네트워크 평면(Gemini Enterprise 런타임 테넌트, 고객 VPC 및 컨트롤 플레인, Google 관리형 SGP 테넌트) 간의 전체 상호작용과 트래픽 흐름을 보여줍니다.
+아래 아키텍처 다이어그램은 이 실습에서 구축할 3개의 테넌트/네트워크 영역(Zone 1: Gemini Enterprise 에이전트 런타임 테넌트, Zone 2: 고객 VPC 및 Agent Registry 컨트롤 플레인, Zone 3: Google 관리형 SGP 테넌트) 간의 전체 상호작용과 트래픽 흐름을 보여줍니다.
 
-<ql-code-block output>
-+=========================================================================================+
-| [평면 1] Google 관리형 에이전트 런타임 테넌트 (Gemini Enterprise Agent Runtime)          |
-|                                                                                         |
-|   [금융 고객 김민준 (CUST005)]                                                          |
-|          | (1) 3-Turn 대화 요청 (:streamQuery)                                          |
-|          v                                                                              |
-|   +---------------------------------------------------------------------------------+   |
-|   | 대화형 뱅킹 에이전트 (conversational-banking / ADK / gemini-3.8-flash Global)    |   |
-|   |  - 고유 ID: principal://agents.global.org-.../reasoningEngines/...               |   |
-|   |  - 내장 인증서: agent-gateway-ca.crt (TLS 복호화 검사용 Root CA)                 |   |
-|   +---------------------------------------------------------------------------------+   |
-|          | (2) 모든 아웃바운드 트래픽 강제 라우팅 (--agent-gateway-egress)              |
-+==========|==============================================================================+
-           v
-+=========================================================================================+
-| [평면 2] 고객 프로젝트 (VPC: apex-wealth-vpc & Agent Registry 컨트롤 플레인)             |
-|                                                                                         |
-|   +---------------------------------------------------------------------------------+   |
-|   | Agent Gateway (agent-egress / 모드: AGENT_TO_ANYWHERE / 프로토콜: MCP)           |   |
-|   |  - 리전 프록시 서브넷: proxy-only-subnet (10.11.13.0/24)                         |   |
-|   |  - TLS 종료(Termination) 및 JSON-RPC 페이로드 복호화                             |   |
-|   |  - AuthzPolicy (CONTENT_AUTHZ) ---> AuthzExtension (sgp-authzextension)         |   |
-|   +---------------------------------------------------------------------------------+   |
-|      | (3) Allowlist & 스키마 검증         | (4) DNS 피어링 질의     | (6) ALLOW 판정 시 |
-|      v     (roles/iap.egressor)            |     (policy.internal.)  |     백엔드 호출   |
-|   +----------------------------+           v                         v                  |
-|   | Agent Registry 카탈로그     |   +------------------------------------------------+   |
-|   |  - Banking MCP Server      |   | 고객 서브넷: apex-subnet (10.10.0.0/24)         |   |
-|   |    (toolspec.json 4개 도구)|   |  - Network Attachment: agent-gateway-na        |   |
-|   |  - 필수 시스템 API 4종      |   |  - Cloud DNS Private Zone: policy.internal.    |   |
-|   |    (aiplatform, logging 등)|   |  - PSC Endpoint: sgp-psc-endpoint (10.10.0.x)  |   |
-|   +----------------------------+   +------------------------------------------------+   |
-|                                            | (5) PSC 사설 터널       |                  |
-|                                            |                         v                  |
-|                                            |         +------------------------------+   |
-|                                            |         | Cloud Run: banking-mcp-server|   |
-|                                            |         |  - /mcp (JSON-RPC 2.0)       |   |
-|                                            |         |  - /tools (스키마 조회)       |   |
-|                                            |         +------------------------------+   |
-+============================================|============================================+
-                                             v
-+=========================================================================================+
-| [평면 3] Google 관리형 SGP 테넌트 (Semantic Governance Policy Engine)                   |
-|                                                                                         |
-|   +---------------------------------------------------------------------------------+   |
-|   | PSC Service Attachment (pscServiceAttachment)                                   |   |
-|   |          |                                                                      |   |
-|   |          v                                                                      |   |
-|   | SGP 정책 엔진 & 정책 (high-value-limit)                                         |   |
-|   |  - 대상 도구: Banking_MCP_Server_transfer_to_phone                              |   |
-|   |  - 자연어 제약 조건: "Block any transfer value exceeding USD 1000."             |   |
-|   |  - 실시간 심사 결과: amount <= 1000 -> ALLOW / amount > 1000 -> DENY            |   |
-|   |  - 감사 로그 기록: Cloud Logging (logs/semantic-governance-policy)              |   |
-|   +---------------------------------------------------------------------------------+   |
-+=========================================================================================+
-</ql-code-block>
+![Enterprise AI Agent Security Governance Architecture](img/00-overall-architecture.png)
 
 | 단계 | 구성 요소 | 역할 및 트래픽 흐름 |
 | :--- | :--- | :--- |
@@ -187,30 +131,7 @@ Agent GW SA:    serviceAccount:service-1080321871308@gcp-sa-agentgateway.iam.gse
 
 엔터프라이즈 에이전트 보안 거버넌스 아키텍처에서는 단일 서비스 계정에 과도한 권한을 몰아주는 대신, **플랫폼·게이트웨이·에이전트 실행 주체의 ID를 3계층으로 분리하여 최소 권한(Least Privilege)을 부여**합니다. 첫 번째 작업에서는 실습에 사용되는 핵심 ID의 역할을 이해하고 IAM 권한을 구성합니다.
 
-<ql-code-block output>
-+---------------------------------------------------------------------------------------+
-|                   3-계층 ID 분리 및 최소 권한(Least Privilege) 모델                    |
-+---------------------------------------------------------------------------------------+
-|                                                                                       |
-|  [계층 1: 에이전트 고유 ID (Agent Identity)]                                          |
-|   주체: principal://agents.global.org-.../reasoningEngines/<ENGINE_ID>                |
-|   역할: 에이전트 코드 자체의 신원. 범용 SA 키 파일 없이 해당 에이전트 인스턴스만 식별 |
-|   권한: roles/agentregistry.user, roles/aiplatform.user, roles/run.servicesInvoker    |
-|          |                                                                            |
-|          v (런타임 호스팅 및 게이트웨이 라우팅 위임)                                  |
-|  [계층 2: Vertex AI & Reasoning Engine 서비스 에이전트]                               |
-|   주체: service-${PROJECT_NUM}@gcp-sa-aiplatform(-re).iam.gserviceaccount.com        |
-|   역할: Agent Runtime 컨테이너 기동, agent-egress 연결, IAP Egress 터널 진입          |
-|   권한: roles/aiplatform.serviceAgent, roles/iap.egressor                             |
-|          |                                                                            |
-|          v (아웃바운드 프록시 중계 및 정책 심사 수행)                                 |
-|  [계층 3: Agent Gateway 서비스 에이전트 (AGW_SA)]                                     |
-|   주체: service-${PROJECT_NUM}@gcp-sa-agentgateway.iam.gserviceaccount.com           |
-|   역할: 도구 카탈로그 조회, SGP 정책 엔진 심사 요청, Cloud Run 백엔드 대리 호출       |
-|   권한: roles/agentgateway.serviceAgent, roles/agentregistry.viewer,                  |
-|         roles/aiplatform.user, roles/modelarmor.user, roles/run.servicesInvoker       |
-+---------------------------------------------------------------------------------------+
-</ql-code-block>
+![3-Tier Least-Privilege Identity Separation & Pre-Provisioning Model](img/01-iam-identity-model.png)
 
 | 구분 | 주체 (Principal / Service Account) | 핵심 역할 및 필요 권한 |
 | :--- | :--- | :--- |
@@ -287,30 +208,9 @@ gcloud projects get-iam-policy "${PROJECT_ID}" \
 
 이 작업에서는 Gemini Enterprise Agent Runtime에서 외부 MCP 서버 및 시스템 API로 나가는 아웃바운드 트래픽을 통제하는 Agent Gateway(`agent-egress`)를 구성합니다.
 
-Agent Gateway는 Google이 관리하는 테넌트 프로젝트에서 실행되는 관리형 Envoy 기반 프록시입니다. 따라서 이 게이트웨이가 **고객의 프라이빗 VPC(`apex-wealth-vpc`) 내부에 있는 SGP 정책 엔진(`policy.internal.`)과 통신**하려면 다음 3가지 네트워크 브리지 요소가 필요합니다.
+Agent Gateway는 Google이 관리하는 테넌트 프로젝트에서 실행되는 관리형 Envoy 기반 프록시입니다. 따라서 이 게이트웨이가 **고객의 프라이빗 VPC(`apex-wealth-vpc`) 내부에 있는 SGP 정책 엔진(`policy.internal.`)과 통신**하려면 아래 다이어그램과 같이 Network Attachment(`agent-gateway-na`), 리전 관리형 프록시 전용 서브넷(`proxy-only-subnet`), 그리고 프라이빗 Cloud DNS 피어링(`policy-engine-zone`)의 3가지 네트워크 브리지 요소가 필요합니다.
 
-<ql-code-block output>
-+---------------------------------------------------------------------------------------+
-|              Agent Gateway (agent-egress) 하이브리드 네트워크 연결 구조               |
-+---------------------------------------------------------------------------------------+
-|                                                                                       |
-|  [Google 관리형 Agent Gateway 테넌트]                                                 |
-|   +-------------------------------------------------------------------------------+   |
-|   | agent-egress (governedAccessPath: AGENT_TO_ANYWHERE / protocols: [MCP])       |   |
-|   +-------------------------------------------------------------------------------+   |
-|          |                                                |                           |
-|          | (A) Egress 트래픽 인입                         | (B) DNS 피어링 질의       |
-|          |     (networkAttachment)                        |     (domains:             |
-|          v                                                v      policy.internal.)    |
-|  +------------------------------------------------+  +-----------------------------+  |
-|  | [고객 VPC: apex-wealth-vpc]                    |  | [Cloud DNS Private Zone]    |  |
-|  |  - Network Attachment: agent-gateway-na        |  |  - Zone: policy-engine-zone |  |
-|  |  - 연결 서브넷: apex-subnet (10.10.0.0/24)     |  |  - 도메인: policy.internal. |  |
-|  |  - 프록시 서브넷: proxy-only-subnet            |  |  - A 레코드 -> PSC 고정 IP  |  |
-|  |    (10.11.13.0/24, REGIONAL_MANAGED_PROXY)     |  +-----------------------------+  |
-|  +------------------------------------------------+                                   |
-+---------------------------------------------------------------------------------------+
-</ql-code-block>
+![Agent Gateway Hybrid Networking & DNS Peering](img/02-agent-gateway-network.png)
 
 ### 리전 관리형 프록시 서브넷 확인 및 Network Attachment 생성
 
@@ -431,28 +331,7 @@ gcloud network-services agent-gateways describe agent-egress \
 * `GET /tools`: 서버가 제공하는 4가지 뱅킹 도구(`get_account`, `lookup_customer_by_phone`, `transfer_to_phone`, `pay_bill`)의 이름, 설명, JSON Schema 입력 파라미터 명세를 반환합니다.
 * `POST /mcp`: 에이전트가 Agent Gateway를 통해 전송하는 표준 MCP JSON-RPC 2.0 요청(`tools/list`, `tools/call`)을 처리하고 거래 결과를 반환합니다.
 
-<ql-code-block output>
-+---------------------------------------------------------------------------------------+
-|                  Cloud Run 뱅킹 MCP 서버 구조 및 호출 권한(IAM) 흐름                  |
-+---------------------------------------------------------------------------------------+
-|                                                                                       |
-|  [Agent Gateway (AGW_SA)]  ---(IAM: roles/run.servicesInvoker)---+                    |
-|                                                                  |                    |
-|  [Reasoning Engine (RE_SA)] --(IAM: roles/run.servicesInvoker)---+                    |
-|                                                                  v                    |
-|                           +-------------------------------------------------------+   |
-|                           | Cloud Run: banking-mcp-server (HTTPS)                 |   |
-|                           |  +-------------------------------------------------+  |   |
-|                           |  | GET  /tools -> 도구 스키마 반환 (toolspec 추출) |  |   |
-|                           |  | POST /mcp   -> JSON-RPC 2.0 도구 실행           |  |   |
-|                           |  |   - get_account(customer_id)                    |  |   |
-|                           |  |   - lookup_customer_by_phone(phone)             |  |   |
-|                           |  |   - transfer_to_phone(customer_id, phone, amt)  |  |   |
-|                           |  |   - pay_bill(customer_id, biller, amount)       |  |   |
-|                           |  +-------------------------------------------------+  |   |
-|                           +-------------------------------------------------------+   |
-+---------------------------------------------------------------------------------------+
-</ql-code-block>
+![Cloud Run Banking MCP Server & IAM Invoker Architecture](img/03-cloud-run-mcp.png)
 
 ### `./03-deploy-mcp.sh` 스크립트 내부 동작 상세 분석
 
@@ -525,26 +404,7 @@ gcloud run services add-iam-policy-binding banking-mcp-server \
 
 심지어 에이전트가 추론을 위해 호출하는 Gemini 모델 API(`https://aiplatform.googleapis.com`)나 로그 전송 API(`https://logging.googleapis.com`)조차 게이트웨이를 경유하므로, 이 시스템 API들도 반드시 Agent Registry에 Allowlist로 등록해야 에이전트가 정상 작동합니다.
 
-<ql-code-block output>
-+---------------------------------------------------------------------------------------+
-|          Agent Gateway의 기본 거부(Default Deny) 및 Agent Registry Allowlist          |
-+---------------------------------------------------------------------------------------+
-|                                                                                       |
-|  [대화형 뱅킹 에이전트]                                                               |
-|          | (모든 아웃바운드 HTTPS 연결)                                               |
-|          v                                                                            |
-|  [Agent Gateway (agent-egress)]                                                       |
-|          |                                                                            |
-|          +-- (1) 미등록 외부 도메인 (예: evil.example.com) -----> [즉시 차단 (DENY)]  |
-|          |                                                                            |
-|          +-- (2) Agent Registry 등록 + IAP Egressor 권한 보유 목적지:                 |
-|                   |-- Banking MCP Server (${MCP_URL}/mcp)    ---> [도구 스키마 검증]  |
-|                   |-- https://aiplatform.googleapis.com      ---> [Global 모델 추론]  |
-|                   |-- https://agentregistry.googleapis.com   ---> [런타임 도구 조회]  |
-|                   |-- https://telemetry.googleapis.com       ---> [Cloud Trace 전송]  |
-|                   +-- https://logging.googleapis.com         ---> [Cloud Logging 기록]|
-+---------------------------------------------------------------------------------------+
-</ql-code-block>
+![Zero-Trust Egress & Agent Registry Allowlist](img/04-agent-registry-allowlist.png)
 
 ### MCP 도구 명세 추출 및 Agent Registry 서비스 등록
 
@@ -653,25 +513,7 @@ Gemini Enterprise Agent Runtime 컨테이너 빌드 및 배포는 백엔드에�
 
 Agent Gateway가 에이전트의 HTTPS 아웃바운드 요청 안에 담긴 JSON-RPC 도구 호출 인자(예: `amount: 2000`)를 검사하려면 **TLS Inspection(복호화 후 재암호화)**을 수행해야 합니다. 이를 위해 게이트웨이의 자체 Root CA 인증서(`agent-gateway-ca.crt`)를 추출하여 에이전트 컨테이너 내부에 신뢰할 수 있는 인증서로 탑재합니다.
 
-<ql-code-block output>
-+---------------------------------------------------------------------------------------+
-|              TLS Inspection Root CA 주입 및 Agent Runtime 배포 메커니즘               |
-+---------------------------------------------------------------------------------------+
-|                                                                                       |
-|  [1. 인증서 추출]                                                                     |
-|   agent-egress (agentGatewayCard.rootCertificates[0])                                 |
-|        |                                                                              |
-|        v (추출 및 저장)                                                               |
-|   conversational-banking/agent-gateway-ca.crt                                         |
-|        |                                                                              |
-|        v (agents-cli deploy 패키징 시 컨테이너에 포함)                                |
-|  [2. 에이전트 런타임 실행 (conversational-banking/app/agent.py)]                      |
-|   - 부팅 시 시스템 기본 CA 번들(certifi) + agent-gateway-ca.crt 병합                  |
-|   - SSL_CERT_FILE 및 REQUESTS_CA_BUNDLE 환경 변수에 병합된 CA 번들 지정               |
-|   - GOOGLE_CLOUD_LOCATION="global" 설정으로 gemini-3.8-flash Global API 호출          |
-|   - AgentRegistry 클라이언트로 ${MCP_SERVER_NAME} 도구 세트 동적 로드                 |
-+---------------------------------------------------------------------------------------+
-</ql-code-block>
+![TLS Inspection Root CA Injection & Async Agent Runtime Deployment](img/05-tls-inspection-agent-deploy.png)
 
 ### 에이전트 코드의 Global 엔드포인트 및 모델 설정 확인
 
@@ -754,28 +596,7 @@ cd ~/agent-gateway-sgp
 
 SGP 정책 엔진은 Google이 관리하는 별도의 보안 테넌트 프로젝트에서 실행됩니다. 금융권과 같은 엔터프라이즈 환경에서는 도구 호출 페이로드(고객 계좌번호, 송금 금액 등 민감 데이터 포함)가 공인 인터넷(Public Internet)을 경유해서는 안 됩니다. 아래 다이어그램과 같이 **DNS 피어링 + 프라이빗 DNS + PSC 엔드포인트**를 결합하면 모든 정책 심사 트래픽이 Google 내부 백본 사설망 안에서만 안전하게 처리됩니다.
 
-<ql-code-block output>
-+---------------------------------------------------------------------------------------+
-|          Agent Gateway -> SGP 정책 엔진 사설망(PSC & Private DNS) 라우팅 구조         |
-+---------------------------------------------------------------------------------------+
-|                                                                                       |
-|  [1] agent-egress 게이트웨이가 AuthzExtension 대상인 "policy.internal" 도메인 질의    |
-|       |                                                                               |
-|       v (작업 2에서 구성한 dnsPeeringConfig 동작)                                     |
-|  [2] 고객 VPC의 프라이빗 Cloud DNS (policy-engine-zone)                               |
-|       |  "policy.internal. -> A 레코드: ${PSC_IP} (예: 10.10.0.2)" 응답               |
-|       v                                                                               |
-|  [3] agent-egress가 Network Attachment (agent-gateway-na)를 통해                      |
-|      고객 서브넷(apex-subnet) 내부의 ${PSC_IP}로 심사 패킷 전송                       |
-|       |                                                                               |
-|       v                                                                               |
-|  [4] PSC 전달 규칙 (sgp-psc-endpoint / IP: ${PSC_IP})                                 |
-|       |  (Private Service Connect 사설 터널 연결 - pscConnectionStatus: ACCEPTED)     |
-|       v                                                                               |
-|  [5] Google 관리형 SGP 정책 엔진 (pscServiceAttachment)                               |
-|      "자연어 정책(high-value-limit)에 따라 페이로드 심사 후 ALLOW / DENY 반환"        |
-+---------------------------------------------------------------------------------------+
-</ql-code-block>
+![SGP Policy Engine Private Service Connect & Private DNS Routing](img/06-psc-dns-routing.png)
 
 ### VPC 내부 고정 IP 확인 및 SGP 엔진 Service Attachment 조회
 
@@ -868,32 +689,7 @@ gcloud compute forwarding-rules describe sgp-psc-endpoint \
 
 이 작업에서는 `agent-egress` 게이트웨이를 통과하는 도구 호출 페이로드를 PSC 터널(`policy.internal`) 너머의 SGP 정책 엔진으로 전달하고, 실제로 어떤 에이전트의 어떤 도구를 어떤 자연어 규칙으로 통제할지 정의하는 **3단계 정책 체인(3-Layer Policy Enforcement Chain)**을 완성합니다.
 
-<ql-code-block output>
-+---------------------------------------------------------------------------------------+
-|                     SGP 3단계 정책 체인 (3-Layer Policy Chain)                        |
-+---------------------------------------------------------------------------------------+
-|                                                                                       |
-|  [계층 1: AuthzPolicy (agent-egress-sgp-authzpolicy)]                                 |
-|   - 역할: "어느 게이트웨이의 어떤 트래픽을 가로챌 것인가?"                            |
-|   - 대상(target): agent-egress 게이트웨이                                             |
-|   - 조건(when): 비-gRPC 요청 중 :generateContent, :streamGenerateContent 및 MCP 호출  |
-|   - 프로필(policyProfile): CONTENT_AUTHZ (HTTP 헤더가 아닌 본문/페이로드 수준 인가)   |
-|          |                                                                            |
-|          v (위임: customProvider.authzExtension)                                      |
-|  [계층 2: AuthzExtension (sgp-authzextension)]                                        |
-|   - 역할: "가로챈 페이로드를 어디로 보내 심사받고, 장애 시 어떻게 동작할 것인가?"     |
-|   - 목적지(service / authority): policy.internal (작업 6의 PSC 엔드포인트)            |
-|   - 안전장치(failOpen): false (Fail-Closed: 정책 엔진 응답 불가 시 거래 즉시 차단)    |
-|          |                                                                            |
-|          v (PSC 사설망을 통해 SGP 정책 엔진으로 전달)                                 |
-|  [계층 3: SemanticGovernancePolicy (high-value-limit)]                                |
-|   - 역할: "누구의 어떤 도구 호출에 대해 어떤 비즈니스 규칙을 적용할 것인가?"          |
-|   - 대상 에이전트(--agent): conversational-banking (${AGENT_ID})                      |
-|   - 대상 도구(--mcp-tools): Banking_MCP_Server_transfer_to_phone                      |
-|   - 자연어 제약 조건(--natural-language-constraint):                                  |
-|     "Block any transfer value exceeding USD 1000."                                    |
-+---------------------------------------------------------------------------------------+
-</ql-code-block>
+![Private Service Connect & 3-Layer SGP Policy Chain](img/07-sgp-policy-chain.png)
 
 ### SGP 인가 확장 및 콘텐츠 인가 정책 바인딩
 
@@ -1018,36 +814,7 @@ gcloud beta ai semantic-governance-policies describe high-value-limit \
 
 ### 3-Turn 금융 거래 시나리오 런타임 시퀀스 다이어그램
 
-<ql-code-block output>
-[고객 (run_tests.py)]        [뱅킹 에이전트 (ADK)]        [Agent Gateway (agent-egress)]     [SGP 정책 엔진 (PSC)]     [Cloud Run (MCP 서버)]
-         |                            |                                 |                              |                         |
-         |=== Turn 1: "I am customer CUST005" =========================>|                              |                         |
-         |--------------------------->|                                 |                              |                         |
-         |                            |-- get_account(CUST005) -------->|                              |                         |
-         |                            |                                 |-- (조회 도구: 정책 대상 아님, 즉시 전달) ------------->|
-         |                            |                                 |<-- 잔액 $10,000.00 반환 -------------------------------|
-         |<-- "Alice Smith님 잔액: $10,000.00" -------------------------|                              |                         |
-         |                            |                                 |                              |                         |
-         |=== Turn 2: "transfer 50 to 555-0001" =======================>|                              |                         |
-         |--------------------------->|                                 |                              |                         |
-         |                            |-- transfer_to_phone(amt=50) --->|                              |                         |
-         |                            |                                 |-- PSC 심사 요청 (amt=50) --->|                         |
-         |                            |                                 |   ("50 <= 1000 한도 이내")   |                         |
-         |                            |                                 |<-- 판정: ALLOW (+감사 로그) -|                         |
-         |                            |                                 |-- POST /mcp (이체 실행) ------------------------------>|
-         |                            |                                 |<-- 이체 완료 (잔액 $9,950.00) -------------------------|
-         |<-- "$50.00 이체 완료 (새 잔액: $9,950.00)" ------------------|                              |                         |
-         |                            |                                 |                              |                         |
-         |=== Turn 3: "transfer 2000 to 555-0002" =====================>|                              |                         |
-         |--------------------------->|                                 |                              |                         |
-         |                            |-- transfer_to_phone(amt=2000) ->|                              |                         |
-         |                            |                                 |-- PSC 심사 요청 (amt=2000) ->|                         |
-         |                            |                                 |   ("2000 > 1000 한도 초과!") |                         |
-         |                            |                                 |<-- 판정: DENY (+감사 로그) --|                         |
-         |                            |<-- [게이트웨이에서 즉시 차단!] -|                              |  (Cloud Run에 요청이    |
-         |                            |    (Policy Violation Error)     |                              |   도달하지 않음!)       |
-         |<-- "$1,000 한도 초과로 보안 정책에 의해 거절됨" -------------|                              |                         |
-</ql-code-block>
+![3-Turn Financial Governance Verification Sequence](img/08-three-turn-sequence.png)
 
 ### `./08-test.sh` 및 `run_tests.py` 내부 동작 상세 분석
 
