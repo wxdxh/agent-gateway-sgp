@@ -2,7 +2,7 @@
 entity_type: Lab
 schema_version: 2
 default_locale: en
-title: "Gemini Enterprise와 Agent Gateway, SGP를 활용한 자율형 AI 에이전트 보안 거버넌스"
+title: "Gemini Enterprise, Agent Gateway 및 SGP를 활용한 자율형 AI 에이전트 보안 거버넌스"
 description: "에이펙스 자산운용 시나리오를 바탕으로 Gemini Enterprise 에이전트의 아웃바운드 MCP 도구 호출을 Agent Gateway(agent-egress)와 시맨틱 거버넌스 정책(SGP)으로 통제하고 감사하는 아키텍처를 구현합니다."
 duration: 90
 max_duration: 120
