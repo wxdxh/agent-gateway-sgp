@@ -65,8 +65,8 @@ gcloud config list project
 
 2. 프로젝트 ID가 비어 있다면 좌측 실습 안내 패널에 표시된 **Project ID**를 설정합니다.
 
-<ql-code-block language="bash">
-gcloud config set project {{{project_0.project_id|YOUR_QWIKLABS_PROJECT_ID}}}
+<ql-code-block language="bash" templated>
+gcloud config set project {{{project_0.project_id|PROJECT_ID}}}
 </ql-code-block>
 
 3. Cloud Shell 홈 디렉터리(`$HOME`)에 실습 코드 리포지토리를 복제하고 작업 폴더로 이동합니다.
