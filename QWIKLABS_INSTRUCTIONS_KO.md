@@ -1,4 +1,4 @@
-# Gemini Enterprise, Agent Gateway 및 SGP를 활용한 자율형 AI 에이전트 보안 거버넌스
+# Gemini Enterprise와 Agent Gateway, SGP를 활용한 자율형 AI 에이전트 보안 거버넌스
 
 ## 개요
 
