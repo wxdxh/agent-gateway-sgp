@@ -111,11 +111,24 @@ Agent GW SA:    serviceAccount:service-1080321871308@gcp-sa-agentgateway.iam.gse
 
 ## 작업 1. 필수 Google Cloud API 확인, 서비스 에이전트 IAM 구성 및 백그라운드 예열
 
-첫 번째 작업에서는 Agent Registry, Model Armor, Telemetry 등을 포함한 필수 API와 Google 관리형 서비스 에이전트(`service-${PROJECT_NUM}@gcp-sa-agentgateway.iam.gserviceaccount.com`, `service-${PROJECT_NUM}@gcp-sa-aiplatform.iam.gserviceaccount.com`)의 IAM 권한을 구성합니다. 또한 실습 대기 시간을 단축하기 위해 에이전트의 고유 ID(`AGENT_IDENTITY`)를 선행 생성하고, 백그라운드에서 Cloud Run 뱅킹 MCP 서버와 SGP 정책 엔진 예열(Warm-up)을 시작합니다.
+엔터프라이즈 에이전트 보안 거버넌스 아키텍처에서는 단일 서비스 계정에 과도한 권한을 몰아주는 대신, **플랫폼·게이트웨이·에이전트 실행 주체의 ID를 분리하여 최소 권한(Least Privilege)을 부여**합니다. 첫 번째 작업에서는 실습에 사용되는 3가지 핵심 ID의 역할을 이해하고 IAM 권한을 구성합니다.
+
+| 구분 | 주체 (Principal / Service Account) | 핵심 역할 및 필요 권한 |
+| :--- | :--- | :--- |
+| **1. Agent Gateway 서비스 에이전트** (`AGW_SA`) | `service-${PROJECT_NUM}@gcp-sa-agentgateway.iam.gserviceaccount.com` | 에이전트의 아웃바운드 트래픽을 중계하고 Agent Registry(`roles/agentregistry.viewer`) 조회 및 SGP 정책 엔진(`roles/aiplatform.user`) 심사를 요청합니다. |
+| **2. Vertex AI 서비스 에이전트** | `service-${PROJECT_NUM}@gcp-sa-aiplatform.iam.gserviceaccount.com` | Gemini Enterprise Agent Runtime을 생성하고 해당 런타임의 아웃바운드 경로에 `agent-egress` 게이트웨이를 연결(`roles/aiplatform.serviceAgent`)합니다. |
+| **3. 에이전트 고유 ID (Agent Identity)** | `principal://agents.global.org-.../reasoningEngines/...` | 범용 서비스 계정 대신 `conversational-banking` 에이전트 인스턴스에만 발급되는 고유 ID로, 허가된 도구 조회(`roles/agentregistry.user`) 및 모델 추론 권한만 가집니다. |
 
 ### 환경 초기화 및 서비스 에이전트 IAM 구성 스크립트 실행
 
-1. Cloud Shell에서 `./01-setup-env.sh` 스크립트를 실행하여 필수 API 활성화 상태 확인, Agent Gateway 및 Vertex AI 서비스 에이전트 IAM 권한 부여, `conversational-banking` 에이전트 ID(`principal://...`) 선행 생성 및 백그라운드 예열 작업을 수행합니다.
+`./01-setup-env.sh` 스크립트는 다음 4가지 작업을 순서대로 수행합니다.
+
+* **필수 API 19종 활성화 확인**: `networkservices`, `networksecurity`, `agentregistry`, `aiplatform`, `agentidentity`, `serviceextensions` 등 필수 API가 모두 활성화되었는지 확인합니다.
+* **관리형 서비스 에이전트 생성 및 IAM 역할 바인딩**: Agent Gateway 서비스 에이전트(`AGW_SA`)와 Vertex AI 서비스 에이전트를 생성하고 위 표의 필수 IAM 역할을 부여합니다.
+* **에이전트 고유 ID(`principal://...`) 선행 등록**: 이후 작업 5에서 에이전트를 배포할 때 글로벌 IAM 권한 전파 지연(Propagation Delay)이 발생하지 않도록, 컨테이너 빌드가 없는 빈 `conversational-banking` 에이전트 ID만 먼저 생성하여 권한을 부여해 둡니다.
+* **백그라운드 리소스 예열(Warm-up)**: 학습자가 작업 2를 진행하는 동안 백그라운드에서 Cloud Run 뱅킹 MCP 서버(`banking-mcp-server`) 컨테이너 빌드와 SGP 정책 엔진 초기화를 미리 진행하여 이후 작업의 대기 시간을 단축합니다.
+
+1. Cloud Shell에서 아래 명령어를 실행하여 `01-setup-env.sh` 스크립트를 실행합니다.
 
 <ql-code-block language="bash">
 cd ~/agent-gateway-sgp
@@ -123,7 +136,7 @@ source env.sh
 ./01-setup-env.sh
 </ql-code-block>
 
-2. Agent Gateway 서비스 에이전트(`AGW_SA`)에 에이전트 트래픽 중계 및 정책 심사에 필요한 4가지 핵심 IAM 역할(`roles/agentgateway.serviceAgent`, `roles/aiplatform.user`, `roles/modelarmor.user`, `roles/agentregistry.viewer`)이 정상적으로 바인딩되었는지 확인합니다.
+2. 스크립트 실행이 완료되면 Agent Gateway 서비스 에이전트(`AGW_SA`)에 에이전트 트래픽 중계 및 정책 심사에 필요한 4가지 핵심 IAM 역할(`roles/agentgateway.serviceAgent`, `roles/aiplatform.user`, `roles/modelarmor.user`, `roles/agentregistry.viewer`)이 정상적으로 바인딩되었는지 직접 확인합니다.
 
 <ql-code-block language="bash">
 gcloud projects get-iam-policy "${PROJECT_ID}" \
@@ -236,27 +249,34 @@ gcloud network-services agent-gateways describe agent-egress \
 
 ## 작업 3. Cloud Run에 에이펙스 자산운용 뱅킹 MCP 서버 배포 및 권한 설정
 
-이 작업에서는 에이펙스 자산운용의 뱅킹 백엔드 역할을 하는 MCP 서버(`banking-mcp-server`)를 Google Cloud Run에 배포하고 권한을 구성합니다. 이 서버는 계좌 조회(`get_account`), 전화번호로 고객 조회(`lookup_customer_by_phone`), 간편 송금(`transfer_to_phone`), 공과금 납부(`pay_bill`)의 4가지 도구를 JSON-RPC 2.0(`/mcp`) 및 도구 명세 조회(`/tools`) 엔드포인트로 제공합니다.
+이 작업에서는 에이펙스 자산운용의 뱅킹 백엔드 역할을 하는 MCP 서버(`banking-mcp-server`)를 Google Cloud Run에 배포하고 호출 권한을 구성합니다. 이 서버는 계좌 조회(`get_account`), 전화번호로 고객 조회(`lookup_customer_by_phone`), 간편 송금(`transfer_to_phone`), 공과금 납부(`pay_bill`)의 4가지 도구를 JSON-RPC 2.0(`/mcp`) 및 도구 명세 조회(`/tools`) 엔드포인트로 제공합니다.
 
-### 뱅킹 MCP 서버 배포 확인, 도구 검증 및 Invoker 권한 부여
+### 뱅킹 MCP 서버 배포 확인, 도구 스키마 검증 및 Invoker 권한 부여
 
-1. `./03-deploy-mcp.sh` 스크립트를 실행하여 Cloud Run `banking-mcp-server` 배포 완료 여부를 확인(작업 1에서 백그라운드로 시작된 빌드가 완료되었으면 즉시 재사용)하고, 서비스 URL(`MCP_URL`)을 `.env.runtime`에 저장한 뒤 `/tools` 스키마 검증과 `roles/run.servicesInvoker` 권한 부여를 수행합니다.
+1. `./03-deploy-mcp.sh` 스크립트를 실행하여 Cloud Run `banking-mcp-server` 서비스 배포를 완료(작업 1에서 백그라운드로 시작된 빌드가 완료된 경우 즉시 재사용)하고, 배포된 서비스의 HTTPS URL(`MCP_URL`)을 `.env.runtime` 파일에 저장합니다.
 
 <ql-code-block language="bash">
 cd ~/agent-gateway-sgp
 source env.sh
 ./03-deploy-mcp.sh
 source .env.runtime
+echo "Banking MCP Server URL: ${MCP_URL}"
 </ql-code-block>
 
-2. 배포된 MCP 서버의 `/tools` 엔드포인트를 직접 호출하여 4가지 뱅킹 도구의 JSON 스키마를 확인하고, Agent Gateway 서비스 에이전트(`AGW_SA`)에 `roles/run.servicesInvoker` 권한이 부여되었는지 확인합니다.
+2. 배포된 MCP 서버의 `/tools` 엔드포인트를 호출하여 4가지 뱅킹 도구(`get_account`, `lookup_customer_by_phone`, `transfer_to_phone`, `pay_bill`)의 입력 파라미터 스키마가 반환되는지 확인합니다.
 
 <ql-code-block language="bash">
 ID_TOKEN="$(gcloud auth print-identity-token 2>/dev/null || true)"
 curl -fsS -H "Authorization: Bearer ${ID_TOKEN}" "${MCP_URL}/tools" | python3 -m json.tool
+</ql-code-block>
 
-gcloud run services get-iam-policy banking-mcp-server \
+3. Agent Gateway 서비스 에이전트(`AGW_SA`)가 Cloud Run의 `banking-mcp-server`를 호출할 수 있도록 `roles/run.servicesInvoker` 권한을 부여하고 정책을 확인합니다.
+
+<ql-code-block language="bash">
+gcloud run services add-iam-policy-binding banking-mcp-server \
   --region="${LOCATION}" \
+  --member="${AGW_SA}" \
+  --role="roles/run.servicesInvoker" \
   --project="${PROJECT_ID}"
 </ql-code-block>
 
