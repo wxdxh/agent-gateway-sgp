@@ -293,7 +293,7 @@ gcloud network-services agent-gateways import agent-egress \
   --project="${PROJECT_ID}"
 </ql-code-block>
 
-<ql-infobox><strong>팁:</strong> 위 과정은 <code>./02-setup-agent-gateway.sh</code> 스크립트로도 실행할 수 있습니다. 스크립트 실행 시 이미 생성된 서브넷이나 DNS 영역이 있으면 건너뛰고 게이트웨이 임포트를 수행합니다.</ql-infobox>
+<ql-infobox><strong>소요 시간 안내 (약 3~5분):</strong> <code>agent-egress</code> 게이트웨이 임포트 시 Google 관리형 보안 프록시 인스턴스 할당, TLS Inspection용 자체 Root CA 인증서 발급, 그리고 VPC 네트워크 어태치먼트(<code>agent-gateway-na</code>) 및 DNS 피어링 바인딩이 백엔드에서 프로비저닝되므로 완료까지 <strong>약 3~5분</strong>이 소요됩니다. 명령어가 완료될 때까지 잠시 기다려 주세요. (위 과정 전체는 <code>./02-setup-agent-gateway.sh</code> 스크립트로도 실행할 수 있습니다.)</ql-infobox>
 
 3. 배포된 `agent-egress` 게이트웨이의 상세 구성을 조회합니다.
 
@@ -491,7 +491,7 @@ for entry in "${ENDPOINTS[@]}"; do
 done
 </ql-code-block>
 
-<ql-infobox><strong>팁:</strong> 위 과정(뱅킹 MCP 서버 등록, <code>roles/iap.egressor</code> 바인딩 및 시스템 API 4종 등록)은 <code>./04-register-mcp.sh</code> 스크립트로도 한 번에 실행할 수 있습니다. 만약 직접 명령어를 입력하는 대신 스크립트를 사용하지 않았다면, 뱅킹 MCP 서버 자체의 IAP Egress 바인딩까지 누락 없이 적용되도록 아래에서 <code>./04-register-mcp.sh</code>를 한 번 실행해 주는 것이 안전합니다.</ql-infobox>
+<ql-infobox><strong>팁 (멱등성 및 ALREADY_EXISTS 안내):</strong> 위 과정(뱅킹 MCP 서버 등록, <code>roles/iap.egressor</code> 바인딩 및 시스템 API 4종 등록)은 <code>./04-register-mcp.sh</code> 스크립트로도 한 번에 실행할 수 있습니다. 앞선 단계에서 이미 <code>banking-mcp-server</code>나 엔드포인트를 생성한 상태에서 스크립트나 생성 명령을 다시 실행하면 이미 등록된 리소스는 건너뛰거나 <code>ALREADY_EXISTS</code> 메시지가 표시될 수 있으며, 이는 정상적인 멱등(Idempotent) 동작이므로 안심하고 다음 단계로 진행하면 됩니다.</ql-infobox>
 
 2. 뱅킹 MCP 서버와 시스템 엔드포인트 모두에 `roles/iap.egressor` 바인딩이 완료되었는지 보장하기 위해 `./04-register-mcp.sh`를 실행(멱등성 보장)하고 등록된 전체 서비스 목록을 확인합니다.
 
@@ -544,7 +544,7 @@ agents-cli deploy \
   --region="${LOCATION}" \
   --deployment-target="agent_runtime" \
   --agent-identity \
-  --min-instances=0 --max-instances=10 --cpu=1 --memory=4Gi --concurrency=8 \
+  --min-instances=1 --max-instances=10 --cpu=1 --memory=4Gi --concurrency=8 \
   --agent-gateway-egress="projects/${PROJECT_ID}/locations/${LOCATION}/agentGateways/agent-egress" \
   --update-env-vars="MCP_SERVER_NAME=${MCP_SERVER_NAME},GOOGLE_CLOUD_LOCATION=global,LOCATION=${LOCATION},MODEL=gemini-3.8-flash,PROJECT_ID=${PROJECT_ID},GOOGLE_API_USE_MTLS_ENDPOINT=never,GOOGLE_API_USE_CLIENT_CERTIFICATE=false" \
   --no-wait
@@ -560,7 +560,7 @@ agents-cli deploy \
 | `--deployment-target="agent_runtime"` | 에이전트를 완전 관리형 Gemini Enterprise Agent Runtime(Reasoning Engine)에 배포합니다. |
 | `--agent-identity` | 범용 서비스 계정 대신 에이전트 전용 ID(`principal://agents.global.org-...`)를 활성화합니다. |
 | `--agent-gateway-egress=".../agentGateways/agent-egress"` | **핵심 거버넌스 설정**: 에이전트 컨테이너에서 발생하는 모든 아웃바운드 네트워크 트래픽을 지정된 `agent-egress` 게이트웨이로 강제 라우팅합니다. |
-| `--min-instances=0 --max-instances=10 --cpu=1 --memory=4Gi` | 런타임 컨테이너의 오토스케일링 및 컴퓨팅 리소스 스펙을 지정합니다. |
+| `--min-instances=1 --max-instances=10 --cpu=1 --memory=4Gi` | 런타임 컨테이너의 오토스케일링(최소 1개 인스턴스 상시 대기) 및 컴퓨팅 리소스 스펙을 지정합니다. |
 | `--update-env-vars="...GOOGLE_API_USE_MTLS_ENDPOINT=never..."` | 게이트웨이가 일반 TLS를 종료하고 복호화할 수 있도록 클라이언트 측 mTLS 엔드포인트 전환을 비활성화합니다. |
 | `--no-wait` | 컨테이너 빌드 요청만 제출하고 즉시 프롬프트를 반환하여 후속 네트워크/정책 구성을 병렬로 진행할 수 있게 합니다. |
 
@@ -820,20 +820,27 @@ gcloud beta ai semantic-governance-policies describe high-value-limit \
 
 `./08-test.sh`는 내부적으로 `python3 run_tests.py`를 호출합니다. `run_tests.py` 스크립트는 다음 과정을 자동으로 수행합니다.
 
-1. **Reasoning Engine 엔드포인트 탐색 및 준비 대기**: Vertex AI Reasoning Engines API(`projects/${PROJECT_ID}/locations/${LOCATION}/reasoningEngines`)를 조회하여 `conversational-banking` 엔진이 완전히 부팅될 때까지 확인합니다.
+1. **백그라운드 컨테이너 빌드 완료 대기 및 엔드포인트 준비 확인**: 작업 5에서 `--no-wait`로 시작한 Gemini Enterprise Agent Runtime 컨테이너 빌드는 약 6~10분이 소요됩니다. 작업 1의 사전 예열 덕분에 작업 6과 작업 7이 빠르게 완료되어 아직 컨테이너 빌드가 진행 중일 수 있으므로, `run_tests.py`는 `conversational-banking/deployment_metadata.json`의 작업 상태와 Reasoning Engine 스펙을 20초 간격으로 확인하여 컨테이너 빌드 및 런타임 인스턴스 기동이 완료될 때까지 자동으로 대기합니다.
 2. **동일 세션(`session_id`) 기반 3-Turn 연속 대화**: `:streamQuery` REST API에 동일한 `user_id`와 `session_id`를 전달하여, Turn 1에서 확인한 고객 번호(`CUST005`)를 에이전트가 Turn 2와 Turn 3에서도 문맥(Context)으로 기억하고 송금 도구를 호출하도록 합니다.
 3. **도구 호출 및 응답 자동 검증**: 각 Turn의 응답 텍스트를 분석하여 계좌 조회 성공 여부, 소액 이체 완료 여부, 고액 이체 차단 여부를 판별합니다.
 
 ### Cloud Shell에서 3-Turn 시나리오 테스트 실행
 
-1. Cloud Shell에서 아래 명령어를 실행하여 Gemini Enterprise Agent Runtime에 배포된 `conversational-banking` 에이전트를 대상으로 3-Turn 시나리오 테스트를 수행합니다.
+1. (선택 사항) 작업 5에서 백그라운드로 시작한 에이전트 런타임 컨테이너 빌드 상태를 먼저 확인하려면 아래 명령어를 실행합니다.
+
+<ql-code-block language="bash">
+cd ~/agent-gateway-sgp/conversational-banking
+agents-cli deploy --status
+</ql-code-block>
+
+2. Cloud Shell에서 아래 명령어를 실행하여 Gemini Enterprise Agent Runtime에 배포된 `conversational-banking` 에이전트를 대상으로 3-Turn 시나리오 테스트를 수행합니다. (백그라운드 컨테이너 빌드가 아직 진행 중인 경우 완료될 때까지 20초 간격으로 대기한 뒤 자동으로 Turn 1을 시작합니다.)
 
 <ql-code-block language="bash">
 cd ~/agent-gateway-sgp
 ./08-test.sh
 </ql-code-block>
 
-2. 터미널 출력에서 각 Turn의 도구 호출 결과와 SGP 판정을 확인합니다.
+3. 터미널 출력에서 각 Turn의 도구 호출 결과와 SGP 판정을 확인합니다.
    * **Turn 1** (`I am customer CUST005`): `get_account` 도구가 호출되어 고객(Alice Smith / 김민준)의 현재 잔액 1,000만 원(`$10,000.00`)이 조회됩니다.
    * **Turn 2** (`transfer 50 to 555-0001`): 1회 한도(100만 원 / `$1,000`) 이하인 5만 원(`amount: 50`) 송금 요청에 대해 SGP가 `ALLOW`로 판정하여 이체가 완료되고 잔액이 995만 원(`$9,950.00`)으로 변경됩니다.
    * **Turn 3** (`transfer 2000 to 555-0002`): 1회 한도를 초과하는 200만 원(`amount: 2000`) 송금 요청에 대해 SGP가 `DENY`로 판정하여 **Cloud Run 백엔드에 도달하기 전에 Agent Gateway에서 즉시 차단**됩니다.
@@ -860,18 +867,20 @@ Turn 3 PASSED (Over-limit transfer of $2000 blocked by SGP)
 
 ### Cloud Logging에서 SGP 감사 로그 조회 및 분석
 
-1. Cloud Shell에서 아래 명령어를 실행하여 SGP 정책 엔진이 남긴 감사 로그(`logs/semantic-governance-policy`)를 조회합니다.
+1. Cloud Shell에서 아래 명령어를 실행하여 SGP 정책 엔진이 남긴 도구 호출 판정 감사 로그(`logs/semantic-governance-policy` 중 `jsonPayload.verdict:*`)를 조회합니다.
 
 <ql-code-block language="bash">
 cd ~/agent-gateway-sgp
 source env.sh
 
 gcloud logging read \
-  "logName=\"projects/${PROJECT_ID}/logs/semantic-governance-policy\"" \
+  "logName=\"projects/${PROJECT_ID}/logs/semantic-governance-policy\" AND jsonPayload.verdict:*" \
   --project="${PROJECT_ID}" \
   --limit=5 \
   --format=json
 </ql-code-block>
+
+<ql-infobox><strong>참고 (SGP 컨트롤 플레인 상태 로그 vs 감사 로그):</strong> <code>logs/semantic-governance-policy</code> 로그 스트림에는 도구 호출 시 기록되는 판정 감사 로그(<code>jsonPayload.verdict: "ALLOW" | "DENY"</code>) 외에도, SGP 런타임 노드(<code>node_id: "sgp-runtime"</code>)가 30초 주기로 정책 동기화 및 파드 정상 가동 상태를 보고하는 하트비트 로그(<code>"totalPods": 2</code>, <code>"podDistributionsPercentages": {"...": 100}</code>)가 함께 기록됩니다. 따라서 위 명령어처럼 <code>AND jsonPayload.verdict:*</code> 조건을 추가하면 하트비트 로그를 제외하고 실제 도구 호출에 대한 <code>ALLOW</code> / <code>DENY</code> 감사 로그만 정확하게 필터링할 수 있습니다.</ql-infobox>
 
 2. 출력된 JSON 감사 로그에서 `jsonPayload` 내부의 핵심 필드를 확인합니다.
    * **정책 이름** (`policyName` / `appliedPolicies`): `high-value-limit` 정책이 매칭되었음을 보여줍니다.

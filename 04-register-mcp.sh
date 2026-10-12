@@ -25,13 +25,27 @@ else
 fi
 
 echo "==> Step 4: Registering MCP service in Agent Registry..."
-gcloud alpha agent-registry services create banking-mcp-server \
+if gcloud alpha agent-registry services describe banking-mcp-server \
   --project="${PROJECT_ID}" \
-  --location="${LOCATION}" \
-  --display-name="Banking MCP Server" \
-  --interfaces=url="${MCP_URL}/mcp",protocolBinding=JSONRPC \
-  --mcp-server-spec-type=tool-spec \
-  --mcp-server-spec-content="${SCRIPT_DIR}/toolspec.json" || true
+  --location="${LOCATION}" &>/dev/null; then
+  echo "MCP service 'banking-mcp-server' already exists in Agent Registry (updating spec)..."
+  gcloud alpha agent-registry services update banking-mcp-server \
+    --project="${PROJECT_ID}" \
+    --location="${LOCATION}" \
+    --display-name="Banking MCP Server" \
+    --interfaces=url="${MCP_URL}/mcp",protocolBinding=JSONRPC \
+    --mcp-server-spec-type=tool-spec \
+    --mcp-server-spec-content="${SCRIPT_DIR}/toolspec.json" \
+    --quiet >/dev/null 2>&1 || true
+else
+  gcloud alpha agent-registry services create banking-mcp-server \
+    --project="${PROJECT_ID}" \
+    --location="${LOCATION}" \
+    --display-name="Banking MCP Server" \
+    --interfaces=url="${MCP_URL}/mcp",protocolBinding=JSONRPC \
+    --mcp-server-spec-type=tool-spec \
+    --mcp-server-spec-content="${SCRIPT_DIR}/toolspec.json" || true
+fi
 
 echo "==> Step 4: Retrieving MCP Server Resource ID..."
 export MCP_SERVER_NAME="$(gcloud alpha agent-registry mcp-servers list \
@@ -47,7 +61,22 @@ else
   echo "=================================================="
   echo " Registered MCP Server ID: ${MCP_SERVER_NAME}"
   echo "=================================================="
-  echo "export MCP_SERVER_NAME=\"${MCP_SERVER_NAME}\"" >> "${SCRIPT_DIR}/.env.runtime"
+  if ! grep -q "MCP_SERVER_NAME=\"${MCP_SERVER_NAME}\"" "${SCRIPT_DIR}/.env.runtime" 2>/dev/null; then
+    echo "export MCP_SERVER_NAME=\"${MCP_SERVER_NAME}\"" >> "${SCRIPT_DIR}/.env.runtime"
+  fi
+  echo "Binding roles/iap.egressor on MCP server ${MCP_SERVER_NAME}..."
+  for MEMBER in \
+    "${AGW_SA}" \
+    "serviceAccount:service-${PROJECT_NUM}@gcp-sa-aiplatform-re.iam.gserviceaccount.com"; do
+    gcloud alpha iap web add-iam-policy-binding \
+      --resource-type=agent-registry \
+      --mcp-server="${MCP_SERVER_NAME}" \
+      --region="${LOCATION}" \
+      --project="${PROJECT_ID}" \
+      --member="${MEMBER}" \
+      --role="roles/iap.egressor" \
+      --quiet >/dev/null 2>&1 || true
+  done
 fi
 
 echo "==> Step 4: Allowlisting Google Cloud system endpoints for Agent Gateway..."
@@ -64,14 +93,24 @@ for entry in "${ENDPOINTS[@]}"; do
   url="$(echo "$url" | xargs)"
   service_id="$(echo "$name" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9' | cut -c 1-40)"
 
-  echo "Registering endpoint '${name}' (${url})..."
-  res="$(gcloud alpha agent-registry services create "${service_id}" \
+  if gcloud alpha agent-registry services describe "${service_id}" \
     --project="${PROJECT_ID}" \
-    --location="${LOCATION}" \
-    --display-name="${name}" \
-    --endpoint-spec-type=no-spec \
-    --interfaces=url="${url}",protocolBinding=JSONRPC \
-    --format="value(registryResource)" 2>&1)" || true
+    --location="${LOCATION}" &>/dev/null; then
+    echo "Endpoint '${name}' (${service_id}) already registered."
+    res="$(gcloud alpha agent-registry services describe "${service_id}" \
+      --project="${PROJECT_ID}" \
+      --location="${LOCATION}" \
+      --format="value(registryResource)" 2>/dev/null || true)"
+  else
+    echo "Registering endpoint '${name}' (${url})..."
+    res="$(gcloud alpha agent-registry services create "${service_id}" \
+      --project="${PROJECT_ID}" \
+      --location="${LOCATION}" \
+      --display-name="${name}" \
+      --endpoint-spec-type=no-spec \
+      --interfaces=url="${url}",protocolBinding=JSONRPC \
+      --format="value(registryResource)" 2>&1)" || true
+  fi
 
   ep_id="$(echo "${res}" | grep -oE 'agentregistry-[0-9a-f-]+$' | head -n 1 || true)"
   if [[ -n "${ep_id}" ]]; then

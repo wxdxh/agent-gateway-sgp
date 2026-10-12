@@ -59,6 +59,114 @@ def resolve_reasoning_engine_id(project_id: str, location: str, token: str) -> s
     return "378064324431708160"
 
 
+def wait_for_reasoning_engine_ready(project_id: str, location: str, re_id: str) -> str:
+    """Ensure the background Agent Runtime container build from Step 5 is finished."""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    metadata_path = os.path.join(script_dir, "conversational-banking", "deployment_metadata.json")
+    deploy_script = os.path.join(script_dir, "05-deploy-agent.sh")
+    start_wait = time.time()
+
+    # 1. If deployment_metadata.json has a pending_operation, poll it until done
+    if os.path.exists(metadata_path):
+        try:
+            with open(metadata_path, "r", encoding="utf-8") as f:
+                meta = json.load(f)
+            op_name = meta.get("pending_operation", {}).get("operation_name")
+        except Exception:
+            op_name = None
+
+        if op_name:
+            op_url = f"https://{location}-aiplatform.googleapis.com/v1beta1/{op_name}"
+            while True:
+                token = get_access_token()
+                try:
+                    req = urllib.request.Request(
+                        op_url,
+                        headers={"Authorization": f"Bearer {token}"},
+                        method="GET",
+                    )
+                    with urllib.request.urlopen(req) as resp:
+                        op_data = json.loads(resp.read().decode("utf-8"))
+                    if op_data.get("done"):
+                        if "error" in op_data:
+                            print(f"[WARNING] Background deploy operation reported error: {op_data['error']}")
+                        else:
+                            print("==> Background Agent Runtime container build completed!")
+                        break
+                except Exception as e:
+                    print(f"Note checking operation status: {e}")
+
+                elapsed = int(time.time() - start_wait)
+                mins, secs = divmod(elapsed, 60)
+                print(
+                    f"⏳ Waiting for background Agent Runtime deployment (started in Step 5) "
+                    f"to complete... ({mins}m {secs}s elapsed, checking again in 20s)"
+                )
+                time.sleep(20)
+
+    # 2. Verify the Reasoning Engine resource has a deployed spec (not just a bare identity shell)
+    triggered_deploy = False
+    while True:
+        token = get_access_token()
+        re_url = f"https://{location}-aiplatform.googleapis.com/v1beta1/projects/{project_id}/locations/{location}/reasoningEngines/{re_id}"
+        try:
+            req = urllib.request.Request(
+                re_url,
+                headers={"Authorization": f"Bearer {token}"},
+                method="GET",
+            )
+            with urllib.request.urlopen(req) as resp:
+                re_data = json.loads(resp.read().decode("utf-8"))
+            spec = re_data.get("spec", {})
+            has_code = bool(
+                spec.get("sourceCodeSpec")
+                or spec.get("packageSpec")
+                or spec.get("containerSpec")
+                or spec.get("deploymentSpec")
+            )
+            if has_code:
+                break
+
+            # Check if there is any in-progress LRO on this ReasoningEngine
+            ops_url = f"{re_url}/operations"
+            ops_req = urllib.request.Request(
+                ops_url,
+                headers={"Authorization": f"Bearer {token}"},
+                method="GET",
+            )
+            in_progress = False
+            try:
+                with urllib.request.urlopen(ops_req) as ops_resp:
+                    ops_data = json.loads(ops_resp.read().decode("utf-8"))
+                    for op in ops_data.get("operations", []):
+                        if not op.get("done", False):
+                            in_progress = True
+                            break
+            except Exception:
+                pass
+
+            if not in_progress and not triggered_deploy and os.path.exists(deploy_script):
+                print("==> Reasoning Engine is a bare identity shell with no active build. Triggering ./05-deploy-agent.sh...")
+                subprocess.run(["bash", deploy_script], check=False)
+                triggered_deploy = True
+                return wait_for_reasoning_engine_ready(project_id, location, re_id)
+        except Exception as e:
+            print(f"Note checking Reasoning Engine spec: {e}")
+            break
+
+        elapsed = int(time.time() - start_wait)
+        mins, secs = divmod(elapsed, 60)
+        if elapsed > 900:
+            break
+        print(
+            f"⏳ Waiting for Reasoning Engine {re_id} container spec to become active... "
+            f"({mins}m {secs}s elapsed, checking again in 20s)"
+        )
+        time.sleep(20)
+
+    return get_access_token()
+
+
 def stream_query(project_id: str, location: str, re_id: str, token: str, session_id: str, message: str):
     url = f"https://{location}-aiplatform.googleapis.com/v1beta1/projects/{project_id}/locations/{location}/reasoningEngines/{re_id}:streamQuery"
     payload = {
@@ -68,33 +176,53 @@ def stream_query(project_id: str, location: str, re_id: str, token: str, session
             "session_id": session_id,
         },
     }
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
 
-    responses = []
-    try:
-        with urllib.request.urlopen(req) as resp:
-            for line in resp:
-                line_str = line.decode("utf-8").strip()
-                if not line_str:
-                    continue
-                try:
-                    data = json.loads(line_str)
-                    responses.append(data)
-                except Exception:
-                    pass
-    except urllib.error.HTTPError as e:
-        err_body = e.read().decode("utf-8", errors="replace")
-        return None, f"HTTP {e.code}: {err_body}"
-    except Exception as e:
-        return None, str(e)
+    max_attempts = 24
+    for attempt in range(1, max_attempts + 1):
+        current_token = token if attempt == 1 else get_access_token()
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {current_token}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+
+        responses = []
+        try:
+            with urllib.request.urlopen(req) as resp:
+                for line in resp:
+                    line_str = line.decode("utf-8").strip()
+                    if not line_str:
+                        continue
+                    try:
+                        data = json.loads(line_str)
+                        responses.append(data)
+                    except Exception:
+                        pass
+            break
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode("utf-8", errors="replace")
+            if (
+                e.code in (400, 429, 502, 503, 504)
+                and (
+                    "does not have running instances" in err_body
+                    or "FAILED_PRECONDITION" in err_body
+                    or e.code in (429, 502, 503, 504)
+                )
+                and attempt < max_attempts
+            ):
+                print(
+                    f"⏳ Agent Runtime instance is still warming up or finishing deployment "
+                    f"(attempt {attempt}/{max_attempts}). Retrying in 20s..."
+                )
+                time.sleep(20)
+                continue
+            return None, f"HTTP {e.code}: {err_body}"
+        except Exception as e:
+            return None, str(e)
 
     # Extract final text from stream chunks
     text_parts = []
@@ -122,6 +250,7 @@ def main():
     print(f" Reasoning Engine: {re_id}")
     print("=" * 80)
 
+    token = wait_for_reasoning_engine_ready(project_id, location, re_id)
     session_id = f"sgp-eval-{int(time.time())}"
     print(f"Session ID: {session_id}\n")
 

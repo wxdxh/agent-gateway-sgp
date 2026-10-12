@@ -59,7 +59,7 @@ for attempt in 1 2 3 4; do
     --region="${LOCATION}" \
     --deployment-target="agent_runtime" \
     --agent-identity \
-    --min-instances=0 \
+    --min-instances=1 \
     --max-instances=10 \
     --cpu=1 \
     --memory=4Gi \
@@ -95,7 +95,14 @@ EFFECTIVE_ID="$(curl -fsS -H "Authorization: Bearer ${TOKEN}" \
 if [[ -n "${EFFECTIVE_ID}" ]]; then
   AGENT_PRINCIPAL="principal://${EFFECTIVE_ID}"
   echo "Detected Agent Identity: ${AGENT_PRINCIPAL}"
-  for ROLE in "roles/agentregistry.viewer" "roles/agentregistry.user" "roles/aiplatform.user"; do
+  for ROLE in \
+    "roles/agentregistry.viewer" \
+    "roles/agentregistry.user" \
+    "roles/aiplatform.user" \
+    "roles/serviceusage.serviceUsageConsumer" \
+    "roles/cloudapiregistry.viewer" \
+    "roles/logging.logWriter" \
+    "roles/monitoring.metricWriter"; do
     gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
       --member="${AGENT_PRINCIPAL}" \
       --role="${ROLE}" \
@@ -108,6 +115,14 @@ if [[ -n "${EFFECTIVE_ID}" ]]; then
     --role="roles/run.servicesInvoker" \
     --project="${PROJECT_ID}" \
     --quiet >/dev/null || true
+  gcloud alpha iap web add-iam-policy-binding \
+    --resource-type=agent-registry \
+    --mcp-server="${MCP_SERVER_NAME}" \
+    --region="${LOCATION}" \
+    --project="${PROJECT_ID}" \
+    --member="${AGENT_PRINCIPAL}" \
+    --role="roles/iap.egressor" \
+    --quiet >/dev/null 2>&1 || true
 fi
 
 RE_SA="serviceAccount:service-${PROJECT_NUM}@gcp-sa-aiplatform-re.iam.gserviceaccount.com"
@@ -134,6 +149,16 @@ for ep_id in $(gcloud alpha agent-registry endpoints list --project="${PROJECT_I
     --member="${RE_SA}" \
     --role="roles/iap.egressor" \
     --quiet >/dev/null 2>&1 || true
+  if [[ -n "${AGENT_PRINCIPAL}" ]]; then
+    gcloud alpha iap web add-iam-policy-binding \
+      --resource-type=agent-registry \
+      --endpoint="${ep_id}" \
+      --region="${LOCATION}" \
+      --project="${PROJECT_ID}" \
+      --member="${AGENT_PRINCIPAL}" \
+      --role="roles/iap.egressor" \
+      --quiet >/dev/null 2>&1 || true
+  fi
 done
 
 echo "================================================================================"
