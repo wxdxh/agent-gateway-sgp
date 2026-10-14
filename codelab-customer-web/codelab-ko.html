@@ -1,0 +1,2798 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <title>Google Cloud 고객사 적용 가이드 | 일반 GCP 환경을 위한 Agent Gateway · SGP 단계별 CLI 구축 가이드</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Noto+Sans+KR:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --gcp-blue: #1a73e8;
+      --gcp-blue-dark: #1557b0;
+      --gcp-blue-light: #e8f0fe;
+      --gcp-red: #d93025;
+      --gcp-red-light: #fce8e6;
+      --gcp-yellow: #f29900;
+      --gcp-yellow-light: #fef7e0;
+      --gcp-green: #1e8e3e;
+      --gcp-green-light: #e6f4ea;
+      --gcp-purple: #8430ce;
+      --gcp-purple-light: #f3e8fd;
+      --bg-primary: #f4f6f9;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f8fafc;
+      --bg-code: #0f172a;
+      --text-primary: #1f2937;
+      --text-secondary: #4b5563;
+      --text-muted: #6b7280;
+      --border-color: #e2e8f0;
+      --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+      --shadow-md: 0 10px 25px -5px rgba(15, 23, 42, 0.06), 0 4px 10px -2px rgba(15, 23, 42, 0.04);
+      --header-height: 64px;
+      --sidebar-width: 300px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+    }
+
+    [data-theme="dark"] {
+      --gcp-blue: #8ab4f8;
+      --gcp-blue-dark: #aecbfa;
+      --gcp-blue-light: rgba(138, 180, 248, 0.14);
+      --gcp-red: #f28b82;
+      --gcp-red-light: rgba(242, 139, 130, 0.14);
+      --gcp-yellow: #fdd663;
+      --gcp-yellow-light: rgba(253, 214, 99, 0.14);
+      --gcp-green: #81c995;
+      --gcp-green-light: rgba(129, 201, 149, 0.14);
+      --gcp-purple: #c58af9;
+      --gcp-purple-light: rgba(197, 138, 249, 0.14);
+      --bg-primary: #0b0f19;
+      --bg-surface: #151c2c;
+      --bg-subtle: #1e293b;
+      --bg-code: #090d16;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --border-color: #263147;
+      --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.4);
+      --shadow-md: 0 12px 28px rgba(0, 0, 0, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Google Sans', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.72;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Top Header */
+    .codelab-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--header-height);
+      background-color: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 1000;
+      backdrop-filter: blur(8px);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .gcp-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text-primary);
+      font-weight: 700;
+      font-size: 17px;
+      white-space: nowrap;
+    }
+
+    .header-divider {
+      width: 1px;
+      height: 22px;
+      background-color: var(--border-color);
+    }
+
+    .codelab-title-top {
+      font-size: 14.5px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .time-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--gcp-blue-light);
+      color: var(--gcp-blue);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .btn-icon {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 7px 13px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.18s ease;
+      text-decoration: none;
+    }
+
+    .btn-icon:hover {
+      background-color: var(--gcp-blue-light);
+      border-color: var(--gcp-blue);
+      color: var(--gcp-blue);
+    }
+
+    /* Progress Bar */
+    .progress-bar-container {
+      position: fixed;
+      top: var(--header-height);
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--border-color);
+      z-index: 999;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4285f4, #34a853, #fbbc04, #ea4335);
+      width: 11.1%;
+      transition: width 0.3s ease;
+    }
+
+    /* Layout Container */
+    .codelab-layout {
+      display: flex;
+      margin-top: calc(var(--header-height) + 3px);
+      min-height: calc(100vh - var(--header-height) - 3px);
+    }
+
+    /* Sidebar Navigation */
+    .codelab-sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--bg-surface);
+      border-right: 1px solid var(--border-color);
+      position: fixed;
+      top: calc(var(--header-height) + 3px);
+      bottom: 0;
+      left: 0;
+      overflow-y: auto;
+      padding: 20px 12px;
+      z-index: 900;
+    }
+
+    .sidebar-section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: var(--text-muted);
+      padding: 0 12px 10px;
+    }
+
+    .step-nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .step-nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.16s ease;
+      color: var(--text-secondary);
+      font-size: 13.5px;
+      font-weight: 400;
+    }
+
+    .step-nav-item:hover {
+      background-color: var(--bg-subtle);
+      color: var(--text-primary);
+    }
+
+    .step-nav-item.active {
+      background-color: var(--gcp-blue-light);
+      color: var(--gcp-blue);
+      font-weight: 600;
+    }
+
+    .step-nav-item.completed .step-num {
+      background-color: var(--gcp-green);
+      color: #fff;
+      border-color: var(--gcp-green);
+    }
+
+    .step-nav-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .step-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border-color);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11.5px;
+      font-weight: 700;
+      flex-shrink: 0;
+      background-color: var(--bg-surface);
+      color: var(--text-secondary);
+    }
+
+    .step-nav-item.active .step-num {
+      background-color: var(--gcp-blue);
+      color: #fff;
+      border-color: var(--gcp-blue);
+    }
+
+    .step-nav-title {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .step-nav-time {
+      font-size: 11px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      margin-left: 6px;
+      background: var(--bg-subtle);
+      padding: 2px 7px;
+      border-radius: 99px;
+    }
+
+    /* Main Content */
+    .codelab-main {
+      flex: 1;
+      margin-left: var(--sidebar-width);
+      padding: 36px 48px 90px;
+      max-width: 1080px;
+    }
+
+    .step-card {
+      display: none;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: 44px 52px;
+      animation: fadeIn 0.22s ease-out;
+    }
+
+    .step-card.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .step-header {
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 22px;
+      margin-bottom: 30px;
+    }
+
+    .step-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .step-badge {
+      background-color: var(--gcp-blue-light);
+      color: var(--gcp-blue);
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 4px 11px;
+      border-radius: 99px;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+
+    .step-duration {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .step-title {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.35;
+      letter-spacing: -0.3px;
+    }
+
+    h2.section-heading {
+      font-size: 18.5px;
+      font-weight: 700;
+      margin: 34px 0 14px;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h3.subsection-heading {
+      font-size: 15.5px;
+      font-weight: 600;
+      margin: 24px 0 8px;
+      color: var(--text-primary);
+    }
+
+    p {
+      margin-bottom: 14px;
+      color: var(--text-secondary);
+      font-size: 15px;
+    }
+
+    p strong, li strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    ul, ol {
+      margin: 0 0 18px 22px;
+      font-size: 15px;
+      color: var(--text-secondary);
+    }
+
+    li {
+      margin-bottom: 8px;
+    }
+
+    code:not(pre code) {
+      font-family: 'Roboto Mono', monospace;
+      font-size: 12.5px;
+      background-color: var(--bg-subtle);
+      color: var(--gcp-blue);
+      border: 1px solid var(--border-color);
+      padding: 2px 6px;
+      border-radius: 5px;
+      font-weight: 500;
+    }
+
+    /* Code Blocks */
+    .code-container {
+      position: relative;
+      margin: 14px 0 22px;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background-color: var(--bg-code);
+      border: 1px solid #1e293b;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 16px;
+      background-color: #1e293b;
+      color: #94a3b8;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 12px;
+    }
+
+    .copy-btn {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.16);
+      color: #f1f5f9;
+      padding: 4px 11px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11.5px;
+      font-family: 'Google Sans', 'Noto Sans KR', sans-serif;
+      transition: all 0.15s;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255,255,255,0.18);
+    }
+
+    pre {
+      padding: 18px 20px;
+      overflow-x: auto;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 13px;
+      line-height: 1.65;
+      color: #e2e8f0;
+    }
+
+    /* Callouts */
+    .callout {
+      padding: 18px 22px;
+      border-radius: var(--radius-md);
+      margin: 22px 0;
+      border-left: 4px solid;
+      font-size: 14.5px;
+    }
+
+    .callout-title {
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+    }
+
+    .callout-info {
+      background-color: var(--gcp-blue-light);
+      border-left-color: var(--gcp-blue);
+    }
+    .callout-info .callout-title { color: var(--gcp-blue); }
+
+    .callout-success {
+      background-color: var(--gcp-green-light);
+      border-left-color: var(--gcp-green);
+    }
+    .callout-success .callout-title { color: var(--gcp-green); }
+
+    .callout-warning {
+      background-color: var(--gcp-yellow-light);
+      border-left-color: var(--gcp-yellow);
+    }
+    .callout-warning .callout-title { color: var(--gcp-yellow); }
+
+    .callout-danger {
+      background-color: var(--gcp-red-light);
+      border-left-color: var(--gcp-red);
+    }
+    .callout-danger .callout-title { color: var(--gcp-red); }
+
+    /* Refined Modern Tables */
+    .table-wrapper {
+      overflow-x: auto;
+      margin: 18px 0 28px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      box-shadow: var(--shadow-sm);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th {
+      background-color: var(--bg-subtle);
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      text-align: left;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 15px 18px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      vertical-align: middle;
+      line-height: 1.55;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: var(--bg-subtle);
+    }
+
+    /* Pill Badges inside Tables */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .pill-blue { background: var(--gcp-blue-light); color: var(--gcp-blue); }
+    .pill-green { background: var(--gcp-green-light); color: var(--gcp-green); }
+    .pill-red { background: var(--gcp-red-light); color: var(--gcp-red); }
+    .pill-yellow { background: var(--gcp-yellow-light); color: var(--gcp-yellow); }
+    .pill-purple { background: var(--gcp-purple-light); color: var(--gcp-purple); }
+    .pill-mono {
+      font-family: 'Roboto Mono', monospace;
+      font-size: 12px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 3px 9px;
+      border-radius: 6px;
+    }
+
+    /* Architecture Diagram Containers */
+    .diagram-box {
+      background: linear-gradient(180deg, var(--bg-subtle) 0%, var(--bg-surface) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 24px 20px 18px;
+      margin: 24px 0 30px;
+      text-align: center;
+      overflow-x: auto;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .diagram-box img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 10px;
+      box-shadow: var(--shadow-sm);
+      display: block;
+      margin: 0 auto;
+    }
+
+    .diagram-caption {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 14px;
+      font-weight: 500;
+    }
+
+    /* Feature Cards Grid */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 18px;
+      margin: 18px 0 26px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin: 18px 0 26px;
+    }
+
+    .info-card {
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 20px 22px;
+      background-color: var(--bg-subtle);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .info-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .info-card-title {
+      font-weight: 700;
+      font-size: 15px;
+      margin-bottom: 10px;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Script Anatomy Box */
+    .script-anatomy {
+      background-color: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 22px 26px;
+      margin: 22px 0;
+    }
+
+    .script-anatomy-header {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--gcp-blue);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Step Footer Navigation */
+    .step-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 36px;
+      padding-top: 22px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .btn-nav {
+      padding: 11px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      color: var(--text-primary);
+      transition: all 0.18s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-nav:hover:not(:disabled) {
+      border-color: var(--gcp-blue);
+      color: var(--gcp-blue);
+    }
+
+    .btn-nav.primary {
+      background-color: var(--gcp-blue);
+      color: #ffffff;
+      border-color: var(--gcp-blue);
+    }
+
+    .btn-nav.primary:hover:not(:disabled) {
+      background-color: var(--gcp-blue-dark);
+      color: #ffffff;
+    }
+
+    .btn-nav:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 960px) {
+      .codelab-sidebar { display: none; }
+      .codelab-main { margin-left: 0; padding: 20px 16px 60px; }
+      .step-card, .qwik-card { padding: 26px 20px; }
+      .lab-mode-tabs { flex-direction: column; }
+    }
+
+    /* Lab Mode Switcher Tabs (Standard vs Qwiklabs Cloud Shell) */
+    .lab-mode-tabs {
+      max-width: 960px;
+      margin: 0 auto 20px auto;
+      display: flex;
+      gap: 12px;
+      background: var(--bg-surface);
+      padding: 8px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .lab-mode-tab {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 18px;
+      border-radius: 12px;
+      border: 1.5px solid transparent;
+      background: var(--bg-subtle);
+      color: var(--text-secondary);
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.18s ease;
+      font-family: inherit;
+    }
+
+    .lab-mode-tab:hover {
+      border-color: var(--gcp-blue);
+      color: var(--text-primary);
+    }
+
+    .lab-mode-tab.active {
+      background: var(--gcp-blue-light);
+      border-color: var(--gcp-blue);
+      color: var(--gcp-blue-dark);
+      box-shadow: 0 2px 8px rgba(26, 115, 232, 0.12);
+    }
+
+    [data-theme="dark"] .lab-mode-tab.active {
+      color: var(--gcp-blue);
+    }
+
+    .lab-mode-tab-left {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .lab-mode-tab-title {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .lab-mode-tab-sub {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .lab-mode-tab.active .lab-mode-tab-sub {
+      color: var(--text-secondary);
+    }
+
+    .lab-mode-badge {
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--gcp-green-light);
+      color: var(--gcp-green);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .qwik-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-top: 4px solid var(--gcp-green);
+      border-radius: var(--radius-lg);
+      padding: 40px 44px;
+      box-shadow: var(--shadow-md);
+      max-width: 960px;
+      margin: 0 auto;
+      display: none;
+      animation: fadeIn 0.22s ease-out;
+    }
+
+    .qwik-card.active {
+      display: block;
+    }
+
+    .qwik-badge {
+      background-color: var(--gcp-green-light);
+      color: var(--gcp-green);
+      font-weight: 700;
+      font-size: 12.5px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      letter-spacing: 0.2px;
+    }
+
+    .qwik-verify-box {
+      margin: 22px 0;
+      padding: 20px 24px;
+      border-radius: var(--radius-md);
+      background-color: var(--gcp-green-light);
+      border: 1px solid rgba(30, 142, 62, 0.3);
+    }
+
+    .qwik-verify-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--gcp-green);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Quiz Event Tab Styles */
+    .quiz-panel-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-top: 4px solid var(--gcp-yellow);
+      border-radius: var(--radius-lg);
+      padding: 40px 44px;
+      box-shadow: var(--shadow-md);
+      max-width: 960px;
+      margin: 0 auto;
+      display: none;
+      animation: fadeIn 0.22s ease-out;
+    }
+
+    .quiz-panel-card.active {
+      display: block;
+    }
+
+    .quiz-item-card {
+      background-color: var(--bg-subtle);
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 28px 30px;
+      margin-bottom: 28px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .quiz-item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .quiz-num-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background-color: var(--gcp-yellow-light);
+      color: #b06000;
+      font-weight: 700;
+      font-size: 12.5px;
+      padding: 5px 13px;
+      border-radius: 999px;
+      border: 1px solid rgba(249, 171, 0, 0.35);
+    }
+
+    [data-theme="dark"] .quiz-num-badge {
+      color: var(--gcp-yellow);
+    }
+
+    .quiz-ref-tag {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .quiz-question-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.55;
+      margin-bottom: 18px;
+    }
+
+    .quiz-options-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .quiz-option-btn {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      width: 100%;
+      text-align: left;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border-color);
+      background-color: var(--bg-surface);
+      color: var(--text-primary);
+      font-size: 14.5px;
+      line-height: 1.5;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.16s ease;
+    }
+
+    .quiz-option-btn:hover {
+      border-color: var(--gcp-blue);
+      background-color: var(--gcp-blue-light);
+    }
+
+    .quiz-option-btn.selected {
+      border-color: var(--gcp-blue);
+      background-color: var(--gcp-blue-light);
+      font-weight: 600;
+    }
+
+    .quiz-option-btn.revealed-correct {
+      border-color: var(--gcp-green);
+      background-color: var(--gcp-green-light);
+      color: var(--text-primary);
+      font-weight: 700;
+      box-shadow: 0 0 0 2px rgba(30, 142, 62, 0.18);
+    }
+
+    .quiz-opt-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background-color: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .quiz-option-btn.revealed-correct .quiz-opt-num {
+      background-color: var(--gcp-green);
+      border-color: var(--gcp-green);
+      color: #ffffff;
+    }
+
+    .quiz-actions-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .quiz-reveal-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: 1.5px solid var(--gcp-blue);
+      background-color: var(--gcp-blue);
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.18s ease;
+    }
+
+    .quiz-reveal-btn:hover {
+      background-color: var(--gcp-blue-dark);
+      border-color: var(--gcp-blue-dark);
+    }
+
+    .quiz-reveal-btn.active {
+      background-color: var(--bg-surface);
+      color: var(--gcp-blue);
+    }
+
+    .quiz-answer-panel {
+      display: none;
+      margin-top: 18px;
+      padding: 20px 24px;
+      border-radius: 10px;
+      background-color: var(--gcp-green-light);
+      border: 1.5px solid rgba(30, 142, 62, 0.35);
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .quiz-answer-panel.open {
+      display: block;
+    }
+
+    .quiz-answer-badge {
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--gcp-green);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header class="codelab-header">
+    <div class="header-left">
+      <a href="#step-1" class="gcp-logo" id="logoLink">
+        <svg width="28" height="24" viewBox="0 0 64 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M40.4 15.6C37.1 9.9 30.9 6.5 24.2 6.5C15.1 6.5 7.4 13.1 5.8 22C2.3 24.4 0 28.5 0 33.1C0 40.5 6 46.5 13.4 46.5H45.6C54.1 46.5 61 39.6 61 31.1C61 23.1 54.9 16.5 47.1 15.7L40.4 15.6Z" stroke="#4285F4" stroke-width="3.8"/>
+          <circle cx="23" cy="27" r="5" fill="#EA4335"/>
+          <circle cx="35" cy="24" r="5" fill="#FBBC04"/>
+          <circle cx="31" cy="35" r="5" fill="#34A853"/>
+          <circle cx="44" cy="31" r="5" fill="#4285F4"/>
+        </svg>
+        <span>Google Cloud Enterprise Guide</span>
+      </a>
+      <div class="header-divider"></div>
+      <div class="codelab-title-top">[일반 고객사 GCP 환경 전용] Agent Gateway · SGP 단계별 Pure CLI 구축 가이드 (No Startup Script · No .sh Wrapper)</div>
+    </div>
+    <div class="header-right">
+      <div class="time-pill" id="remainingTimeBadge">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+        <span id="remainingTimeText">총 예상 소요 시간: 55분</span>
+      </div>
+      <button class="btn-icon" id="viewAllBtn" type="button">
+        <span id="viewAllText">전체 펼쳐보기</span>
+      </button>
+      <button class="btn-icon" id="themeToggleBtn" type="button">
+        <span id="themeToggleText">다크 모드</span>
+      </button>
+      <a class="btn-icon" href="https://github.com/wxdxh/agent-gateway-sgp" target="_blank" rel="noopener noreferrer">
+        GitHub
+      </a>
+    </div>
+  </header>
+
+  <!-- Progress Bar -->
+  <div class="progress-bar-container">
+    <div class="progress-bar-fill" id="progressBar"></div>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="codelab-layout">
+    <!-- Left Sidebar -->
+    <aside class="codelab-sidebar">
+      <div class="sidebar-section-label" id="sidebarSectionLabel">고객사 구축 목차 (Pure CLI · 총 55분)</div>
+      <ul class="step-nav-list" id="stepNavList">
+        <li class="step-nav-item active" data-step="1">
+          <div class="step-nav-left">
+            <span class="step-num">1</span>
+            <span class="step-nav-title">아키텍처 및 사전 준비</span>
+          </div>
+          <span class="step-nav-time">5분</span>
+        </li>
+        <li class="step-nav-item" data-step="2">
+          <div class="step-nav-left">
+            <span class="step-num">2</span>
+            <span class="step-nav-title">API 활성화 및 3-계층 IAM</span>
+          </div>
+          <span class="step-nav-time">10분</span>
+        </li>
+        <li class="step-nav-item" data-step="3">
+          <div class="step-nav-left">
+            <span class="step-num">3</span>
+            <span class="step-nav-title">VPC · 서브넷 · DNS · 게이트웨이</span>
+          </div>
+          <span class="step-nav-time">8분</span>
+        </li>
+        <li class="step-nav-item" data-step="4">
+          <div class="step-nav-left">
+            <span class="step-num">4</span>
+            <span class="step-nav-title">뱅킹 MCP 서버 배포</span>
+          </div>
+          <span class="step-nav-time">5분</span>
+        </li>
+        <li class="step-nav-item" data-step="5">
+          <div class="step-nav-left">
+            <span class="step-num">5</span>
+            <span class="step-nav-title">Agent Registry 카탈로그 등록</span>
+          </div>
+          <span class="step-nav-time">5분</span>
+        </li>
+        <li class="step-nav-item" data-step="6">
+          <div class="step-nav-left">
+            <span class="step-num">6</span>
+            <span class="step-nav-title">🚀 에이전트 비동기 배포</span>
+          </div>
+          <span class="step-nav-time">4분</span>
+        </li>
+        <li class="step-nav-item" data-step="7">
+          <div class="step-nav-left">
+            <span class="step-num">7</span>
+            <span class="step-nav-title">SGP 엔진 · 고정 IP · PSC · DNS</span>
+          </div>
+          <span class="step-nav-time">5분</span>
+        </li>
+        <li class="step-nav-item" data-step="8">
+          <div class="step-nav-left">
+            <span class="step-num">8</span>
+            <span class="step-nav-title">인가 확장 및 자연어 SGP 정책</span>
+          </div>
+          <span class="step-nav-time">5분</span>
+        </li>
+        <li class="step-nav-item" data-step="9">
+          <div class="step-nav-left">
+            <span class="step-num">9</span>
+            <span class="step-nav-title">개별 curl 검증 · 감사 로그 · 정리</span>
+          </div>
+          <span class="step-nav-time">8분</span>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main Step Content -->
+    <main class="codelab-main">
+
+      <!-- Mode Switcher Tabs: Customer Pure CLI Guide vs Session Quiz -->
+      <div class="lab-mode-tabs" role="tablist" aria-label="고객사 가이드 모드 선택">
+        <button class="lab-mode-tab active" id="modeTabStandard" type="button" data-mode="standard">
+          <div class="lab-mode-tab-left">
+            <div class="lab-mode-tab-title">🏢 일반 고객사 환경 단계별 CLI 구축 가이드 (Zero-to-Production)</div>
+            <div class="lab-mode-tab-sub">스타트업 스크립트 없이 빈 GCP 프로젝트에서 개별 명령어(gcloud · curl · agents-cli)만으로 직접 구축</div>
+          </div>
+          <span class="lab-mode-badge" style="background:var(--gcp-blue-light);color:var(--gcp-blue);">Pure CLI 가이드</span>
+        </button>
+        <button class="lab-mode-tab" id="modeTabQuiz" type="button" data-mode="quiz">
+          <div class="lab-mode-tab-left">
+            <div class="lab-mode-tab-title">🎁 세션 퀴즈 이벤트</div>
+            <div class="lab-mode-tab-sub">참여자 경품 증정용 핵심 아키텍처 퀴즈 2선 (정답 확인 토글)</div>
+          </div>
+          <span class="lab-mode-badge" style="background:var(--gcp-yellow-light);color:#b06000;">퀴즈 2문항</span>
+        </button>
+      </div>
+
+      <!-- ==================== STEP 1 ==================== -->
+      <section class="step-card active" id="step-1" data-duration="5">
+        <div class="step-header">
+          <div class="step-meta">
+            <span class="step-badge">Step 1 of 9</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 5분</span>
+          </div>
+          <h1 class="step-title">개요: 일반 고객사 GCP 환경을 위한 자율형 AI 에이전트 거버넌스 구축</h1>
+        </div>
+
+        <div class="callout callout-success">
+          <div class="callout-title">🏢 이 가이드의 목적: 일반 고객사 표준 GCP 프로젝트 (Zero-Base) 직접 적용</div>
+          <p style="margin-bottom:0;">
+            본 가이드는 Qwiklabs 교육 환경처럼 <strong>사전 프로비저닝 스타트업 스크립트(Terraform)가 없는 일반 고객사 GCP 프로젝트</strong>에서
+            처음부터 끝까지 직접 아키텍처를 구축할 수 있도록 설계되었습니다.<br>
+            또한 쉘 스크립트(<code>01-setup-env.sh</code> ~ <code>08-test.sh</code>)로 명령어를 숨기지 않고,
+            엔지니어가 각 리소스의 역할과 옵션을 명확히 통제할 수 있도록 <strong>모든 단계를 개별 CLI 명령어(<code>gcloud</code>, <code>curl</code>, <code>agents-cli</code>)</strong>로 하나하나 안내합니다.
+          </p>
+        </div>
+
+        <p>
+          금융 및 엔터프라이즈 환경에서 자율형 AI 에이전트가 단순 질의응답을 넘어 <strong>계좌 조회, 실시간 자금 이체, 사내 ERP/원장 API 호출</strong>을 수행하기 시작하면서,
+          전통적인 IAM 권한 제어만으로는 <em>"누가 호출했는가"</em>만 확인할 뿐 <em>"얼마를 어떤 맥락으로 이체하려 하는가"</em>를 통제할 수 없습니다.
+        </p>
+
+        <div class="callout callout-info">
+          <div class="callout-title">🏦 비즈니스 시나리오: 에이펙스 자산운용 (Apex Asset Management)</div>
+          <p style="margin-bottom:0;">
+            금융사인 <strong>에이펙스 자산운용</strong>은 고객이 대화만으로 간편 송금과 계좌 관리를 수행할 수 있도록
+            <strong>Gemini Enterprise (Vertex AI Agent Engine)</strong> 기반의 대화형 뱅킹 에이전트를 도입했습니다.<br>
+            보안 및 준법감시팀은 에이전트 애플리케이션 코드를 수정하지 않고도
+            <strong>"1회 이체 금액이 $1,000(약 100만 원)을 초과하는 모든 송금 요청을 네트워크 경계에서 즉시 차단"</strong>하는 제로 트러스트 아키텍처를 구축합니다.
+          </p>
+        </div>
+
+        <h2 class="section-heading">전체 시스템 아키텍처 (3-Plane 분리 구조)</h2>
+        <p>
+          <strong>Gemini Enterprise Agent Runtime</strong>에서 실행되는 에이전트의 모든 외부 도구 호출은 <strong>Google Cloud Agent Gateway</strong>에 의해 가로채어지며,
+          프라이빗 네트워크(PSC)로 연결된 <strong>시맨틱 거버넌스 정책(SGP) 엔진</strong>의 인가 판정을 통과해야만 백엔드 <strong>Cloud Run 뱅킹 MCP 서버</strong>에 도달할 수 있습니다.
+        </p>
+
+        <div class="diagram-box">
+          <img src="img/00-overall-architecture.png" alt="에이펙스 자산운용 3-Plane 전체 아키텍처" loading="lazy">
+          <div class="diagram-caption">그림 1-1. 에이펙스 자산운용 3-Plane(에이전트 실행 · 네트워크 경계 검문 · 거버넌스 평가) 아키텍처</div>
+        </div>
+
+        <h2 class="section-heading">Qwiklabs 환경 vs 일반 고객사 GCP 환경 차이점</h2>
+        <p>
+          Qwiklabs 실습 환경에서는 랩 시작 시 Terraform 스타트업 스크립트가 백그라운드에서 기본 네트워크와 API를 미리 생성해 두지만,
+          <strong>일반 고객사 프로젝트에서는 아래 기반 인프라를 직접 생성해야 합니다.</strong> 본 가이드는 이 모든 과정을 빠짐없이 포함합니다.
+        </p>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>구분 항목</th>
+                <th>Qwiklabs 교육 환경</th>
+                <th>일반 고객사 GCP 환경 (본 가이드)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>19개 필수 API 활성화</strong></td>
+                <td>스타트업 스크립트(Terraform)가 사전 활성화</td>
+                <td><span class="pill pill-blue">Step 2</span> <code>gcloud services enable</code> 명령어로 명시적 활성화</td>
+              </tr>
+              <tr>
+                <td><strong>환경 변수 구성 (<code>env.sh</code>)</strong></td>
+                <td>사전 생성된 <code>apex-subnet</code>에서 리전을 자동 역추적</td>
+                <td><span class="pill pill-blue">Step 2</span> 고객사 리전·프로젝트에 맞춘 <code>customer-env.sh</code> 직접 생성</td>
+              </tr>
+              <tr>
+                <td><strong>커스텀 VPC &amp; 워크로드 서브넷</strong></td>
+                <td><code>apex-wealth-vpc</code>, <code>apex-subnet</code> 사전 생성됨</td>
+                <td><span class="pill pill-green">Step 3</span> <code>gcloud compute networks/subnets create</code>로 직접 생성</td>
+              </tr>
+              <tr>
+                <td><strong>리전 매니지드 프록시 전용 서브넷</strong></td>
+                <td><code>proxy-only-subnet</code> 사전 생성됨</td>
+                <td><span class="pill pill-green">Step 3</span> <code>--purpose=REGIONAL_MANAGED_PROXY</code> 서브넷 직접 생성</td>
+              </tr>
+              <tr>
+                <td><strong>프라이빗 Cloud DNS 관리형 존</strong></td>
+                <td><code>policy-engine-zone</code> (<code>policy.internal.</code>) 사전 생성됨</td>
+                <td><span class="pill pill-green">Step 3</span> <code>gcloud dns managed-zones create</code>로 직접 생성</td>
+              </tr>
+              <tr>
+                <td><strong>PSC 엔드포인트용 내부 고정 IP</strong></td>
+                <td><code>sgp-psc-ip</code> 사전 예약됨</td>
+                <td><span class="pill pill-purple">Step 7</span> <code>gcloud compute addresses create</code>로 직접 예약</td>
+              </tr>
+              <tr>
+                <td><strong>실행 방식</strong></td>
+                <td><code>01-setup-env.sh</code> ~ <code>08-test.sh</code> 일괄 실행</td>
+                <td><span class="pill pill-yellow">전 단계</span> <strong>래퍼 스크립트 없이 개별 CLI 명령어 하나하나 직접 실행</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 class="section-heading">고객사 실행 계정 사전 준비 체크리스트</h2>
+        <div class="grid-2">
+          <div class="info-card">
+            <div class="info-card-title">🔑 1. 실행자 IAM 권한 요건</div>
+            <p style="font-size:13.5px;margin-bottom:0;">
+              구축을 진행하는 엔지니어 계정에는 프로젝트 <code>roles/owner</code>(소유자) 권한, 또는 최소 다음 권한 조합이 필요합니다:<br>
+              • <code>roles/resourcemanager.projectIamAdmin</code><br>
+              • <code>roles/serviceusage.serviceUsageAdmin</code><br>
+              • <code>roles/compute.networkAdmin</code> &amp; <code>roles/dns.admin</code><br>
+              • <code>roles/run.admin</code> &amp; <code>roles/aiplatform.admin</code><br>
+              • <code>roles/iap.admin</code> &amp; <code>roles/agentregistry.admin</code>
+            </p>
+          </div>
+          <div class="info-card">
+            <div class="info-card-title">💻 2. 실행 터미널 환경</div>
+            <p style="font-size:13.5px;margin-bottom:0;">
+              <strong>Google Cloud Shell</strong>(권장) 또는 <code>gcloud</code> CLI(최신 버전, <code>alpha</code>/<code>beta</code> 컴포넌트 포함), <code>python3</code>(3.10+), <code>curl</code>, <code>git</code>이 설치된 사내 배포 워크스테이션에서 동일하게 실행할 수 있습니다.<br>
+              리전은 현재 Agent Gateway · SGP Preview가 지원되는 <code>us-central1</code>을 기준으로 안내합니다.
+            </p>
+          </div>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav" disabled type="button">← 이전 단계</button>
+          <button class="btn-nav primary next-step-btn" data-target="2" type="button">다음: API 활성화 및 3-계층 IAM 구성 →</button>
+        </div>
+      </section>
+
+      <!-- ==================== STEP 2 ==================== -->
+      <section class="step-card" id="step-2" data-duration="10">
+        <div class="step-header">
+          <div class="step-meta">
+            <span class="step-badge">Step 2 of 9</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 10분</span>
+          </div>
+          <h1 class="step-title">환경 변수 설정, 필수 API 19종 활성화 및 3-계층 IAM 구성</h1>
+        </div>
+
+        <p>
+          일반 고객사 프로젝트에는 아무런 API나 서비스 에이전트가 준비되어 있지 않습니다.
+          이 단계에서는 에이전트 및 MCP 서버 소스코드를 클론한 뒤, <strong>고객사 전용 환경 변수 파일(<code>customer-env.sh</code>)</strong>을 만들고,
+          <strong>19개 필수 API 활성화 → Google 관리형 서비스 에이전트 생성 → 3-계층 IAM 권한 부여 → 에이전트 고유 ID(<code>AGENT_PRINCIPAL</code>) 발급</strong>을 개별 명령어로 수행합니다.
+        </p>
+
+        <div class="diagram-box">
+          <img src="img/01-iam-separation.png" alt="3-계층 서비스 주체 IAM 분리 아키텍처" loading="lazy">
+          <div class="diagram-caption">그림 2-1. 최소 권한 원칙에 기반한 3-계층(Agent Identity · Agent Engine SA · Agent Gateway SA) IAM 분리 구조</div>
+        </div>
+
+        <h2 class="section-heading">2-1. 소스코드 리포지토리 클론</h2>
+        <p>
+          에이전트 애플리케이션 코드(<code>conversational-banking/</code>)와 뱅킹 MCP 서버 코드(<code>banking-mcp-server/</code>)를 가져오기 위해 리포지토리를 클론합니다.
+          <strong>(주의: 리포지토리 내의 <code>.sh</code> 스크립트는 실행하지 않고, 아래 가이드의 개별 명령어를 직접 실행합니다.)</strong>
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 2-1</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>git clone https://github.com/wxdxh/agent-gateway-sgp.git ~/agent-gateway-sgp
+cd ~/agent-gateway-sgp</code></pre>
+        </div>
+
+        <h2 class="section-heading">2-2. 고객사 환경 변수 정의 및 <code>customer-env.sh</code> 생성</h2>
+        <div class="callout callout-warning">
+          <div class="callout-title">⚠️ 왜 기본 <code>env.sh</code> 대신 <code>customer-env.sh</code>를 만드나요?</div>
+          <p style="margin-bottom:0;">
+            리포지토리에 포함된 <code>env.sh</code>는 Qwiklabs 스타트업 스크립트가 미리 생성해 둔 <code>apex-subnet</code>의 리전을 조회하여 <code>LOCATION</code>을 설정하도록 작성되어 있습니다.
+            일반 고객사 환경에서는 아직 서브넷이 존재하지 않으므로, 프로젝트 ID와 대상 리전(<code>us-central1</code>)을 명시적으로 지정하는 <code>customer-env.sh</code>를 생성하여 사용합니다.
+          </p>
+        </div>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 2-2</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>export PROJECT_ID=$(gcloud config get-value project)
+export PROJECT_NUM=$(gcloud projects describe "${PROJECT_ID}" --format="value(projectNumber)")
+export LOCATION="us-central1"
+
+export NETWORK_NAME="apex-wealth-vpc"
+export SUBNET_NAME="apex-subnet"
+export PROXY_SUBNET_NAME="proxy-only-subnet"
+
+export AGW_SA="service-${PROJECT_NUM}@gcp-sa-networkservices.iam.gserviceaccount.com"
+export RE_SA="service-${PROJECT_NUM}@gcp-sa-aiplatform-re.iam.gserviceaccount.com"
+
+cat &lt;&lt;EOF &gt; ~/agent-gateway-sgp/customer-env.sh
+export PROJECT_ID="${PROJECT_ID}"
+export PROJECT_NUM="${PROJECT_NUM}"
+export LOCATION="${LOCATION}"
+export NETWORK_NAME="${NETWORK_NAME}"
+export SUBNET_NAME="${SUBNET_NAME}"
+export PROXY_SUBNET_NAME="${PROXY_SUBNET_NAME}"
+export AGW_SA="${AGW_SA}"
+export RE_SA="${RE_SA}"
+EOF
+
+source ~/agent-gateway-sgp/customer-env.sh
+echo "PROJECT_ID=${PROJECT_ID}, PROJECT_NUM=${PROJECT_NUM}, LOCATION=${LOCATION}"</code></pre>
+        </div>
+
+        <h2 class="section-heading">2-3. 필수 Google Cloud API 19종 활성화</h2>
+        <p>
+          네트워크 보안, Agent Gateway, Agent Registry, Agent Identity, Vertex AI, Cloud Run, Cloud Build, Cloud DNS 등 본 아키텍처에 필요한 19개 API를 활성화합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 2-3</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>gcloud services enable \
+  compute.googleapis.com \
+  networksecurity.googleapis.com \
+  networkservices.googleapis.com \
+  dns.googleapis.com \
+  iam.googleapis.com \
+  iap.googleapis.com \
+  agentregistry.googleapis.com \
+  aiplatform.googleapis.com \
+  run.googleapis.com \
+  cloudbuild.googleapis.com \
+  artifactregistry.googleapis.com \
+  storage.googleapis.com \
+  modelarmor.googleapis.com \
+  telemetry.googleapis.com \
+  cloudtrace.googleapis.com \
+  logging.googleapis.com \
+  cloudapiregistry.googleapis.com \
+  agentidentity.googleapis.com \
+  serviceextensions.googleapis.com \
+  --project="${PROJECT_ID}"</code></pre>
+        </div>
+
+        <h2 class="section-heading">2-4. Google 관리형 서비스 에이전트(Service Identity) 생성</h2>
+        <p>
+          신규 고객사 프로젝트에서는 API를 활성화하더라도 관리형 서비스 계정(Service Agent)이 즉시 생성되지 않을 수 있습니다.
+          <code>networkservices</code>와 <code>aiplatform</code>의 서비스 아이덴티티를 명시적으로 프로비저닝합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 2-4</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>gcloud beta services identity create \
+  --service=networkservices.googleapis.com \
+  --project="${PROJECT_ID}"
+
+gcloud beta services identity create \
+  --service=aiplatform.googleapis.com \
+  --project="${PROJECT_ID}"</code></pre>
+        </div>
+
+        <h2 class="section-heading">2-5. 빌드 서비스 계정 및 서비스 에이전트 IAM 권한 구성</h2>
+        <p>
+          세 가지 인프라 계층의 서비스 계정에 필요한 IAM 역할을 각각 부여합니다:
+        </p>
+        <ul>
+          <li><strong>기본 컴퓨트 서비스 계정 (<code>${PROJECT_NUM}-compute@...</code>)</strong>: Cloud Run 소스 배포 및 컨테이너 이미지 빌드 권한</li>
+          <li><strong>Vertex AI 서비스 에이전트 (<code>gcp-sa-aiplatform</code> &amp; <code>RE_SA</code>)</strong>: 에이전트 런타임 구동 및 Agent Registry 조회 권한</li>
+          <li><strong>Agent Gateway 서비스 에이전트 (<code>AGW_SA</code>)</strong>: 이그레스 프록시 제어, SGP/Model Armor 호출 및 레지스트리 조회 권한</li>
+        </ul>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 2-5</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code># 1) 기본 컴퓨트 서비스 계정 (Cloud Build 및 Cloud Run 소스 배포용)
+for role in \
+  "roles/cloudbuild.builds.builder" \
+  "roles/storage.admin" \
+  "roles/artifactregistry.writer"; do
+  gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+    --member="serviceAccount:${PROJECT_NUM}-compute@developer.gserviceaccount.com" \
+    --role="${role}" \
+    --condition=None --quiet
+done
+
+# 2) Vertex AI 서비스 에이전트 (런타임 관리 및 레지스트리 조회)
+for sa in \
+  "service-${PROJECT_NUM}@gcp-sa-aiplatform.iam.gserviceaccount.com" \
+  "${RE_SA}"; do
+  for role in \
+    "roles/aiplatform.serviceAgent" \
+    "roles/aiplatform.user" \
+    "roles/agentregistry.viewer"; do
+    gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+      --member="serviceAccount:${sa}" \
+      --role="${role}" \
+      --condition=None --quiet
+  done
+done
+
+# 3) Agent Gateway 서비스 에이전트 (네트워크 경계 검문 및 SGP 정책 평가)
+for role in \
+  "roles/agentgateway.serviceAgent" \
+  "roles/aiplatform.user" \
+  "roles/modelarmor.user" \
+  "roles/agentregistry.viewer"; do
+  gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+    --member="serviceAccount:${AGW_SA}" \
+    --role="${role}" \
+    --condition=None --quiet
+done</code></pre>
+        </div>
+
+        <h2 class="section-heading">2-6. <code>uv</code> 패키지 매니저 및 <code>google-agents-cli</code> 설치</h2>
+        <p>
+          에이전트를 Gemini Enterprise Agent Runtime으로 패키징하여 배포하기 위해 필요한 <code>uv</code>와 <code>agents-cli</code>를 설치합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 2-6</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+echo 'export PATH="$HOME/.local/bin:$PATH"' &gt;&gt; ~/agent-gateway-sgp/customer-env.sh
+
+uv tool install "git+https://github.com/google/agents-cli.git" --force
+agents-cli --version</code></pre>
+        </div>
+
+        <h2 class="section-heading">2-7. 빈 Reasoning Engine 생성으로 에이전트 고유 ID (<code>AGENT_PRINCIPAL</code>) 사전 발급</h2>
+        <p>
+          Google Cloud의 <strong>Managed Agent Identity</strong>는 에이전트 인스턴스마다 SPIFFE 형식의 고유 주체(<code>principal://.../reasoningEngines/{ID}</code>)를 부여합니다.
+          코드를 빌드하기 전에 빈 <code>conversational-banking</code> Reasoning Engine 리소스를 먼저 생성하여 ID를 즉시 발급받습니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 2-7</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>CREATE_RESP=$(curl -s -X POST \
+  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  -H "Content-Type: application/json" \
+  "https://${LOCATION}-aiplatform.googleapis.com/v1beta1/projects/${PROJECT_ID}/locations/${LOCATION}/reasoningEngines" \
+  -d '{"displayName": "conversational-banking"}')
+
+echo "${CREATE_RESP}"</code></pre>
+        </div>
+
+        <h2 class="section-heading">2-8. <code>AGENT_PRINCIPAL</code> 추출 및 환경 변수 파일 저장</h2>
+        <p>
+          방금 생성된 Reasoning Engine의 <code>spec.effectiveIdentity</code> 필드를 조회하여 <code>AGENT_PRINCIPAL</code> 환경 변수로 등록하고 <code>customer-env.sh</code>에 영구 저장합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 2-8</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>RE_RESOURCE_NAME=$(echo "${CREATE_RESP}" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+name = data.get('response', {}).get('name', '') or data.get('name', '').split('/operations/')[0]
+print(name)
+")
+
+EFFECTIVE_ID=""
+for i in {1..12}; do
+  EFFECTIVE_ID=$(curl -s \
+    -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+    "https://${LOCATION}-aiplatform.googleapis.com/v1beta1/${RE_RESOURCE_NAME}" \
+    | python3 -c "import sys, json; print(json.load(sys.stdin).get('spec', {}).get('effectiveIdentity', ''))" 2&gt;/dev/null || true)
+  if [ -n "${EFFECTIVE_ID}" ]; then
+    break
+  fi
+  echo "Waiting for effectiveIdentity provisioning... (${i}/12)"
+  sleep 5
+done
+
+export AGENT_PRINCIPAL="principal://${EFFECTIVE_ID}"
+echo "export AGENT_PRINCIPAL=\"${AGENT_PRINCIPAL}\"" &gt;&gt; ~/agent-gateway-sgp/customer-env.sh
+echo "AGENT_PRINCIPAL=${AGENT_PRINCIPAL}"</code></pre>
+        </div>
+
+        <h2 class="section-heading">2-9. 발급된 <code>AGENT_PRINCIPAL</code>에 런타임 IAM 역할 7종 부여</h2>
+        <p>
+          발급된 에이전트 고유 ID가 런타임에 Gemini 모델 추론, Agent Registry 도구 탐색, 로그/메트릭 기록을 수행할 수 있도록 프로젝트 레벨 IAM 역할 7종을 바인딩합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 2-9</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>for role in \
+  "roles/agentregistry.viewer" \
+  "roles/agentregistry.user" \
+  "roles/aiplatform.user" \
+  "roles/serviceusage.serviceUsageConsumer" \
+  "roles/cloudapiregistry.viewer" \
+  "roles/logging.logWriter" \
+  "roles/monitoring.metricWriter"; do
+  gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+    --member="${AGENT_PRINCIPAL}" \
+    --role="${role}" \
+    --condition=None --quiet
+done</code></pre>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" data-target="1" type="button">← 이전: 아키텍처 및 사전 준비</button>
+          <button class="btn-nav primary next-step-btn" data-target="3" type="button">다음: VPC · 서브넷 · DNS · 게이트웨이 구축 →</button>
+        </div>
+      </section>
+
+      <!-- ==================== STEP 3 ==================== -->
+      <section class="step-card" id="step-3" data-duration="8">
+        <div class="step-header">
+          <div class="step-meta">
+            <span class="step-badge">Step 3 of 9</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 8분</span>
+          </div>
+          <h1 class="step-title">커스텀 VPC, 서브넷, 프록시 전용 서브넷, Cloud DNS 및 Agent Gateway 생성</h1>
+        </div>
+
+        <div class="callout callout-info">
+          <div class="callout-title">🏗️ 스타트업 스크립트 대체 핵심 구간: VPC 네트워크 인프라 직접 구축</div>
+          <p style="margin-bottom:0;">
+            Qwiklabs에서는 Terraform이 VPC와 서브넷, DNS 존을 미리 만들어 두었지만, 일반 고객사 프로젝트에서는
+            <strong>① 커스텀 VPC(<code>apex-wealth-vpc</code>) → ② 워크로드 서브넷(<code>apex-subnet</code>) → ③ 리전 매니지드 프록시 전용 서브넷(<code>proxy-only-subnet</code>) → ④ 프라이빗 Cloud DNS 존(<code>policy-engine-zone</code>)</strong>을 먼저 생성한 뒤,
+            그 위에 <strong>⑤ 네트워크 어태치먼트(<code>agent-gateway-na</code>)</strong>와 <strong>⑥ <code>agent-egress</code> 게이트웨이</strong>를 프로비저닝해야 합니다.
+          </p>
+        </div>
+
+        <div class="diagram-box">
+          <img src="img/02-agent-gateway-network.png" alt="Agent Gateway 및 Network Attachment 구조" loading="lazy">
+          <div class="diagram-caption">그림 3-1. 커스텀 VPC, 프록시 전용 서브넷, Network Attachment 및 Agent Gateway(AGENT_TO_ANYWHERE) 연결 구조</div>
+        </div>
+
+        <h2 class="section-heading">3-1. 커스텀 VPC (<code>apex-wealth-vpc</code>) 및 워크로드 서브넷 (<code>apex-subnet</code>) 생성</h2>
+        <p>
+          자동 모드 서브넷 대신 보안 통제가 용이한 커스텀 모드 VPC를 생성하고, <code>us-central1</code> 리전에 <code>10.10.0.0/24</code> 대역의 워크로드 서브넷을 생성합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 3-1</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>source ~/agent-gateway-sgp/customer-env.sh
+
+gcloud compute networks create "${NETWORK_NAME}" \
+  --subnet-mode=custom \
+  --project="${PROJECT_ID}"
+
+gcloud compute networks subnets create "${SUBNET_NAME}" \
+  --network="${NETWORK_NAME}" \
+  --region="${LOCATION}" \
+  --range="10.10.0.0/24" \
+  --project="${PROJECT_ID}"</code></pre>
+        </div>
+
+        <h2 class="section-heading">3-2. 리전 매니지드 프록시 전용 서브넷 (<code>proxy-only-subnet</code>) 생성</h2>
+        <p>
+          Agent Gateway와 Service Extensions(<code>INTERNAL_MANAGED</code> 로드 밸런싱 스킴)가 내부 Envoy 프록시 풀을 할당할 수 있도록
+          <code>--purpose=REGIONAL_MANAGED_PROXY</code> 및 <code>--role=ACTIVE</code> 옵션으로 프록시 전용 서브넷(<code>10.11.13.0/24</code>)을 생성합니다.
+          <strong>이 서브넷이 없으면 Step 8에서 AuthzExtension 및 AuthzPolicy 연결이 실패합니다.</strong>
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 3-2</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>gcloud compute networks subnets create "${PROXY_SUBNET_NAME}" \
+  --network="${NETWORK_NAME}" \
+  --region="${LOCATION}" \
+  --range="10.11.13.0/24" \
+  --purpose=REGIONAL_MANAGED_PROXY \
+  --role=ACTIVE \
+  --project="${PROJECT_ID}"</code></pre>
+        </div>
+
+        <h2 class="section-heading">3-3. 프라이빗 Cloud DNS 관리형 존 (<code>policy-engine-zone</code>) 생성</h2>
+        <p>
+          향후 Step 7~8에서 Agent Gateway의 인가 확장(AuthzExtension)이 <code>policy.internal</code> 도메인으로 SGP 정책 엔진을 호출할 수 있도록,
+          <code>apex-wealth-vpc</code> 내부에서만 보이는 프라이빗 DNS 관리형 존을 생성합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 3-3</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>gcloud dns managed-zones create policy-engine-zone \
+  --dns-name="policy.internal." \
+  --description="Private DNS zone for SGP Policy Engine" \
+  --visibility=private \
+  --networks="${NETWORK_NAME}" \
+  --project="${PROJECT_ID}"</code></pre>
+        </div>
+
+        <h2 class="section-heading">3-4. 네트워크 어태치먼트 (<code>agent-gateway-na</code>) 생성 및 URI 조회</h2>
+        <p>
+          Google 관리형 테넌트에 위치한 Agent Gateway가 고객사의 <code>apex-subnet</code> 내부로 이그레스 트래픽을 라우팅할 수 있도록
+          <code>ACCEPT_AUTOMATIC</code> 모드의 네트워크 어태치먼트를 생성하고 전체 SelfLink URI를 환경 변수에 저장합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 3-4</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>gcloud compute network-attachments create agent-gateway-na \
+  --region="${LOCATION}" \
+  --subnets="${SUBNET_NAME}" \
+  --connection-preference=ACCEPT_AUTOMATIC \
+  --project="${PROJECT_ID}"
+
+export NA_URI=$(gcloud compute network-attachments describe agent-gateway-na \
+  --region="${LOCATION}" \
+  --project="${PROJECT_ID}" \
+  --format="value(selfLink)")
+
+echo "export NA_URI=\"${NA_URI}\"" &gt;&gt; ~/agent-gateway-sgp/customer-env.sh
+echo "NA_URI=${NA_URI}"</code></pre>
+        </div>
+
+        <h2 class="section-heading">3-5. <code>agent-egress</code> 게이트웨이 매니페스트 작성 및 생성</h2>
+        <p>
+          MCP 프로토콜 제어 및 <code>AGENT_TO_ANYWHERE</code> 경로 감시를 수행하는 <code>agent-egress</code> 게이트웨이 매니페스트 파일을 작성하고 임포트합니다.
+        </p>
+        <div class="callout callout-warning">
+          <div class="callout-title">⏳ 프로비저닝 소요 시간 안내 (약 3~5분)</div>
+          <p style="margin-bottom:0;">
+            <code>agent-gateways import</code> 명령어는 내부 리전 프록시 인스턴스 할당, 네트워크 어태치먼트 연결, 그리고
+            <strong>전용 TLS Inspection Root CA 인증서(<code>CertificatePem</code>) 동적 발급</strong>을 한꺼번에 수행하므로 완료까지 <strong>약 3~5분</strong>이 소요됩니다. 명령어가 완료될 때까지 터미널을 닫지 말고 기다려 주세요.
+          </p>
+        </div>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 3-5</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>cat &lt;&lt;EOF &gt; ~/agent-gateway-sgp/agent-gateway-vpc-egress.yaml
+name: projects/${PROJECT_ID}/locations/${LOCATION}/agentGateways/agent-egress
+protocols:
+  - MCP
+googleManaged:
+  governedAccessPath: AGENT_TO_ANYWHERE
+networkConfig:
+  egress:
+    networkAttachment: ${NA_URI}
+EOF
+
+gcloud network-services agent-gateways import agent-egress \
+  --source="$HOME/agent-gateway-sgp/agent-gateway-vpc-egress.yaml" \
+  --location="${LOCATION}" \
+  --project="${PROJECT_ID}"</code></pre>
+        </div>
+
+        <h2 class="section-heading">3-6. 생성된 <code>agent-egress</code> 게이트웨이 상태 검증</h2>
+        <p>
+          게이트웨이 상세 정보를 조회하여 <code>selfManaged.CertificatePem</code>에 TLS 검사용 Root CA 인증서가 정상 발급되었는지 확인합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 3-6</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>gcloud network-services agent-gateways describe agent-egress \
+  --location="${LOCATION}" \
+  --project="${PROJECT_ID}"</code></pre>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" data-target="2" type="button">← 이전: API 활성화 및 IAM</button>
+          <button class="btn-nav primary next-step-btn" data-target="4" type="button">다음: 뱅킹 MCP 서버 배포 →</button>
+        </div>
+      </section>
+
+      <!-- ==================== STEP 4 ==================== -->
+      <section class="step-card" id="step-4" data-duration="5">
+        <div class="step-header">
+          <div class="step-meta">
+            <span class="step-badge">Step 4 of 9</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 5분</span>
+          </div>
+          <h1 class="step-title">Cloud Run에 뱅킹 MCP 서버 배포 및 서비스 호출 권한 부여</h1>
+        </div>
+
+        <p>
+          에이전트가 호출할 백엔드 코어 뱅킹 도구 서버(FastMCP 기반 Python 애플리케이션, 7개 뱅킹 도구 내장)를 Cloud Run에 배포하고,
+          허가된 3개 주체(<code>AGW_SA</code>, <code>RE_SA</code>, <code>AGENT_PRINCIPAL</code>)에게 호출 권한을 부여합니다.
+        </p>
+
+        <div class="diagram-box">
+          <img src="img/03-cloud-run-mcp.png" alt="Cloud Run 뱅킹 MCP 서버 배포 아키텍처" loading="lazy">
+          <div class="diagram-caption">그림 4-1. Cloud Run에 배포된 뱅킹 MCP 서버의 7대 도구 구성 및 호출 권한 구조</div>
+        </div>
+
+        <h2 class="section-heading">4-1. Cloud Run에 <code>banking-mcp-server</code> 소스 빌드 및 배포</h2>
+        <p>
+          <code>./banking-mcp-server</code> 디렉토리의 소스코드를 Cloud Build로 빌드하여 Cloud Run 서비스로 배포합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 4-1</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>source ~/agent-gateway-sgp/customer-env.sh
+cd ~/agent-gateway-sgp
+
+gcloud run deploy banking-mcp-server \
+  --source=./banking-mcp-server \
+  --region="${LOCATION}" \
+  --project="${PROJECT_ID}" \
+  --allow-unauthenticated \
+  --quiet</code></pre>
+        </div>
+
+        <h2 class="section-heading">4-2. 배포된 Cloud Run 서비스 URL 추출 및 저장</h2>
+        <p>
+          배포된 <code>banking-mcp-server</code>의 HTTPS 엔드포인트 URL을 조회하여 <code>MCP_URL</code> 환경 변수로 설정하고 <code>customer-env.sh</code>에 저장합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 4-2</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>export MCP_URL=$(gcloud run services describe banking-mcp-server \
+  --region="${LOCATION}" \
+  --project="${PROJECT_ID}" \
+  --format="value(status.url)")
+
+echo "export MCP_URL=\"${MCP_URL}\"" &gt;&gt; ~/agent-gateway-sgp/customer-env.sh
+echo "MCP_URL=${MCP_URL}"</code></pre>
+        </div>
+
+        <h2 class="section-heading">4-3. Cloud Run 서비스 호출 권한 (<code>roles/run.servicesInvoker</code>) 바인딩</h2>
+        <p>
+          Agent Gateway 서비스 에이전트(<code>AGW_SA</code>), Vertex AI Reasoning Engine 서비스 에이전트(<code>RE_SA</code>), 그리고 에이전트 고유 ID(<code>AGENT_PRINCIPAL</code>)에
+          <code>banking-mcp-server</code> 호출 권한을 부여합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 4-3</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>for member in \
+  "serviceAccount:${AGW_SA}" \
+  "serviceAccount:${RE_SA}" \
+  "${AGENT_PRINCIPAL}"; do
+  gcloud run services add-iam-policy-binding banking-mcp-server \
+    --region="${LOCATION}" \
+    --project="${PROJECT_ID}" \
+    --member="${member}" \
+    --role="roles/run.servicesInvoker" \
+    --quiet
+done</code></pre>
+        </div>
+
+        <h2 class="section-heading">4-4. 뱅킹 MCP 서버 도구 명세(<code>/tools</code>) 응답 검증</h2>
+        <p>
+          <code>curl</code>로 <code>${MCP_URL}/tools</code> 엔드포인트를 호출하여 <code>transfer_to_phone</code>을 포함한 7개 뱅킹 도구의 JSON 스키마가 정상 반환되는지 확인합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 4-4</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>curl -s "${MCP_URL}/tools" | python3 -m json.tool</code></pre>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" data-target="3" type="button">← 이전: VPC · 서브넷 · 게이트웨이</button>
+          <button class="btn-nav primary next-step-btn" data-target="5" type="button">다음: Agent Registry 카탈로그 등록 →</button>
+        </div>
+      </section>
+
+      <!-- ==================== STEP 5 ==================== -->
+      <section class="step-card" id="step-5" data-duration="5">
+        <div class="step-header">
+          <div class="step-meta">
+            <span class="step-badge">Step 5 of 9</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 5분</span>
+          </div>
+          <h1 class="step-title">Agent Registry에 뱅킹 MCP 서버 및 4대 시스템 엔드포인트 등록</h1>
+        </div>
+
+        <p>
+          <code>AGENT_TO_ANYWHERE</code> 모드로 동작하는 Agent Gateway는 <strong>"기본 차단(Default Deny)"</strong> 원칙을 따릅니다.
+          따라서 에이전트가 호출할 <strong>뱅킹 MCP 서버</strong>뿐만 아니라, 에이전트 런타임이 동작하는 데 필수적인 <strong>4대 Google Cloud 시스템 API 엔드포인트</strong>까지
+          모두 <strong>Agent Registry</strong>에 등록하고 각각에 대해 <strong>IAP 이그레스 권한(<code>roles/iap.egressor</code>)</strong>을 부여해야 합니다.
+        </p>
+
+        <div class="diagram-box">
+          <img src="img/04-agent-registry-catalog.png" alt="Agent Registry 카탈로그 및 IAP Egressor 바인딩" loading="lazy">
+          <div class="diagram-caption">그림 5-1. Agent Registry 도구 명세(toolspec.json) 및 4대 시스템 엔드포인트 IAP Egressor 화이트리스트 구조</div>
+        </div>
+
+        <h2 class="section-heading">5-1. MCP 서버로부터 <code>toolspec.json</code> 파일 생성</h2>
+        <p>
+          Step 4에서 배포한 <code>banking-mcp-server</code>의 <code>/tools</code> 응답에서 도구 배열을 추출하여 Agent Registry 규격의 <code>toolspec.json</code> 파일로 저장합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 5-1</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>source ~/agent-gateway-sgp/customer-env.sh
+cd ~/agent-gateway-sgp
+
+curl -s "${MCP_URL}/tools" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+with open('toolspec.json', 'w') as f:
+    json.dump({'tools': data.get('tools', [])}, f, indent=2)
+print('Saved toolspec.json with', len(data.get('tools', [])), 'tools.')
+"</code></pre>
+        </div>
+
+        <h2 class="section-heading">5-2. Agent Registry에 <code>banking-mcp-server</code> 등록 및 ID 추출</h2>
+        <p>
+          <code>streamable-http</code> 프로토콜과 <code>toolspec.json</code>을 지정하여 Agent Registry에 뱅킹 MCP 서버를 등록하고,
+          생성된 리소스 ID(<code>MCP_SERVER_NAME</code>)를 조회하여 <code>customer-env.sh</code>에 저장합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 5-2</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>gcloud alpha agent-registry services create banking-mcp-server \
+  --location="${LOCATION}" \
+  --project="${PROJECT_ID}" \
+  --display-name="Banking MCP Server" \
+  --description="Banking MCP Server" \
+  --mcp-server-spec="protocol=streamable-http,uri=${MCP_URL}/mcp,toolspec-from-file=toolspec.json"
+
+export MCP_SERVER_NAME=$(gcloud alpha agent-registry mcp-servers list \
+  --location="${LOCATION}" \
+  --project="${PROJECT_ID}" \
+  --filter="displayName='Banking MCP Server'" \
+  --format="value(name)" | awk -F'/' '{print $NF}')
+
+echo "export MCP_SERVER_NAME=\"${MCP_SERVER_NAME}\"" &gt;&gt; ~/agent-gateway-sgp/customer-env.sh
+echo "MCP_SERVER_NAME=${MCP_SERVER_NAME}"</code></pre>
+        </div>
+
+        <h2 class="section-heading">5-3. 뱅킹 MCP 서버에 IAP Egressor 권한 (<code>roles/iap.egressor</code>) 부여</h2>
+        <p>
+          Cloud Run 레벨의 <code>roles/run.servicesInvoker</code>와 별개로, Agent Gateway가 이그레스 요청을 통과시키려면
+          Agent Registry에 등록된 MCP 서버 리소스에 <code>roles/iap.egressor</code> 역할이 바인딩되어야 합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 5-3</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>for member in \
+  "serviceAccount:${AGW_SA}" \
+  "serviceAccount:${RE_SA}" \
+  "${AGENT_PRINCIPAL}"; do
+  gcloud alpha iap agent-registry add-iam-policy-binding \
+    --project="${PROJECT_ID}" \
+    --location="${LOCATION}" \
+    --mcp-server="${MCP_SERVER_NAME}" \
+    --member="${member}" \
+    --role="roles/iap.egressor" \
+    --condition=None --quiet
+done</code></pre>
+        </div>
+
+        <h2 class="section-heading">5-4. 4대 필수 Google Cloud 시스템 엔드포인트 등록 및 IAP 권한 부여</h2>
+        <p>
+          에이전트가 런타임에 Gemini 모델 추론(<code>aiplatform</code>), 트레이스 전송(<code>telemetry</code>), 로그 기록(<code>logging</code>), 도구 동적 탐색(<code>agentregistry</code>)을 수행할 수 있도록
+          4개 시스템 엔드포인트를 등록하고 각각에 <code>roles/iap.egressor</code>를 바인딩합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 5-4</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>gcloud alpha agent-registry services create system-aiplatform \
+  --location="${LOCATION}" --project="${PROJECT_ID}" \
+  --display-name="Vertex AI Endpoint" \
+  --endpoint-spec="protocol=rest,uris=${LOCATION}-aiplatform.googleapis.com"
+
+gcloud alpha agent-registry services create system-telemetry \
+  --location="${LOCATION}" --project="${PROJECT_ID}" \
+  --display-name="Cloud Telemetry Endpoint" \
+  --endpoint-spec="protocol=grpc,uris=telemetry.googleapis.com"
+
+gcloud alpha agent-registry services create system-logging \
+  --location="${LOCATION}" --project="${PROJECT_ID}" \
+  --display-name="Cloud Logging Endpoint" \
+  --endpoint-spec="protocol=grpc,uris=logging.googleapis.com"
+
+gcloud alpha agent-registry services create system-agentregistry \
+  --location="${LOCATION}" --project="${PROJECT_ID}" \
+  --display-name="Agent Registry Endpoint" \
+  --endpoint-spec="protocol=rest,uris=agentregistry.googleapis.com"
+
+for ep_id in $(gcloud alpha agent-registry endpoints list \
+  --location="${LOCATION}" \
+  --project="${PROJECT_ID}" \
+  --format="value(name)" | awk -F'/' '{print $NF}'); do
+  for member in \
+    "serviceAccount:${AGW_SA}" \
+    "serviceAccount:${RE_SA}" \
+    "${AGENT_PRINCIPAL}"; do
+    gcloud alpha iap agent-registry add-iam-policy-binding \
+      --project="${PROJECT_ID}" \
+      --location="${LOCATION}" \
+      --endpoint="${ep_id}" \
+      --member="${member}" \
+      --role="roles/iap.egressor" \
+      --condition=None --quiet
+  done
+done</code></pre>
+        </div>
+
+        <h2 class="section-heading">5-5. 등록된 Agent Registry 서비스 카탈로그 전체 확인</h2>
+        <p>
+          총 5개의 서비스(<code>banking-mcp-server</code> + 4대 시스템 엔드포인트)가 정상 등록되었는지 확인합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 5-5</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>gcloud alpha agent-registry services list \
+  --location="${LOCATION}" \
+  --project="${PROJECT_ID}"</code></pre>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" data-target="4" type="button">← 이전: 뱅킹 MCP 서버 배포</button>
+          <button class="btn-nav primary next-step-btn" data-target="6" type="button">다음: 에이전트 비동기 배포 →</button>
+        </div>
+      </section>
+
+      <!-- ==================== STEP 6 ==================== -->
+      <section class="step-card" id="step-6" data-duration="4">
+        <div class="step-header">
+          <div class="step-meta">
+            <span class="step-badge">Step 6 of 9</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 4분 (백그라운드 빌드 약 6~8분)</span>
+          </div>
+          <h1 class="step-title">🚀 TLS 검사용 Root CA 인증서 추출 및 에이전트 비동기 배포</h1>
+        </div>
+
+        <p>
+          Agent Gateway는 HTTPS 암호화 통신 내부의 JSON-RPC 페이로드를 검사하기 위해 <strong>TLS Inspection(중간자 복호화 및 재서명)</strong>을 수행합니다.
+          따라서 에이전트 컨테이너 내부에 <code>agent-egress</code>의 전용 Root CA 인증서를 주입해야 SSL 핸드셰이크 오류가 발생하지 않습니다.
+        </p>
+
+        <div class="callout callout-info">
+          <div class="callout-title">⚡ 병렬 배포 최적화 (<code>--no-wait</code>) 및 콜드 스타트 방지 (<code>--min-instances=1</code>)</div>
+          <p style="margin-bottom:0;">
+            Vertex AI Reasoning Engine 컨테이너 빌드는 약 6~8분이 소요됩니다.
+            <code>--no-wait</code> 옵션으로 백그라운드 빌드를 먼저 트리거한 뒤 기다리는 동안 <strong>Step 7과 Step 8의 SGP 네트워크 및 정책 구성을 병렬로 진행</strong>합니다.<br>
+            또한 배포 직후 테스트 시 <code>does not have running instances</code>(HTTP 400) 에러가 발생하지 않도록 <code>--min-instances=1</code> 옵션을 명시합니다.
+          </p>
+        </div>
+
+        <h2 class="section-heading">6-1. <code>agent-egress</code> 게이트웨이의 TLS Inspection Root CA 인증서 추출</h2>
+        <p>
+          Step 3에서 생성한 <code>agent-egress</code> 게이트웨이에서 PEM 형식의 Root CA 인증서를 추출하여 에이전트 소스 디렉토리(<code>conversational-banking/agent-gateway-ca.crt</code>)에 저장합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 6-1</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>source ~/agent-gateway-sgp/customer-env.sh
+
+gcloud network-services agent-gateways describe agent-egress \
+  --location="${LOCATION}" \
+  --project="${PROJECT_ID}" \
+  --format="value(selfManaged.CertificatePem)" \
+  &gt; ~/agent-gateway-sgp/conversational-banking/agent-gateway-ca.crt
+
+head -n 5 ~/agent-gateway-sgp/conversational-banking/agent-gateway-ca.crt</code></pre>
+        </div>
+
+        <h2 class="section-heading">6-2. <code>agents-cli deploy</code>로 Gemini Enterprise 에이전트 비동기 배포 시작</h2>
+        <p>
+          <code>--agent-gateway</code>에 <code>agent-egress</code> 리소스 경로를 지정하고, 환경 변수(<code>SSL_CERT_FILE</code>, <code>REQUESTS_CA_BUNDLE</code>)에 추출한 Root CA 인증서를 연결하여 비동기 배포를 시작합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 6-2</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>cd ~/agent-gateway-sgp/conversational-banking
+
+agents-cli deploy \
+  --target=agent-runtime \
+  --agent-name=conversational-banking \
+  --project="${PROJECT_ID}" \
+  --region="${LOCATION}" \
+  --framework=adk \
+  --agent-gateway="projects/${PROJECT_ID}/locations/${LOCATION}/agentGateways/agent-egress" \
+  --min-instances=1 \
+  --env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${LOCATION},SSL_CERT_FILE=agent-gateway-ca.crt,REQUESTS_CA_BUNDLE=agent-gateway-ca.crt" \
+  --no-wait
+
+cd ~/agent-gateway-sgp</code></pre>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" data-target="5" type="button">← 이전: Agent Registry 등록</button>
+          <button class="btn-nav primary next-step-btn" data-target="7" type="button">다음: SGP 엔진 · 고정 IP · PSC · DNS 구성 →</button>
+        </div>
+      </section>
+
+      <!-- ==================== STEP 7 ==================== -->
+      <section class="step-card" id="step-7" data-duration="5">
+        <div class="step-header">
+          <div class="step-meta">
+            <span class="step-badge">Step 7 of 9</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 5분 (에이전트 빌드와 병렬 진행)</span>
+          </div>
+          <h1 class="step-title">SGP 정책 엔진 활성화, 내부 고정 IP 예약, PSC 엔드포인트 및 DNS 구성</h1>
+        </div>
+
+        <p>
+          백그라운드에서 에이전트 컨테이너가 빌드되는 동안, Google 관리형 테넌트에서 동작하는 <strong>시맨틱 거버넌스 정책(SGP) 엔진</strong>을 활성화하고,
+          고객사 VPC(<code>apex-wealth-vpc</code>) 내부에서 공인 인터넷을 거치지 않고 SGP 엔진과 통신할 수 있도록 <strong>Private Service Connect(PSC) 엔드포인트와 프라이빗 DNS 레코드</strong>를 구성합니다.
+        </p>
+
+        <div class="diagram-box">
+          <img src="img/05-psc-dns-routing.png" alt="PSC 포워딩 규칙 및 Cloud DNS 라우팅" loading="lazy">
+          <div class="diagram-caption">그림 7-1. SGP Service Attachment, 내부 고정 IP(sgp-psc-ip), PSC 엔드포인트 및 policy.internal 프라이빗 DNS 연결 구조</div>
+        </div>
+
+        <h2 class="section-heading">7-1. 리전 SGP 정책 엔진 활성화 및 Service Attachment URI 추출</h2>
+        <p>
+          고객사 프로젝트의 <code>us-central1</code> 리전에 SGP 정책 엔진을 프로비저닝하고, 생성된 서비스 어태치먼트 URI(<code>pscConfig.serviceAttachment</code>)를 추출합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 7-1</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>source ~/agent-gateway-sgp/customer-env.sh
+
+gcloud beta ai semantic-governance-policy-engine update \
+  --location="${LOCATION}" \
+  --project="${PROJECT_ID}" \
+  --quiet
+
+export SERVICE_ATTACHMENT=$(gcloud beta ai semantic-governance-policy-engine describe \
+  --location="${LOCATION}" \
+  --project="${PROJECT_ID}" \
+  --format="value(pscConfig.serviceAttachment)")
+
+echo "export SERVICE_ATTACHMENT=\"${SERVICE_ATTACHMENT}\"" &gt;&gt; ~/agent-gateway-sgp/customer-env.sh
+echo "SERVICE_ATTACHMENT=${SERVICE_ATTACHMENT}"</code></pre>
+        </div>
+
+        <h2 class="section-heading">7-2. PSC 소비자 엔드포인트용 내부 고정 IP (<code>sgp-psc-ip</code>) 예약</h2>
+        <div class="callout callout-info">
+          <div class="callout-title">📌 스타트업 스크립트 대체 포인트: <code>sgp-psc-ip</code> 직접 예약</div>
+          <p style="margin-bottom:0;">
+            Qwiklabs에서는 Terraform이 <code>sgp-psc-ip</code>를 미리 예약해 두었지만, 일반 고객사 프로젝트에서는
+            <code>--purpose=GCE_ENDPOINT</code> 옵션으로 <code>apex-subnet</code> 내부 IP를 직접 예약해야 합니다.
+          </p>
+        </div>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 7-2</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>gcloud compute addresses create sgp-psc-ip \
+  --region="${LOCATION}" \
+  --subnet="${SUBNET_NAME}" \
+  --purpose=GCE_ENDPOINT \
+  --project="${PROJECT_ID}"
+
+export PSC_IP=$(gcloud compute addresses describe sgp-psc-ip \
+  --region="${LOCATION}" \
+  --project="${PROJECT_ID}" \
+  --format="value(address)")
+
+echo "export PSC_IP=\"${PSC_IP}\"" &gt;&gt; ~/agent-gateway-sgp/customer-env.sh
+echo "PSC_IP=${PSC_IP}"</code></pre>
+        </div>
+
+        <h2 class="section-heading">7-3. PSC 포워딩 규칙 (<code>sgp-psc-endpoint</code>) 생성 및 연결 상태 검증</h2>
+        <p>
+          예약한 <code>sgp-psc-ip</code>와 SGP 엔진의 <code>SERVICE_ATTACHMENT</code>를 연결하는 PSC 포워딩 규칙을 생성하고,
+          <code>pscConnectionStatus: ACCEPTED</code> 상태인지 확인합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 7-3</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>gcloud compute forwarding-rules create sgp-psc-endpoint \
+  --region="${LOCATION}" \
+  --network="${NETWORK_NAME}" \
+  --address="sgp-psc-ip" \
+  --target-service-attachment="${SERVICE_ATTACHMENT}" \
+  --project="${PROJECT_ID}"
+
+gcloud compute forwarding-rules describe sgp-psc-endpoint \
+  --region="${LOCATION}" \
+  --project="${PROJECT_ID}" \
+  --format="yaml(IPAddress,pscConnectionStatus,target)"</code></pre>
+        </div>
+
+        <h2 class="section-heading">7-4. 프라이빗 Cloud DNS에 <code>policy.internal.</code> A 레코드 등록</h2>
+        <p>
+          Step 3에서 생성한 <code>policy-engine-zone</code> 내부에 <code>policy.internal.</code> 도메인이 방금 생성한 <code>${PSC_IP}</code>로 해석되도록 A 레코드를 추가합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 7-4</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>gcloud dns record-sets create "policy.internal." \
+  --zone="policy-engine-zone" \
+  --type="A" \
+  --ttl="300" \
+  --rrdatas="${PSC_IP}" \
+  --project="${PROJECT_ID}"
+
+gcloud dns record-sets list \
+  --zone="policy-engine-zone" \
+  --project="${PROJECT_ID}"</code></pre>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" data-target="6" type="button">← 이전: 에이전트 비동기 배포</button>
+          <button class="btn-nav primary next-step-btn" data-target="8" type="button">다음: 인가 확장 및 자연어 SGP 정책 생성 →</button>
+        </div>
+      </section>
+
+      <!-- ==================== STEP 8 ==================== -->
+      <section class="step-card" id="step-8" data-duration="5">
+        <div class="step-header">
+          <div class="step-meta">
+            <span class="step-badge">Step 8 of 9</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 5분</span>
+          </div>
+          <h1 class="step-title">인가 확장(AuthzExtension), 콘텐츠 인가 정책 및 자연어 SGP 정책 생성</h1>
+        </div>
+
+        <p>
+          이제 <code>agent-egress</code> 게이트웨이가 모든 MCP 도구 호출 트래픽을 <code>policy.internal:443</code>(SGP 엔진)으로 전달하여 실시간 심사를 받도록
+          <strong>① Service Extensions 인가 확장(<code>sgp-authzextension</code>) → ② 네트워크 보안 인가 정책(<code>agent-egress-sgp-authzpolicy</code>) → ③ 자연어 시맨틱 거버넌스 정책(<code>high-value-limit</code>)</strong>을 차례대로 구성합니다.
+        </p>
+
+        <div class="diagram-box">
+          <img src="img/06-sgp-policy-flow.png" alt="SGP 정책 평가 및 차단 흐름" loading="lazy">
+          <div class="diagram-caption">그림 8-1. AuthzExtension(failOpen: false) · CONTENT_AUTHZ 정책 연동 및 자연어 SGP 제약 조건 평가 구조</div>
+        </div>
+
+        <h2 class="section-heading">8-1. Service Extensions API에 <code>sgp-authzextension</code> 등록</h2>
+        <p>
+          <code>EXT_PROC_GRPC</code> 프로토콜을 사용하여 <code>policy.internal:443</code>으로 외부 인가 콜아웃을 수행하는 <code>sgp-authzextension</code>을 생성합니다.
+          금융 보안 원칙에 따라 <strong><code>failOpen: false</code>(Fail-Closed: 정책 엔진 장애 시 거래 자동 차단)</strong>로 설정합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 8-1</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>source ~/agent-gateway-sgp/customer-env.sh
+
+curl -s -X POST \
+  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  -H "Content-Type: application/json" \
+  "https://networkservices.googleapis.com/v1beta1/projects/${PROJECT_ID}/locations/${LOCATION}/authzExtensions?authzExtensionId=sgp-authzextension" \
+  -d "{
+    \"authority\": \"policy.internal\",
+    \"service\": \"policy.internal\",
+    \"port\": 443,
+    \"timeout\": \"10s\",
+    \"failOpen\": false,
+    \"forwardHeaders\": [\"Authorization\"],
+    \"loadBalancingScheme\": \"INTERNAL_MANAGED\",
+    \"wireFormat\": \"EXT_PROC_GRPC\"
+  }"</code></pre>
+        </div>
+        <p>생성 요청 후 약 30~60초 뒤 아래 명령어로 <code>sgp-authzextension</code> 리소스가 정상 조회되는지 확인합니다:</p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 8-1 검증</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>gcloud service-extensions authz-extensions describe sgp-authzextension \
+  --location="${LOCATION}" \
+  --project="${PROJECT_ID}"</code></pre>
+        </div>
+
+        <h2 class="section-heading">8-2. 콘텐츠 인가 정책 (<code>agent-egress-sgp-authzpolicy</code>) 매니페스트 작성 및 임포트</h2>
+        <p>
+          <code>agent-egress</code> 게이트웨이를 통과하는 모든 MCP(<code>mcp: {}</code>) 작업에 대해 <code>CONTENT_AUTHZ</code> 프로필로 <code>sgp-authzextension</code>을 호출하도록 인가 정책을 임포트합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 8-2</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>cat &lt;&lt;EOF &gt; ~/agent-gateway-sgp/agent-egress-sgp-authzpolicy.yaml
+name: projects/${PROJECT_ID}/locations/${LOCATION}/authzPolicies/agent-egress-sgp-authzpolicy
+target:
+  loadBalancingScheme: INTERNAL_MANAGED
+  resources:
+    - projects/${PROJECT_ID}/locations/${LOCATION}/agentGateways/agent-egress
+action: CUSTOM
+customProvider:
+  authzExtension:
+    resources:
+      - projects/${PROJECT_ID}/locations/${LOCATION}/authzExtensions/sgp-authzextension
+policyProfile: CONTENT_AUTHZ
+httpRules:
+  - to:
+      operations:
+        - mcp: {}
+EOF
+
+gcloud beta network-security authz-policies import agent-egress-sgp-authzpolicy \
+  --source="$HOME/agent-gateway-sgp/agent-egress-sgp-authzpolicy.yaml" \
+  --location="${LOCATION}" \
+  --project="${PROJECT_ID}"</code></pre>
+        </div>
+
+        <h2 class="section-heading">8-3. 에이전트 빌드 완료 확인 및 Agent Registry <code>AGENT_ID</code> 추출</h2>
+        <p>
+          SGP 정책에는 통제 대상 에이전트의 Agent Registry ID(<code>AGENT_ID</code>)를 지정해야 합니다.
+          Step 6에서 비동기로 시작한 에이전트 배포가 완료되었는지 확인한 뒤 <code>AGENT_ID</code>를 추출합니다.
+          (만약 상태가 아직 <code>RUNNING</code>이면 완료될 때까지 1~2분간 기다린 후 다시 조회합니다.)
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 8-3</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>cd ~/agent-gateway-sgp/conversational-banking
+agents-cli deploy --status
+cd ~/agent-gateway-sgp
+
+export AGENT_ID=$(gcloud alpha agent-registry agents list \
+  --location="${LOCATION}" \
+  --project="${PROJECT_ID}" \
+  --filter="displayName='conversational-banking'" \
+  --format="value(name)" | awk -F'/' '{print $NF}')
+
+echo "export AGENT_ID=\"${AGENT_ID}\"" &gt;&gt; ~/agent-gateway-sgp/customer-env.sh
+echo "AGENT_ID=${AGENT_ID}"</code></pre>
+        </div>
+
+        <h2 class="section-heading">8-4. $1,000 초과 이체를 차단하는 자연어 SGP 정책 (<code>high-value-limit</code>) 생성</h2>
+        <p>
+          <code>conversational-banking</code> 에이전트가 <code>Banking_MCP_Server_transfer_to_phone</code> 도구를 호출할 때
+          <strong><code>"Block any transfer value exceeding USD 1000."</code></strong> 규칙을 적용하는 시맨틱 거버넌스 정책을 생성하고 조회합니다.
+        </p>
+        <div class="callout callout-success">
+          <div class="callout-title">💡 무중단 정책 변경 (Code-Free Policy Update)</div>
+          <p style="margin-bottom:0;">
+            향후 금융규제 변경으로 한도를 $500로 낮추거나 수취인 제한 조건을 추가해야 할 때, 에이전트 컨테이너나 Cloud Run MCP 서버를 재배포할 필요 없이
+            <code>gcloud beta ai semantic-governance-policies update high-value-limit --natural-language-constraint="..."</code> 명령어 하나로 즉시 반영할 수 있습니다.
+          </p>
+        </div>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 8-4</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>gcloud beta ai semantic-governance-policies create high-value-limit \
+  --location="${LOCATION}" \
+  --project="${PROJECT_ID}" \
+  --display-name="High Value Transfer Limit" \
+  --description="Blocks transfers over USD 1000" \
+  --agent="projects/${PROJECT_ID}/locations/${LOCATION}/agents/${AGENT_ID}" \
+  --mcp-tools="mcp-server=projects/${PROJECT_ID}/locations/${LOCATION}/mcpServers/${MCP_SERVER_NAME},tools=Banking_MCP_Server_transfer_to_phone" \
+  --natural-language-constraint="Block any transfer value exceeding USD 1000."
+
+gcloud beta ai semantic-governance-policies describe high-value-limit \
+  --location="${LOCATION}" \
+  --project="${PROJECT_ID}"</code></pre>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" data-target="7" type="button">← 이전: SGP 엔진 · 고정 IP · PSC</button>
+          <button class="btn-nav primary next-step-btn" data-target="9" type="button">다음: 개별 curl 검증 · 감사 로그 · 리소스 정리 →</button>
+        </div>
+      </section>
+
+      <!-- ==================== STEP 9 ==================== -->
+      <section class="step-card" id="step-9" data-duration="8">
+        <div class="step-header">
+          <div class="step-meta">
+            <span class="step-badge">Step 9 of 9</span>
+            <span class="step-duration">⏱ 예상 소요 시간: 8분</span>
+          </div>
+          <h1 class="step-title">개별 curl 명령어 기반 3-Turn 시나리오 검증, 감사 로그 조회 및 리소스 정리</h1>
+        </div>
+
+        <p>
+          모든 구축이 완료되었습니다! 래퍼 스크립트(<code>08-test.sh</code>) 대신
+          <strong>Vertex AI Reasoning Engine REST API(<code>:streamQuery</code>)를 직접 호출하는 개별 <code>curl</code> 명령어</strong>로
+          Turn 1(조회 허용) → Turn 2($50 소액 이체 허용) → Turn 3($2,000 고액 이체 차단)을 하나씩 실행하며 SGP 정책의 실시간 동작을 검증합니다.
+        </p>
+
+        <h2 class="section-heading">9-1. 배포된 Reasoning Engine ID (<code>RE_ID</code>) 조회</h2>
+        <p>
+          현재 활성화된 <code>conversational-banking</code> Reasoning Engine의 숫자 ID를 조회하여 <code>RE_ID</code> 환경 변수에 저장합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 9-1</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>source ~/agent-gateway-sgp/customer-env.sh
+
+export RE_ID=$(curl -s \
+  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  "https://${LOCATION}-aiplatform.googleapis.com/v1beta1/projects/${PROJECT_ID}/locations/${LOCATION}/reasoningEngines" \
+  | python3 -c "
+import sys, json
+engines = json.load(sys.stdin).get('reasoningEngines', [])
+matching = [e for e in engines if e.get('displayName') == 'conversational-banking']
+matching.sort(key=lambda x: x.get('createTime', ''), reverse=True)
+print(matching[0]['name'].split('/')[-1] if matching else '')
+")
+
+echo "RE_ID=${RE_ID}"</code></pre>
+        </div>
+
+        <h2 class="section-heading">9-2. [Turn 1] 고객 프로필 및 계좌 잔액 조회 (정상 허용 검증)</h2>
+        <p>
+          <code>CUST005</code>(박지훈 고객)의 프로필 및 당좌/저축 계좌 잔액 조회를 요청합니다.
+          <code>get_customer_profile</code> 및 <code>get_accounts</code> 도구는 SGP 차단 대상이 아니므로 정상 응답이 반환됩니다.
+          (신규 SGP 정책 반영 및 컨테이너 웜업을 위해 첫 호출 전 약 30초 후 실행하는 것을 권장합니다.)
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 9-2 (Turn 1: 조회 허용)</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>curl -s -X POST \
+  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  -H "Content-Type: application/json" \
+  "https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/reasoningEngines/${RE_ID}:streamQuery?alt=sse" \
+  -d '{
+    "class_method": "async_stream_query",
+    "input": {
+      "user_id": "customer-demo-user",
+      "message": "Hi, I am customer CUST005. Can you show my profile and account balances?"
+    }
+  }'</code></pre>
+        </div>
+
+        <h2 class="section-heading">9-3. [Turn 2] $50 소액 송금 요청 ($1,000 한도 이하 — 정상 승인 검증)</h2>
+        <p>
+          <code>555-0001</code> 번호로 <strong>50 USD</strong> 송금을 요청합니다.
+          Agent Gateway가 <code>transfer_to_phone</code> 호출을 가로채어 SGP 엔진에 전달하며, <code>amount: 50</code>이 $1,000 한도 이내이므로 <strong>ALLOW</strong> 판정을 받아 정상 이체됩니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 9-3 (Turn 2: $50 이체 허용)</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>curl -s -X POST \
+  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  -H "Content-Type: application/json" \
+  "https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/reasoningEngines/${RE_ID}:streamQuery?alt=sse" \
+  -d '{
+    "class_method": "async_stream_query",
+    "input": {
+      "user_id": "customer-demo-user",
+      "message": "I am customer CUST005. Please transfer 50 USD from my checking account to phone number 555-0001 with memo Dinner."
+    }
+  }'</code></pre>
+        </div>
+
+        <h2 class="section-heading">9-4. [Turn 3] $2,000 고액 송금 요청 ($1,000 한도 초과 — 실시간 차단 검증!)</h2>
+        <p>
+          이번에는 <code>555-0002</code> 번호로 <strong>2,000 USD</strong> 고액 송금을 요청합니다.
+          SGP 엔진이 JSON-RPC 인자(<code>amount: 2000</code>)가 자연어 제약 조건(<code>"Block any transfer value exceeding USD 1000."</code>)을 위반했음을 즉시 감지하여
+          <strong>백엔드 Cloud Run MCP 서버에 패킷이 도달하기 전에 차단</strong>하고, 에이전트가 정책 위반 사유를 안내하는 것을 확인할 수 있습니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 9-4 (Turn 3: $2,000 이체 차단)</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>curl -s -X POST \
+  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  -H "Content-Type: application/json" \
+  "https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/reasoningEngines/${RE_ID}:streamQuery?alt=sse" \
+  -d '{
+    "class_method": "async_stream_query",
+    "input": {
+      "user_id": "customer-demo-user",
+      "message": "I am customer CUST005. Now transfer 2000 USD from my checking account to phone number 555-0002 with memo Rent."
+    }
+  }'</code></pre>
+        </div>
+
+        <div class="callout callout-info">
+          <div class="callout-title">🐍 참고: Python 테스트 러너(<code>run_tests.py</code>)로 깔끔하게 보기</div>
+          <p style="margin-bottom:0;">
+            위 3개의 <code>curl</code> SSE 스트림 응답을 파싱하여 보기 좋게 요약 출력하고 싶다면 아래 단일 Python 명령어를 실행할 수도 있습니다:<br>
+            <code>python3 ~/agent-gateway-sgp/run_tests.py</code>
+          </p>
+        </div>
+
+        <h2 class="section-heading">9-5. Cloud Logging에서 SGP 시맨틱 거버넌스 감사 로그 확인</h2>
+        <p>
+          SGP 정책 엔진이 각 도구 호출에 대해 내린 판정(<code>jsonPayload.verdict</code>)과 위반 정책 ID(<code>high-value-limit</code>)를 Cloud Logging에서 직접 조회합니다.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 9-5 (SGP 감사 로그 조회)</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>gcloud logging read \
+  "logName=\"projects/${PROJECT_ID}/logs/semantic-governance-policy\" AND jsonPayload.verdict:*" \
+  --project="${PROJECT_ID}" \
+  --limit=5 \
+  --format=json</code></pre>
+        </div>
+
+        <h2 class="section-heading">9-6. (선택) 고객사 테스트 리소스 역순 정리 개별 명령어</h2>
+        <p>
+          일반 고객사 프로젝트에서는 Qwiklabs처럼 실습 종료 시 프로젝트가 자동 삭제되지 않습니다.
+          검증을 마친 후 과금이 계속 발생하지 않도록 정리하려면, 의존성 역순으로 구성된 아래 개별 삭제 명령어를 차례대로 실행하세요.
+        </p>
+        <div class="code-container">
+          <div class="code-header"><span>Cloud Shell / Terminal — 명령어 9-6 (리소스 역순 정리)</span><button class="copy-btn" type="button">복사</button></div>
+          <pre><code>source ~/agent-gateway-sgp/customer-env.sh
+
+# 1) SGP 정책 및 네트워크 인가 정책/확장 삭제
+gcloud beta ai semantic-governance-policies delete high-value-limit \
+  --location="${LOCATION}" --project="${PROJECT_ID}" --quiet
+
+gcloud beta network-security authz-policies delete agent-egress-sgp-authzpolicy \
+  --location="${LOCATION}" --project="${PROJECT_ID}" --quiet
+
+gcloud service-extensions authz-extensions delete sgp-authzextension \
+  --location="${LOCATION}" --project="${PROJECT_ID}" --quiet
+
+# 2) Agent Gateway 및 Network Attachment 삭제
+gcloud network-services agent-gateways delete agent-egress \
+  --location="${LOCATION}" --project="${PROJECT_ID}" --quiet
+
+gcloud compute network-attachments delete agent-gateway-na \
+  --region="${LOCATION}" --project="${PROJECT_ID}" --quiet
+
+# 3) Vertex AI Reasoning Engine 및 Cloud Run MCP 서버 삭제
+for re_id in $(curl -s -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  "https://${LOCATION}-aiplatform.googleapis.com/v1beta1/projects/${PROJECT_ID}/locations/${LOCATION}/reasoningEngines" \
+  | python3 -c "import sys, json; print(' '.join([e['name'].split('/')[-1] for e in json.load(sys.stdin).get('reasoningEngines', []) if e.get('displayName')=='conversational-banking']))"); do
+  curl -s -X DELETE -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+    "https://${LOCATION}-aiplatform.googleapis.com/v1beta1/projects/${PROJECT_ID}/locations/${LOCATION}/reasoningEngines/${re_id}?force=true"
+done
+
+gcloud run services delete banking-mcp-server \
+  --region="${LOCATION}" --project="${PROJECT_ID}" --quiet
+
+# 4) Agent Registry 서비스 삭제
+for svc in banking-mcp-server system-aiplatform system-telemetry system-logging system-agentregistry; do
+  gcloud alpha agent-registry services delete "${svc}" \
+    --location="${LOCATION}" --project="${PROJECT_ID}" --quiet || true
+done
+
+# 5) DNS 레코드, DNS 존, PSC 포워딩 규칙, 고정 IP, 서브넷 및 VPC 삭제
+gcloud dns record-sets delete "policy.internal." \
+  --type="A" --zone="policy-engine-zone" --project="${PROJECT_ID}" --quiet
+
+gcloud dns managed-zones delete policy-engine-zone \
+  --project="${PROJECT_ID}" --quiet
+
+gcloud compute forwarding-rules delete sgp-psc-endpoint \
+  --region="${LOCATION}" --project="${PROJECT_ID}" --quiet
+
+gcloud compute addresses delete sgp-psc-ip \
+  --region="${LOCATION}" --project="${PROJECT_ID}" --quiet
+
+gcloud compute networks subnets delete "${PROXY_SUBNET_NAME}" \
+  --region="${LOCATION}" --project="${PROJECT_ID}" --quiet
+
+gcloud compute networks subnets delete "${SUBNET_NAME}" \
+  --region="${LOCATION}" --project="${PROJECT_ID}" --quiet
+
+gcloud compute networks delete "${NETWORK_NAME}" \
+  --project="${PROJECT_ID}" --quiet</code></pre>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" data-target="8" type="button">← 이전: 인가 확장 및 SGP 정책</button>
+          <button class="btn-nav primary" id="restartBtn" type="button">처음으로 돌아가기 ↺</button>
+        </div>
+      </section>
+
+      <!-- ==================== SESSION QUIZ EVENT PANEL ==================== -->
+      <section class="quiz-panel-card" id="quiz-panel">
+        <div class="step-header">
+          <div class="step-meta">
+            <span class="step-badge" style="background:var(--gcp-yellow-light);color:#b06000;">🎁 Session Quiz Event</span>
+            <span class="step-duration">참여자 경품 증정용 퀴즈 2선 (정답 숨김 기본 적용)</span>
+          </div>
+          <h1 class="step-title">세션 퀴즈 이벤트: 자율형 AI 에이전트 거버넌스 핵심 체크!</h1>
+        </div>
+
+        <p>
+          구축 세션에 참여해 주신 여러분을 위한 <strong>경품 퀴즈 이벤트(총 2문항)</strong>입니다!
+          보기를 클릭해 예상 정답을 선택한 뒤, 하단의 <strong>[🔍 정답 확인하기]</strong> 버튼을 누르면 숨겨져 있던 정답과 상세 해설이 공개됩니다.
+        </p>
+
+        <!-- Quiz 1 -->
+        <div class="quiz-item-card" id="quiz-card-1">
+          <div class="quiz-item-header">
+            <span class="quiz-num-badge">🏆 QUIZ 1 · 제로 트러스트 네트워크 &amp; IAM</span>
+            <span class="quiz-ref-tag">관련 단계: Step 4 &amp; Step 5</span>
+          </div>
+          <div class="quiz-question-title">
+            Q1. Cloud Run에 배포된 뱅킹 MCP 서버를 호출하기 위해 <code>roles/run.servicesInvoker</code> 권한을 이미 부여했습니다. 하지만 기본 차단(Default Deny)으로 동작하는 <strong>Agent Gateway</strong>가 Agent Registry에 등록된 도구 및 시스템 엔드포인트로 나가는 트래픽을 최종 허용하기 위해 <strong>반드시 추가로 바인딩해야 하는 IAP 역할(Role)</strong>은 무엇일까요?
+          </div>
+
+          <div class="quiz-options-list" data-quiz="1">
+            <button class="quiz-option-btn" type="button" data-option="1">
+              <span class="quiz-opt-num">1</span>
+              <span><code>roles/compute.networkUser</code> (Compute 네트워크 사용자)</span>
+            </button>
+            <button class="quiz-option-btn" type="button" data-option="2" data-correct="true">
+              <span class="quiz-opt-num">2</span>
+              <span><code>roles/iap.egressor</code> (IAP Agent Registry 이그레스 허용 역할)</span>
+            </button>
+            <button class="quiz-option-btn" type="button" data-option="3">
+              <span class="quiz-opt-num">3</span>
+              <span><code>roles/storage.objectViewer</code> (Cloud Storage 객체 뷰어)</span>
+            </button>
+            <button class="quiz-option-btn" type="button" data-option="4">
+              <span class="quiz-opt-num">4</span>
+              <span><code>roles/dns.reader</code> (Cloud DNS 리더)</span>
+            </button>
+          </div>
+
+          <div class="quiz-actions-row">
+            <span style="font-size:13px;color:var(--text-muted);">💡 힌트: Step 5에서 <code>gcloud alpha iap agent-registry add-iam-policy-binding</code> 명령어로 부여한 역할입니다.</span>
+            <button class="quiz-reveal-btn" type="button" data-quiz="1">🔍 정답 확인하기</button>
+          </div>
+
+          <div class="quiz-answer-panel" id="quiz-answer-1">
+            <div class="quiz-answer-badge">✅ 정답: ②번 — <code>roles/iap.egressor</code></div>
+            <p style="margin-bottom:8px;color:var(--text-primary);font-size:14.5px;">
+              <strong>핵심 해설:</strong> <code>AGENT_TO_ANYWHERE</code> 모드로 동작하는 Google Cloud Agent Gateway는 모든 아웃바운드 트래픽에 대해 <strong>기본 차단(Default Deny)</strong> 원칙을 적용합니다.
+            </p>
+            <p style="margin-bottom:0;font-size:14px;">
+              따라서 백엔드 Cloud Run 레벨의 호출 권한(<code>roles/run.servicesInvoker</code>)과는 별개로, Agent Registry에 등록된 MCP 서버(<code>banking-mcp-server</code>)와 4대 시스템 엔드포인트 각각에 대해 <strong><code>roles/iap.egressor</code></strong> 권한을 에이전트 주체(<code>AGENT_PRINCIPAL</code> 등)에게 명시적으로 부여해야만 게이트웨이를 통과할 수 있습니다.
+            </p>
+          </div>
+        </div>
+
+        <!-- Quiz 2 -->
+        <div class="quiz-item-card" id="quiz-card-2">
+          <div class="quiz-item-header">
+            <span class="quiz-num-badge">🏆 QUIZ 2 · 무중단 거버넌스 운영 (Code-Free Policy)</span>
+            <span class="step-duration quiz-ref-tag">관련 단계: Step 8 &amp; Step 9</span>
+          </div>
+          <div class="quiz-question-title">
+            Q2. 금융감독 규정 강화로 인해 이체 차단 한도를 기존 <strong>$1,000 초과</strong>에서 <strong>"$500 초과 시 차단 및 야간 시간대 고액 이체 금지"</strong>로 긴급 변경해야 합니다. 본 아키텍처에서 이 정책을 가장 빠르고 안전하게 반영하는 방법은 무엇일까요?
+          </div>
+
+          <div class="quiz-options-list" data-quiz="2">
+            <button class="quiz-option-btn" type="button" data-option="1">
+              <span class="quiz-opt-num">1</span>
+              <span>에이전트의 Python 코드(<code>agent.py</code>)에 <code>if amount &gt; 500:</code> 조건문을 넣은 뒤 컨테이너를 다시 빌드·배포한다.</span>
+            </button>
+            <button class="quiz-option-btn" type="button" data-option="2">
+              <span class="quiz-opt-num">2</span>
+              <span>백엔드 Cloud Run 뱅킹 MCP 서버(<code>server.py</code>)의 코드를 수정하고 서비스를 재시작한다.</span>
+            </button>
+            <button class="quiz-option-btn" type="button" data-option="3">
+              <span class="quiz-opt-num">3</span>
+              <span>VPC 방화벽 규칙에서 Cloud Run의 IP 주소를 차단한다.</span>
+            </button>
+            <button class="quiz-option-btn" type="button" data-option="4" data-correct="true">
+              <span class="quiz-opt-num">4</span>
+              <span>에이전트나 MCP 서버의 <strong>코드 수정·재배포 전혀 없이</strong>, SGP 정책의 <code>--natural-language-constraint</code>(자연어 제약 조건)만 업데이트한다.</span>
+            </button>
+          </div>
+
+          <div class="quiz-actions-row">
+            <span style="font-size:13px;color:var(--text-muted);">💡 힌트: 본 아키텍처가 비즈니스 로직(에이전트/MCP 서버)과 보안 정책(SGP)을 분리한 가장 큰 이유입니다!</span>
+            <button class="quiz-reveal-btn" type="button" data-quiz="2">🔍 정답 확인하기</button>
+          </div>
+
+          <div class="quiz-answer-panel" id="quiz-answer-2">
+            <div class="quiz-answer-badge">✅ 정답: ④번 — 코드 수정·재배포 없이 SGP의 <code>--natural-language-constraint</code>만 업데이트</div>
+            <p style="margin-bottom:8px;color:var(--text-primary);font-size:14.5px;">
+              <strong>핵심 해설:</strong> <strong>시맨틱 거버넌스 정책(SGP)</strong>은 에이전트 애플리케이션 코드나 백엔드 MCP 서버 코드와 완전히 분리된 <strong>네트워크 경계(Out-of-Code) 거버넌스 계층</strong>입니다.
+            </p>
+            <p style="margin-bottom:0;font-size:14px;">
+              따라서 약관이나 규제가 바뀌더라도 개발자가 수십 개의 에이전트 코드를 일일이 고치고 재배포할 필요 없이, 보안/컴플라이언스 담당자가 <code>gcloud beta ai semantic-governance-policies update</code> 명령어로 <strong><code>--natural-language-constraint</code></strong> 문장만 수정하면 무중단으로 모든 에이전트 트래픽에 즉시 적용됩니다.
+            </p>
+          </div>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav" id="quizBackToStandardBtn" type="button">← 고객사 CLI 구축 가이드로 돌아가기</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      var totalSteps = 9;
+      var currentStep = 1;
+      var viewAllMode = false;
+      var currentMode = 'standard';
+
+      var stepCards = Array.from(document.querySelectorAll('.step-card'));
+      var quizPanel = document.getElementById('quiz-panel');
+      var navItems = Array.from(document.querySelectorAll('.step-nav-item'));
+      var progressBar = document.getElementById('progressBar');
+      var remainingTimeText = document.getElementById('remainingTimeText');
+      var viewAllBtn = document.getElementById('viewAllBtn');
+      var viewAllText = document.getElementById('viewAllText');
+      var themeToggleBtn = document.getElementById('themeToggleBtn');
+      var themeToggleText = document.getElementById('themeToggleText');
+      var restartBtn = document.getElementById('restartBtn');
+      var logoLink = document.getElementById('logoLink');
+      var modeTabStandard = document.getElementById('modeTabStandard');
+      var modeTabQuiz = document.getElementById('modeTabQuiz');
+      var quizBackToStandardBtn = document.getElementById('quizBackToStandardBtn');
+      var sidebarSectionLabel = document.getElementById('sidebarSectionLabel');
+
+      function calculateRemainingMinutes(fromStep) {
+        var total = 0;
+        for (var i = fromStep - 1; i < stepCards.length; i++) {
+          var d = parseInt(stepCards[i].getAttribute('data-duration') || '0', 10);
+          total += d;
+        }
+        return total;
+      }
+
+      function renderCards() {
+        if (currentMode === 'quiz') {
+          stepCards.forEach(function (card) { card.classList.remove('active'); });
+          if (quizPanel) quizPanel.classList.add('active');
+          return;
+        }
+
+        if (quizPanel) quizPanel.classList.remove('active');
+        stepCards.forEach(function (card, idx) {
+          if (viewAllMode || idx + 1 === currentStep) {
+            card.classList.add('active');
+          } else {
+            card.classList.remove('active');
+          }
+        });
+      }
+
+      function setLabMode(mode) {
+        currentMode = mode;
+        if (modeTabStandard && modeTabQuiz) {
+          modeTabStandard.classList.toggle('active', mode === 'standard');
+          modeTabQuiz.classList.toggle('active', mode === 'quiz');
+        }
+        if (sidebarSectionLabel) {
+          if (mode === 'quiz') {
+            sidebarSectionLabel.textContent = '세션 경품 퀴즈 (총 2문항)';
+          } else {
+            sidebarSectionLabel.textContent = '고객사 구축 목차 (Pure CLI · 총 55분)';
+          }
+        }
+        renderCards();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      function goToStep(stepNum) {
+        if (stepNum < 1 || stepNum > totalSteps) return;
+        if (currentMode === 'quiz') {
+          setLabMode('standard');
+        }
+        currentStep = stepNum;
+        renderCards();
+
+        navItems.forEach(function (item, idx) {
+          var s = idx + 1;
+          item.classList.remove('active', 'completed');
+          if (s < currentStep) {
+            item.classList.add('completed');
+          } else if (s === currentStep) {
+            item.classList.add('active');
+          }
+        });
+
+        var pct = ((currentStep / totalSteps) * 100).toFixed(1);
+        if (progressBar) {
+          progressBar.style.width = pct + '%';
+        }
+
+        var rem = calculateRemainingMinutes(currentStep);
+        if (remainingTimeText) {
+          remainingTimeText.textContent = '남은 예상 시간: 약 ' + rem + '분 (총 55분)';
+        }
+
+        if (!viewAllMode) {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          var targetEl = document.getElementById('step-' + currentStep);
+          if (targetEl) {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
+      }
+
+      if (modeTabStandard) {
+        modeTabStandard.addEventListener('click', function () {
+          setLabMode('standard');
+        });
+      }
+
+      if (modeTabQuiz) {
+        modeTabQuiz.addEventListener('click', function () {
+          setLabMode('quiz');
+        });
+      }
+
+      if (quizBackToStandardBtn) {
+        quizBackToStandardBtn.addEventListener('click', function () {
+          setLabMode('standard');
+        });
+      }
+
+      document.querySelectorAll('.quiz-options-list').forEach(function (listEl) {
+        var buttons = listEl.querySelectorAll('.quiz-option-btn');
+        buttons.forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            buttons.forEach(function (other) {
+              other.classList.remove('selected');
+            });
+            btn.classList.add('selected');
+          });
+        });
+      });
+
+      document.querySelectorAll('.quiz-reveal-btn').forEach(function (revealBtn) {
+        revealBtn.addEventListener('click', function () {
+          var quizId = revealBtn.getAttribute('data-quiz');
+          if (!quizId) return;
+          var answerPanel = document.getElementById('quiz-answer-' + quizId);
+          var cardEl = document.getElementById('quiz-card-' + quizId);
+          if (!answerPanel) return;
+
+          var isOpen = answerPanel.classList.toggle('open');
+          revealBtn.classList.toggle('active', isOpen);
+          revealBtn.textContent = isOpen ? '🙈 정답 숨기기' : '🔍 정답 확인하기';
+
+          if (cardEl) {
+            var correctBtns = cardEl.querySelectorAll('.quiz-option-btn[data-correct="true"]');
+            correctBtns.forEach(function (cBtn) {
+              cBtn.classList.toggle('revealed-correct', isOpen);
+            });
+          }
+        });
+      });
+
+      navItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+          var targetStep = parseInt(item.getAttribute('data-step') || '1', 10);
+          goToStep(targetStep);
+        });
+      });
+
+      document.querySelectorAll('.next-step-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var target = parseInt(btn.getAttribute('data-target') || '1', 10);
+          goToStep(target);
+        });
+      });
+
+      document.querySelectorAll('.prev-step-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var target = parseInt(btn.getAttribute('data-target') || '1', 10);
+          goToStep(target);
+        });
+      });
+
+      if (restartBtn) {
+        restartBtn.addEventListener('click', function () {
+          goToStep(1);
+        });
+      }
+
+      if (logoLink) {
+        logoLink.addEventListener('click', function (e) {
+          e.preventDefault();
+          goToStep(1);
+        });
+      }
+
+      if (viewAllBtn) {
+        viewAllBtn.addEventListener('click', function () {
+          viewAllMode = !viewAllMode;
+          if (viewAllText) {
+            viewAllText.textContent = viewAllMode ? '단계별 보기' : '전체 펼쳐보기';
+          }
+          renderCards();
+        });
+      }
+
+      if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', function () {
+          var root = document.documentElement;
+          var isDark = root.getAttribute('data-theme') === 'dark';
+          if (isDark) {
+            root.removeAttribute('data-theme');
+            if (themeToggleText) {
+              themeToggleText.textContent = '다크 모드';
+            }
+          } else {
+            root.setAttribute('data-theme', 'dark');
+            if (themeToggleText) {
+              themeToggleText.textContent = '라이트 모드';
+            }
+          }
+        });
+      }
+
+      document.querySelectorAll('.copy-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var container = btn.closest('.code-container');
+          if (!container) return;
+          var codeEl = container.querySelector('code');
+          if (!codeEl) return;
+          var textToCopy = codeEl.textContent || '';
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(textToCopy).then(function () {
+              btn.textContent = '복사됨 ✓';
+              setTimeout(function () {
+                btn.textContent = '복사';
+              }, 1800);
+            });
+          }
+        });
+      });
+
+      document.addEventListener('keydown', function (e) {
+        if (viewAllMode || currentMode === 'quiz') return;
+        if (e.key === 'ArrowRight' && currentStep < totalSteps) {
+          goToStep(currentStep + 1);
+        } else if (e.key === 'ArrowLeft' && currentStep > 1) {
+          goToStep(currentStep - 1);
+        }
+      });
+
+      if (window.location.hash === '#quiz' || window.location.search.indexOf('mode=quiz') !== -1) {
+        setLabMode('quiz');
+      }
+    })();
+  </script>
+</body>
+</html>
