@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
-  <title>Google Cloud 고객사 적용 가이드 | 일반 GCP 환경을 위한 Agent Gateway · SGP 단계별 CLI 구축 가이드</title>
+  <title>Google Cloud Codelab | Gemini Enterprise와 Agent Gateway · SGP를 활용한 자율형 AI 에이전트 거버넌스</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Noto+Sans+KR:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -1041,10 +1041,10 @@
           <circle cx="31" cy="35" r="5" fill="#34A853"/>
           <circle cx="44" cy="31" r="5" fill="#4285F4"/>
         </svg>
-        <span>Google Cloud Enterprise Guide</span>
+        <span>Google Cloud Codelabs</span>
       </a>
       <div class="header-divider"></div>
-      <div class="codelab-title-top">[일반 고객사 GCP 환경 전용] Agent Gateway · SGP 단계별 Pure CLI 구축 가이드 (No Startup Script · No .sh Wrapper)</div>
+      <div class="codelab-title-top">Gemini Enterprise · Agent Gateway와 시맨틱 거버넌스 정책(SGP) 기반 금융 에이전트 통제</div>
     </div>
     <div class="header-right">
       <div class="time-pill" id="remainingTimeBadge">
@@ -1074,12 +1074,12 @@
   <div class="codelab-layout">
     <!-- Left Sidebar -->
     <aside class="codelab-sidebar">
-      <div class="sidebar-section-label" id="sidebarSectionLabel">고객사 구축 목차 (Pure CLI · 총 55분)</div>
+      <div class="sidebar-section-label" id="sidebarSectionLabel">실습 목차 (총 55분)</div>
       <ul class="step-nav-list" id="stepNavList">
         <li class="step-nav-item active" data-step="1">
           <div class="step-nav-left">
             <span class="step-num">1</span>
-            <span class="step-nav-title">아키텍처 및 사전 준비</span>
+            <span class="step-nav-title">시나리오 및 아키텍처</span>
           </div>
           <span class="step-nav-time">5분</span>
         </li>
@@ -1135,7 +1135,7 @@
         <li class="step-nav-item" data-step="9">
           <div class="step-nav-left">
             <span class="step-num">9</span>
-            <span class="step-nav-title">개별 curl 검증 · 감사 로그 · 정리</span>
+            <span class="step-nav-title">3-Turn 검증 · 감사 로그 · 정리</span>
           </div>
           <span class="step-nav-time">8분</span>
         </li>
@@ -1145,24 +1145,6 @@
     <!-- Main Step Content -->
     <main class="codelab-main">
 
-      <!-- Mode Switcher Tabs: Customer Pure CLI Guide vs Session Quiz -->
-      <div class="lab-mode-tabs" role="tablist" aria-label="고객사 가이드 모드 선택">
-        <button class="lab-mode-tab active" id="modeTabStandard" type="button" data-mode="standard">
-          <div class="lab-mode-tab-left">
-            <div class="lab-mode-tab-title">🏢 일반 고객사 환경 단계별 CLI 구축 가이드 (Zero-to-Production)</div>
-            <div class="lab-mode-tab-sub">스타트업 스크립트 없이 빈 GCP 프로젝트에서 개별 명령어(gcloud · curl · agents-cli)만으로 직접 구축</div>
-          </div>
-          <span class="lab-mode-badge" style="background:var(--gcp-blue-light);color:var(--gcp-blue);">Pure CLI 가이드</span>
-        </button>
-        <button class="lab-mode-tab" id="modeTabQuiz" type="button" data-mode="quiz">
-          <div class="lab-mode-tab-left">
-            <div class="lab-mode-tab-title">🎁 세션 퀴즈 이벤트</div>
-            <div class="lab-mode-tab-sub">참여자 경품 증정용 핵심 아키텍처 퀴즈 2선 (정답 확인 토글)</div>
-          </div>
-          <span class="lab-mode-badge" style="background:var(--gcp-yellow-light);color:#b06000;">퀴즈 2문항</span>
-        </button>
-      </div>
-
       <!-- ==================== STEP 1 ==================== -->
       <section class="step-card active" id="step-1" data-duration="5">
         <div class="step-header">
@@ -1170,21 +1152,11 @@
             <span class="step-badge">Step 1 of 9</span>
             <span class="step-duration">⏱ 예상 소요 시간: 5분</span>
           </div>
-          <h1 class="step-title">개요: 일반 고객사 GCP 환경을 위한 자율형 AI 에이전트 거버넌스 구축</h1>
-        </div>
-
-        <div class="callout callout-success">
-          <div class="callout-title">🏢 이 가이드의 목적: 일반 고객사 표준 GCP 프로젝트 (Zero-Base) 직접 적용</div>
-          <p style="margin-bottom:0;">
-            본 가이드는 Qwiklabs 교육 환경처럼 <strong>사전 프로비저닝 스타트업 스크립트(Terraform)가 없는 일반 고객사 GCP 프로젝트</strong>에서
-            처음부터 끝까지 직접 아키텍처를 구축할 수 있도록 설계되었습니다.<br>
-            또한 쉘 스크립트(<code>01-setup-env.sh</code> ~ <code>08-test.sh</code>)로 명령어를 숨기지 않고,
-            엔지니어가 각 리소스의 역할과 옵션을 명확히 통제할 수 있도록 <strong>모든 단계를 개별 CLI 명령어(<code>gcloud</code>, <code>curl</code>, <code>agents-cli</code>)</strong>로 하나하나 안내합니다.
-          </p>
+          <h1 class="step-title">개요: 에이펙스 자산운용의 자율형 AI 에이전트 거버넌스</h1>
         </div>
 
         <p>
-          금융 및 엔터프라이즈 환경에서 자율형 AI 에이전트가 단순 질의응답을 넘어 <strong>계좌 조회, 실시간 자금 이체, 사내 ERP/원장 API 호출</strong>을 수행하기 시작하면서,
+          금융 및 엔터프라이즈 환경에서 자율형 AI 에이전트가 단순 질의응답을 넘어 <strong>계좌 조회, 실시간 자금 이체, 사내 원장 API 호출</strong>을 직접 수행하기 시작하면서,
           전통적인 IAM 권한 제어만으로는 <em>"누가 호출했는가"</em>만 확인할 뿐 <em>"얼마를 어떤 맥락으로 이체하려 하는가"</em>를 통제할 수 없습니다.
         </p>
 
@@ -1194,7 +1166,7 @@
             금융사인 <strong>에이펙스 자산운용</strong>은 고객이 대화만으로 간편 송금과 계좌 관리를 수행할 수 있도록
             <strong>Gemini Enterprise (Vertex AI Agent Engine)</strong> 기반의 대화형 뱅킹 에이전트를 도입했습니다.<br>
             보안 및 준법감시팀은 에이전트 애플리케이션 코드를 수정하지 않고도
-            <strong>"1회 이체 금액이 $1,000(약 100만 원)을 초과하는 모든 송금 요청을 네트워크 경계에서 즉시 차단"</strong>하는 제로 트러스트 아키텍처를 구축합니다.
+            <strong>"1회 이체 금액이 $1,000(약 100만 원)을 초과하는 모든 송금 요청을 네트워크 경계에서 즉시 차단"</strong>하는 제로 트러스트 아키텍처를 구축하고자 합니다.
           </p>
         </div>
 
@@ -1209,67 +1181,67 @@
           <div class="diagram-caption">그림 1-1. 에이펙스 자산운용 3-Plane(에이전트 실행 · 네트워크 경계 검문 · 거버넌스 평가) 아키텍처</div>
         </div>
 
-        <h2 class="section-heading">Qwiklabs 환경 vs 일반 고객사 GCP 환경 차이점</h2>
-        <p>
-          Qwiklabs 실습 환경에서는 랩 시작 시 Terraform 스타트업 스크립트가 백그라운드에서 기본 네트워크와 API를 미리 생성해 두지만,
-          <strong>일반 고객사 프로젝트에서는 아래 기반 인프라를 직접 생성해야 합니다.</strong> 본 가이드는 이 모든 과정을 빠짐없이 포함합니다.
-        </p>
-
+        <h2 class="section-heading">단계별 구축 로드맵 (Step 1 ~ Step 9)</h2>
         <div class="table-wrapper">
           <table>
             <thead>
               <tr>
-                <th>구분 항목</th>
-                <th>Qwiklabs 교육 환경</th>
-                <th>일반 고객사 GCP 환경 (본 가이드)</th>
+                <th>단계</th>
+                <th>구축 영역</th>
+                <th>핵심 생성 리소스 및 작업 내용</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td><strong>19개 필수 API 활성화</strong></td>
-                <td>스타트업 스크립트(Terraform)가 사전 활성화</td>
-                <td><span class="pill pill-blue">Step 2</span> <code>gcloud services enable</code> 명령어로 명시적 활성화</td>
+                <td><span class="pill pill-blue">Step 2</span></td>
+                <td><strong>API 활성화 및 3-계층 IAM</strong></td>
+                <td>19종 필수 API 활성화, 서비스 에이전트 생성, <code>AGENT_PRINCIPAL</code> 사전 발급 및 IAM 바인딩</td>
               </tr>
               <tr>
-                <td><strong>환경 변수 구성 (<code>env.sh</code>)</strong></td>
-                <td>사전 생성된 <code>apex-subnet</code>에서 리전을 자동 역추적</td>
-                <td><span class="pill pill-blue">Step 2</span> 고객사 리전·프로젝트에 맞춘 <code>customer-env.sh</code> 직접 생성</td>
+                <td><span class="pill pill-green">Step 3</span></td>
+                <td><strong>VPC · 서브넷 · DNS · 게이트웨이</strong></td>
+                <td><code>apex-wealth-vpc</code>, <code>apex-subnet</code>, <code>proxy-only-subnet</code>, <code>policy-engine-zone</code>, <code>agent-egress</code> 생성</td>
               </tr>
               <tr>
-                <td><strong>커스텀 VPC &amp; 워크로드 서브넷</strong></td>
-                <td><code>apex-wealth-vpc</code>, <code>apex-subnet</code> 사전 생성됨</td>
-                <td><span class="pill pill-green">Step 3</span> <code>gcloud compute networks/subnets create</code>로 직접 생성</td>
+                <td><span class="pill pill-green">Step 4</span></td>
+                <td><strong>뱅킹 MCP 서버 배포</strong></td>
+                <td>Cloud Run에 <code>banking-mcp-server</code> 배포 및 <code>roles/run.servicesInvoker</code> 권한 부여</td>
               </tr>
               <tr>
-                <td><strong>리전 매니지드 프록시 전용 서브넷</strong></td>
-                <td><code>proxy-only-subnet</code> 사전 생성됨</td>
-                <td><span class="pill pill-green">Step 3</span> <code>--purpose=REGIONAL_MANAGED_PROXY</code> 서브넷 직접 생성</td>
+                <td><span class="pill pill-green">Step 5</span></td>
+                <td><strong>Agent Registry 카탈로그 등록</strong></td>
+                <td><code>toolspec.json</code> 추출, MCP 서버 및 4대 시스템 엔드포인트 등록, <code>roles/iap.egressor</code> 부여</td>
               </tr>
               <tr>
-                <td><strong>프라이빗 Cloud DNS 관리형 존</strong></td>
-                <td><code>policy-engine-zone</code> (<code>policy.internal.</code>) 사전 생성됨</td>
-                <td><span class="pill pill-green">Step 3</span> <code>gcloud dns managed-zones create</code>로 직접 생성</td>
+                <td><span class="pill pill-yellow">Step 6</span></td>
+                <td><strong>에이전트 비동기 배포</strong></td>
+                <td>TLS Inspection Root CA(<code>agent-gateway-ca.crt</code>) 추출 및 <code>agents-cli deploy --no-wait</code> 실행</td>
               </tr>
               <tr>
-                <td><strong>PSC 엔드포인트용 내부 고정 IP</strong></td>
-                <td><code>sgp-psc-ip</code> 사전 예약됨</td>
-                <td><span class="pill pill-purple">Step 7</span> <code>gcloud compute addresses create</code>로 직접 예약</td>
+                <td><span class="pill pill-purple">Step 7</span></td>
+                <td><strong>SGP 엔진 · 고정 IP · PSC · DNS</strong></td>
+                <td>SGP 엔진 활성화, 내부 고정 IP(<code>sgp-psc-ip</code>) 예약, <code>sgp-psc-endpoint</code> 및 DNS A 레코드 생성</td>
               </tr>
               <tr>
-                <td><strong>실행 방식</strong></td>
-                <td><code>01-setup-env.sh</code> ~ <code>08-test.sh</code> 일괄 실행</td>
-                <td><span class="pill pill-yellow">전 단계</span> <strong>래퍼 스크립트 없이 개별 CLI 명령어 하나하나 직접 실행</strong></td>
+                <td><span class="pill pill-purple">Step 8</span></td>
+                <td><strong>인가 확장 및 자연어 SGP 정책</strong></td>
+                <td><code>sgp-authzextension</code>, <code>agent-egress-sgp-authzpolicy</code>, <code>high-value-limit</code>($1,000 한도) 정책 생성</td>
+              </tr>
+              <tr>
+                <td><span class="pill pill-red">Step 9</span></td>
+                <td><strong>3-Turn 검증 · 감사 로그 · 정리</strong></td>
+                <td><code>curl</code> 기반 3-Turn 시나리오 검증, Cloud Logging 감사 로그 확인 및 리소스 역순 정리</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <h2 class="section-heading">고객사 실행 계정 사전 준비 체크리스트</h2>
+        <h2 class="section-heading">사전 준비 사항 체크리스트</h2>
         <div class="grid-2">
           <div class="info-card">
-            <div class="info-card-title">🔑 1. 실행자 IAM 권한 요건</div>
+            <div class="info-card-title">🔑 1. 실행 계정 IAM 권한 요건</div>
             <p style="font-size:13.5px;margin-bottom:0;">
-              구축을 진행하는 엔지니어 계정에는 프로젝트 <code>roles/owner</code>(소유자) 권한, 또는 최소 다음 권한 조합이 필요합니다:<br>
+              구축을 진행하는 계정에는 프로젝트 <code>roles/owner</code>(소유자) 권한, 또는 최소 다음 권한 조합이 필요합니다:<br>
               • <code>roles/resourcemanager.projectIamAdmin</code><br>
               • <code>roles/serviceusage.serviceUsageAdmin</code><br>
               • <code>roles/compute.networkAdmin</code> &amp; <code>roles/dns.admin</code><br>
@@ -1280,8 +1252,8 @@
           <div class="info-card">
             <div class="info-card-title">💻 2. 실행 터미널 환경</div>
             <p style="font-size:13.5px;margin-bottom:0;">
-              <strong>Google Cloud Shell</strong>(권장) 또는 <code>gcloud</code> CLI(최신 버전, <code>alpha</code>/<code>beta</code> 컴포넌트 포함), <code>python3</code>(3.10+), <code>curl</code>, <code>git</code>이 설치된 사내 배포 워크스테이션에서 동일하게 실행할 수 있습니다.<br>
-              리전은 현재 Agent Gateway · SGP Preview가 지원되는 <code>us-central1</code>을 기준으로 안내합니다.
+              <strong>Google Cloud Shell</strong>(권장) 또는 <code>gcloud</code> CLI(최신 버전, <code>alpha</code>/<code>beta</code> 컴포넌트 포함), <code>python3</code>(3.10+), <code>curl</code>, <code>git</code>이 설치된 터미널 환경에서 실행할 수 있습니다.<br>
+              대상 리전은 <code>us-central1</code>을 기준으로 안내합니다.
             </p>
           </div>
         </div>
@@ -1303,9 +1275,8 @@
         </div>
 
         <p>
-          일반 고객사 프로젝트에는 아무런 API나 서비스 에이전트가 준비되어 있지 않습니다.
-          이 단계에서는 에이전트 및 MCP 서버 소스코드를 클론한 뒤, <strong>고객사 전용 환경 변수 파일(<code>customer-env.sh</code>)</strong>을 만들고,
-          <strong>19개 필수 API 활성화 → Google 관리형 서비스 에이전트 생성 → 3-계층 IAM 권한 부여 → 에이전트 고유 ID(<code>AGENT_PRINCIPAL</code>) 발급</strong>을 개별 명령어로 수행합니다.
+          이 단계에서는 에이전트 및 MCP 서버 소스코드를 클론한 뒤 환경 변수 파일(<code>customer-env.sh</code>)을 생성하고,
+          <strong>19개 필수 API 활성화 → Google 관리형 서비스 에이전트 생성 → 3-계층 IAM 권한 부여 → 에이전트 고유 ID(<code>AGENT_PRINCIPAL</code>) 발급</strong>을 차례대로 수행합니다.
         </p>
 
         <div class="diagram-box">
@@ -1315,8 +1286,7 @@
 
         <h2 class="section-heading">2-1. 소스코드 리포지토리 클론</h2>
         <p>
-          에이전트 애플리케이션 코드(<code>conversational-banking/</code>)와 뱅킹 MCP 서버 코드(<code>banking-mcp-server/</code>)를 가져오기 위해 리포지토리를 클론합니다.
-          <strong>(주의: 리포지토리 내의 <code>.sh</code> 스크립트는 실행하지 않고, 아래 가이드의 개별 명령어를 직접 실행합니다.)</strong>
+          에이전트 애플리케이션 코드(<code>conversational-banking/</code>)와 뱅킹 MCP 서버 코드(<code>banking-mcp-server/</code>)가 포함된 리포지토리를 클론합니다.
         </p>
         <div class="code-container">
           <div class="code-header"><span>Cloud Shell / Terminal — 명령어 2-1</span><button class="copy-btn" type="button">복사</button></div>
@@ -1324,14 +1294,10 @@
 cd ~/agent-gateway-sgp</code></pre>
         </div>
 
-        <h2 class="section-heading">2-2. 고객사 환경 변수 정의 및 <code>customer-env.sh</code> 생성</h2>
-        <div class="callout callout-warning">
-          <div class="callout-title">⚠️ 왜 기본 <code>env.sh</code> 대신 <code>customer-env.sh</code>를 만드나요?</div>
-          <p style="margin-bottom:0;">
-            리포지토리에 포함된 <code>env.sh</code>는 Qwiklabs 스타트업 스크립트가 미리 생성해 둔 <code>apex-subnet</code>의 리전을 조회하여 <code>LOCATION</code>을 설정하도록 작성되어 있습니다.
-            일반 고객사 환경에서는 아직 서브넷이 존재하지 않으므로, 프로젝트 ID와 대상 리전(<code>us-central1</code>)을 명시적으로 지정하는 <code>customer-env.sh</code>를 생성하여 사용합니다.
-          </p>
-        </div>
+        <h2 class="section-heading">2-2. 프로젝트 환경 변수 정의 및 <code>customer-env.sh</code> 생성</h2>
+        <p>
+          현재 설정된 GCP 프로젝트 ID와 프로젝트 번호를 조회하고, 리전(<code>us-central1</code>), 네트워크 이름, 서비스 에이전트 주소를 환경 변수 파일(<code>customer-env.sh</code>)에 저장한 뒤 로드합니다.
+        </p>
         <div class="code-container">
           <div class="code-header"><span>Cloud Shell / Terminal — 명령어 2-2</span><button class="copy-btn" type="button">복사</button></div>
           <pre><code>export PROJECT_ID=$(gcloud config get-value project)
@@ -1391,8 +1357,7 @@ echo "PROJECT_ID=${PROJECT_ID}, PROJECT_NUM=${PROJECT_NUM}, LOCATION=${LOCATION}
 
         <h2 class="section-heading">2-4. Google 관리형 서비스 에이전트(Service Identity) 생성</h2>
         <p>
-          신규 고객사 프로젝트에서는 API를 활성화하더라도 관리형 서비스 계정(Service Agent)이 즉시 생성되지 않을 수 있습니다.
-          <code>networkservices</code>와 <code>aiplatform</code>의 서비스 아이덴티티를 명시적으로 프로비저닝합니다.
+          <code>networkservices</code>와 <code>aiplatform</code>의 관리형 서비스 아이덴티티(Service Agent)를 프로비저닝합니다.
         </p>
         <div class="code-container">
           <div class="code-header"><span>Cloud Shell / Terminal — 명령어 2-4</span><button class="copy-btn" type="button">복사</button></div>
@@ -1487,7 +1452,7 @@ echo "${CREATE_RESP}"</code></pre>
 
         <h2 class="section-heading">2-8. <code>AGENT_PRINCIPAL</code> 추출 및 환경 변수 파일 저장</h2>
         <p>
-          방금 생성된 Reasoning Engine의 <code>spec.effectiveIdentity</code> 필드를 조회하여 <code>AGENT_PRINCIPAL</code> 환경 변수로 등록하고 <code>customer-env.sh</code>에 영구 저장합니다.
+          생성된 Reasoning Engine의 <code>spec.effectiveIdentity</code> 필드를 조회하여 <code>AGENT_PRINCIPAL</code> 환경 변수로 등록하고 <code>customer-env.sh</code>에 저장합니다.
         </p>
         <div class="code-container">
           <div class="code-header"><span>Cloud Shell / Terminal — 명령어 2-8</span><button class="copy-btn" type="button">복사</button></div>
@@ -1538,7 +1503,7 @@ done</code></pre>
         </div>
 
         <div class="step-footer">
-          <button class="btn-nav prev-step-btn" data-target="1" type="button">← 이전: 아키텍처 및 사전 준비</button>
+          <button class="btn-nav prev-step-btn" data-target="1" type="button">← 이전: 시나리오 및 아키텍처</button>
           <button class="btn-nav primary next-step-btn" data-target="3" type="button">다음: VPC · 서브넷 · DNS · 게이트웨이 구축 →</button>
         </div>
       </section>
@@ -1553,14 +1518,11 @@ done</code></pre>
           <h1 class="step-title">커스텀 VPC, 서브넷, 프록시 전용 서브넷, Cloud DNS 및 Agent Gateway 생성</h1>
         </div>
 
-        <div class="callout callout-info">
-          <div class="callout-title">🏗️ 스타트업 스크립트 대체 핵심 구간: VPC 네트워크 인프라 직접 구축</div>
-          <p style="margin-bottom:0;">
-            Qwiklabs에서는 Terraform이 VPC와 서브넷, DNS 존을 미리 만들어 두었지만, 일반 고객사 프로젝트에서는
-            <strong>① 커스텀 VPC(<code>apex-wealth-vpc</code>) → ② 워크로드 서브넷(<code>apex-subnet</code>) → ③ 리전 매니지드 프록시 전용 서브넷(<code>proxy-only-subnet</code>) → ④ 프라이빗 Cloud DNS 존(<code>policy-engine-zone</code>)</strong>을 먼저 생성한 뒤,
-            그 위에 <strong>⑤ 네트워크 어태치먼트(<code>agent-gateway-na</code>)</strong>와 <strong>⑥ <code>agent-egress</code> 게이트웨이</strong>를 프로비저닝해야 합니다.
-          </p>
-        </div>
+        <p>
+          이 단계에서는 에이전트 트래픽과 거버넌스 엔진이 통신할 네트워크 기반인
+          <strong>① 커스텀 VPC(<code>apex-wealth-vpc</code>) → ② 워크로드 서브넷(<code>apex-subnet</code>) → ③ 리전 매니지드 프록시 전용 서브넷(<code>proxy-only-subnet</code>) → ④ 프라이빗 Cloud DNS 존(<code>policy-engine-zone</code>)</strong>을 생성한 뒤,
+          <strong>⑤ 네트워크 어태치먼트(<code>agent-gateway-na</code>)</strong>와 <strong>⑥ <code>agent-egress</code> 게이트웨이</strong>를 프로비저닝합니다.
+        </p>
 
         <div class="diagram-box">
           <img src="img/02-agent-gateway-network.png" alt="Agent Gateway 및 Network Attachment 구조" loading="lazy">
@@ -1569,7 +1531,7 @@ done</code></pre>
 
         <h2 class="section-heading">3-1. 커스텀 VPC (<code>apex-wealth-vpc</code>) 및 워크로드 서브넷 (<code>apex-subnet</code>) 생성</h2>
         <p>
-          자동 모드 서브넷 대신 보안 통제가 용이한 커스텀 모드 VPC를 생성하고, <code>us-central1</code> 리전에 <code>10.10.0.0/24</code> 대역의 워크로드 서브넷을 생성합니다.
+          커스텀 모드 VPC를 생성하고, <code>us-central1</code> 리전에 <code>10.10.0.0/24</code> 대역의 워크로드 서브넷을 생성합니다.
         </p>
         <div class="code-container">
           <div class="code-header"><span>Cloud Shell / Terminal — 명령어 3-1</span><button class="copy-btn" type="button">복사</button></div>
@@ -1590,7 +1552,6 @@ gcloud compute networks subnets create "${SUBNET_NAME}" \
         <p>
           Agent Gateway와 Service Extensions(<code>INTERNAL_MANAGED</code> 로드 밸런싱 스킴)가 내부 Envoy 프록시 풀을 할당할 수 있도록
           <code>--purpose=REGIONAL_MANAGED_PROXY</code> 및 <code>--role=ACTIVE</code> 옵션으로 프록시 전용 서브넷(<code>10.11.13.0/24</code>)을 생성합니다.
-          <strong>이 서브넷이 없으면 Step 8에서 AuthzExtension 및 AuthzPolicy 연결이 실패합니다.</strong>
         </p>
         <div class="code-container">
           <div class="code-header"><span>Cloud Shell / Terminal — 명령어 3-2</span><button class="copy-btn" type="button">복사</button></div>
@@ -1606,7 +1567,7 @@ gcloud compute networks subnets create "${SUBNET_NAME}" \
         <h2 class="section-heading">3-3. 프라이빗 Cloud DNS 관리형 존 (<code>policy-engine-zone</code>) 생성</h2>
         <p>
           향후 Step 7~8에서 Agent Gateway의 인가 확장(AuthzExtension)이 <code>policy.internal</code> 도메인으로 SGP 정책 엔진을 호출할 수 있도록,
-          <code>apex-wealth-vpc</code> 내부에서만 보이는 프라이빗 DNS 관리형 존을 생성합니다.
+          <code>apex-wealth-vpc</code> 내부에서만 조회되는 프라이빗 DNS 관리형 존을 생성합니다.
         </p>
         <div class="code-container">
           <div class="code-header"><span>Cloud Shell / Terminal — 명령어 3-3</span><button class="copy-btn" type="button">복사</button></div>
@@ -1620,7 +1581,7 @@ gcloud compute networks subnets create "${SUBNET_NAME}" \
 
         <h2 class="section-heading">3-4. 네트워크 어태치먼트 (<code>agent-gateway-na</code>) 생성 및 URI 조회</h2>
         <p>
-          Google 관리형 테넌트에 위치한 Agent Gateway가 고객사의 <code>apex-subnet</code> 내부로 이그레스 트래픽을 라우팅할 수 있도록
+          Google 관리형 테넌트에 위치한 Agent Gateway가 <code>apex-subnet</code> 내부로 이그레스 트래픽을 라우팅할 수 있도록
           <code>ACCEPT_AUTOMATIC</code> 모드의 네트워크 어태치먼트를 생성하고 전체 SelfLink URI를 환경 변수에 저장합니다.
         </p>
         <div class="code-container">
@@ -1648,7 +1609,7 @@ echo "NA_URI=${NA_URI}"</code></pre>
           <div class="callout-title">⏳ 프로비저닝 소요 시간 안내 (약 3~5분)</div>
           <p style="margin-bottom:0;">
             <code>agent-gateways import</code> 명령어는 내부 리전 프록시 인스턴스 할당, 네트워크 어태치먼트 연결, 그리고
-            <strong>전용 TLS Inspection Root CA 인증서(<code>CertificatePem</code>) 동적 발급</strong>을 한꺼번에 수행하므로 완료까지 <strong>약 3~5분</strong>이 소요됩니다. 명령어가 완료될 때까지 터미널을 닫지 말고 기다려 주세요.
+            <strong>전용 TLS Inspection Root CA 인증서(<code>CertificatePem</code>) 동적 발급</strong>을 한꺼번에 수행하므로 완료까지 <strong>약 3~5분</strong>이 소요됩니다. 명령어가 완료될 때까지 기다려 주세요.
           </p>
         </div>
         <div class="code-container">
@@ -2007,7 +1968,7 @@ cd ~/agent-gateway-sgp</code></pre>
 
         <p>
           백그라운드에서 에이전트 컨테이너가 빌드되는 동안, Google 관리형 테넌트에서 동작하는 <strong>시맨틱 거버넌스 정책(SGP) 엔진</strong>을 활성화하고,
-          고객사 VPC(<code>apex-wealth-vpc</code>) 내부에서 공인 인터넷을 거치지 않고 SGP 엔진과 통신할 수 있도록 <strong>Private Service Connect(PSC) 엔드포인트와 프라이빗 DNS 레코드</strong>를 구성합니다.
+          VPC(<code>apex-wealth-vpc</code>) 내부에서 공인 인터넷을 거치지 않고 SGP 엔진과 통신할 수 있도록 <strong>Private Service Connect(PSC) 엔드포인트와 프라이빗 DNS 레코드</strong>를 구성합니다.
         </p>
 
         <div class="diagram-box">
@@ -2017,7 +1978,7 @@ cd ~/agent-gateway-sgp</code></pre>
 
         <h2 class="section-heading">7-1. 리전 SGP 정책 엔진 활성화 및 Service Attachment URI 추출</h2>
         <p>
-          고객사 프로젝트의 <code>us-central1</code> 리전에 SGP 정책 엔진을 프로비저닝하고, 생성된 서비스 어태치먼트 URI(<code>pscConfig.serviceAttachment</code>)를 추출합니다.
+          <code>us-central1</code> 리전에 SGP 정책 엔진을 프로비저닝하고, 생성된 서비스 어태치먼트 URI(<code>pscConfig.serviceAttachment</code>)를 추출합니다.
         </p>
         <div class="code-container">
           <div class="code-header"><span>Cloud Shell / Terminal — 명령어 7-1</span><button class="copy-btn" type="button">복사</button></div>
@@ -2038,13 +1999,9 @@ echo "SERVICE_ATTACHMENT=${SERVICE_ATTACHMENT}"</code></pre>
         </div>
 
         <h2 class="section-heading">7-2. PSC 소비자 엔드포인트용 내부 고정 IP (<code>sgp-psc-ip</code>) 예약</h2>
-        <div class="callout callout-info">
-          <div class="callout-title">📌 스타트업 스크립트 대체 포인트: <code>sgp-psc-ip</code> 직접 예약</div>
-          <p style="margin-bottom:0;">
-            Qwiklabs에서는 Terraform이 <code>sgp-psc-ip</code>를 미리 예약해 두었지만, 일반 고객사 프로젝트에서는
-            <code>--purpose=GCE_ENDPOINT</code> 옵션으로 <code>apex-subnet</code> 내부 IP를 직접 예약해야 합니다.
-          </p>
-        </div>
+        <p>
+          <code>--purpose=GCE_ENDPOINT</code> 옵션으로 <code>apex-subnet</code> 내부에 PSC 엔드포인트용 고정 IP(<code>sgp-psc-ip</code>)를 예약하고 IP 주소를 조회합니다.
+        </p>
         <div class="code-container">
           <div class="code-header"><span>Cloud Shell / Terminal — 명령어 7-2</span><button class="copy-btn" type="button">복사</button></div>
           <pre><code>gcloud compute addresses create sgp-psc-ip \
@@ -2240,7 +2197,7 @@ gcloud beta ai semantic-governance-policies describe high-value-limit \
 
         <div class="step-footer">
           <button class="btn-nav prev-step-btn" data-target="7" type="button">← 이전: SGP 엔진 · 고정 IP · PSC</button>
-          <button class="btn-nav primary next-step-btn" data-target="9" type="button">다음: 개별 curl 검증 · 감사 로그 · 리소스 정리 →</button>
+          <button class="btn-nav primary next-step-btn" data-target="9" type="button">다음: 3-Turn 검증 · 감사 로그 · 리소스 정리 →</button>
         </div>
       </section>
 
@@ -2251,12 +2208,12 @@ gcloud beta ai semantic-governance-policies describe high-value-limit \
             <span class="step-badge">Step 9 of 9</span>
             <span class="step-duration">⏱ 예상 소요 시간: 8분</span>
           </div>
-          <h1 class="step-title">개별 curl 명령어 기반 3-Turn 시나리오 검증, 감사 로그 조회 및 리소스 정리</h1>
+          <h1 class="step-title">3-Turn 시나리오 검증, 감사 로그 조회 및 리소스 정리</h1>
         </div>
 
         <p>
-          모든 구축이 완료되었습니다! 래퍼 스크립트(<code>08-test.sh</code>) 대신
-          <strong>Vertex AI Reasoning Engine REST API(<code>:streamQuery</code>)를 직접 호출하는 개별 <code>curl</code> 명령어</strong>로
+          모든 구축이 완료되었습니다!
+          <strong>Vertex AI Reasoning Engine REST API(<code>:streamQuery</code>)를 호출하는 <code>curl</code> 명령어</strong>로
           Turn 1(조회 허용) → Turn 2($50 소액 이체 허용) → Turn 3($2,000 고액 이체 차단)을 하나씩 실행하며 SGP 정책의 실시간 동작을 검증합니다.
         </p>
 
@@ -2350,16 +2307,16 @@ echo "RE_ID=${RE_ID}"</code></pre>
         </div>
 
         <div class="callout callout-info">
-          <div class="callout-title">🐍 참고: Python 테스트 러너(<code>run_tests.py</code>)로 깔끔하게 보기</div>
+          <div class="callout-title">🐍 참고: Python 테스트 러너(<code>run_tests.py</code>)로 요약 출력 보기</div>
           <p style="margin-bottom:0;">
-            위 3개의 <code>curl</code> SSE 스트림 응답을 파싱하여 보기 좋게 요약 출력하고 싶다면 아래 단일 Python 명령어를 실행할 수도 있습니다:<br>
+            위 3개의 <code>curl</code> SSE 스트림 응답을 파싱하여 보기 좋게 요약 출력하고 싶다면 아래 명령어를 실행할 수도 있습니다:<br>
             <code>python3 ~/agent-gateway-sgp/run_tests.py</code>
           </p>
         </div>
 
         <h2 class="section-heading">9-5. Cloud Logging에서 SGP 시맨틱 거버넌스 감사 로그 확인</h2>
         <p>
-          SGP 정책 엔진이 각 도구 호출에 대해 내린 판정(<code>jsonPayload.verdict</code>)과 위반 정책 ID(<code>high-value-limit</code>)를 Cloud Logging에서 직접 조회합니다.
+          SGP 정책 엔진이 각 도구 호출에 대해 내린 판정(<code>jsonPayload.verdict</code>)과 위반 정책 ID(<code>high-value-limit</code>)를 Cloud Logging에서 조회합니다.
         </p>
         <div class="code-container">
           <div class="code-header"><span>Cloud Shell / Terminal — 명령어 9-5 (SGP 감사 로그 조회)</span><button class="copy-btn" type="button">복사</button></div>
@@ -2370,10 +2327,9 @@ echo "RE_ID=${RE_ID}"</code></pre>
   --format=json</code></pre>
         </div>
 
-        <h2 class="section-heading">9-6. (선택) 고객사 테스트 리소스 역순 정리 개별 명령어</h2>
+        <h2 class="section-heading">9-6. (선택) 테스트 리소스 역순 정리 명령어</h2>
         <p>
-          일반 고객사 프로젝트에서는 Qwiklabs처럼 실습 종료 시 프로젝트가 자동 삭제되지 않습니다.
-          검증을 마친 후 과금이 계속 발생하지 않도록 정리하려면, 의존성 역순으로 구성된 아래 개별 삭제 명령어를 차례대로 실행하세요.
+          검증을 마친 후 생성한 리소스를 모두 정리하려면, 의존성 역순으로 구성된 아래 삭제 명령어를 차례대로 실행하세요.
         </p>
         <div class="code-container">
           <div class="code-header"><span>Cloud Shell / Terminal — 명령어 9-6 (리소스 역순 정리)</span><button class="copy-btn" type="button">복사</button></div>
@@ -2442,116 +2398,6 @@ gcloud compute networks delete "${NETWORK_NAME}" \
         </div>
       </section>
 
-      <!-- ==================== SESSION QUIZ EVENT PANEL ==================== -->
-      <section class="quiz-panel-card" id="quiz-panel">
-        <div class="step-header">
-          <div class="step-meta">
-            <span class="step-badge" style="background:var(--gcp-yellow-light);color:#b06000;">🎁 Session Quiz Event</span>
-            <span class="step-duration">참여자 경품 증정용 퀴즈 2선 (정답 숨김 기본 적용)</span>
-          </div>
-          <h1 class="step-title">세션 퀴즈 이벤트: 자율형 AI 에이전트 거버넌스 핵심 체크!</h1>
-        </div>
-
-        <p>
-          구축 세션에 참여해 주신 여러분을 위한 <strong>경품 퀴즈 이벤트(총 2문항)</strong>입니다!
-          보기를 클릭해 예상 정답을 선택한 뒤, 하단의 <strong>[🔍 정답 확인하기]</strong> 버튼을 누르면 숨겨져 있던 정답과 상세 해설이 공개됩니다.
-        </p>
-
-        <!-- Quiz 1 -->
-        <div class="quiz-item-card" id="quiz-card-1">
-          <div class="quiz-item-header">
-            <span class="quiz-num-badge">🏆 QUIZ 1 · 제로 트러스트 네트워크 &amp; IAM</span>
-            <span class="quiz-ref-tag">관련 단계: Step 4 &amp; Step 5</span>
-          </div>
-          <div class="quiz-question-title">
-            Q1. Cloud Run에 배포된 뱅킹 MCP 서버를 호출하기 위해 <code>roles/run.servicesInvoker</code> 권한을 이미 부여했습니다. 하지만 기본 차단(Default Deny)으로 동작하는 <strong>Agent Gateway</strong>가 Agent Registry에 등록된 도구 및 시스템 엔드포인트로 나가는 트래픽을 최종 허용하기 위해 <strong>반드시 추가로 바인딩해야 하는 IAP 역할(Role)</strong>은 무엇일까요?
-          </div>
-
-          <div class="quiz-options-list" data-quiz="1">
-            <button class="quiz-option-btn" type="button" data-option="1">
-              <span class="quiz-opt-num">1</span>
-              <span><code>roles/compute.networkUser</code> (Compute 네트워크 사용자)</span>
-            </button>
-            <button class="quiz-option-btn" type="button" data-option="2" data-correct="true">
-              <span class="quiz-opt-num">2</span>
-              <span><code>roles/iap.egressor</code> (IAP Agent Registry 이그레스 허용 역할)</span>
-            </button>
-            <button class="quiz-option-btn" type="button" data-option="3">
-              <span class="quiz-opt-num">3</span>
-              <span><code>roles/storage.objectViewer</code> (Cloud Storage 객체 뷰어)</span>
-            </button>
-            <button class="quiz-option-btn" type="button" data-option="4">
-              <span class="quiz-opt-num">4</span>
-              <span><code>roles/dns.reader</code> (Cloud DNS 리더)</span>
-            </button>
-          </div>
-
-          <div class="quiz-actions-row">
-            <span style="font-size:13px;color:var(--text-muted);">💡 힌트: Step 5에서 <code>gcloud alpha iap agent-registry add-iam-policy-binding</code> 명령어로 부여한 역할입니다.</span>
-            <button class="quiz-reveal-btn" type="button" data-quiz="1">🔍 정답 확인하기</button>
-          </div>
-
-          <div class="quiz-answer-panel" id="quiz-answer-1">
-            <div class="quiz-answer-badge">✅ 정답: ②번 — <code>roles/iap.egressor</code></div>
-            <p style="margin-bottom:8px;color:var(--text-primary);font-size:14.5px;">
-              <strong>핵심 해설:</strong> <code>AGENT_TO_ANYWHERE</code> 모드로 동작하는 Google Cloud Agent Gateway는 모든 아웃바운드 트래픽에 대해 <strong>기본 차단(Default Deny)</strong> 원칙을 적용합니다.
-            </p>
-            <p style="margin-bottom:0;font-size:14px;">
-              따라서 백엔드 Cloud Run 레벨의 호출 권한(<code>roles/run.servicesInvoker</code>)과는 별개로, Agent Registry에 등록된 MCP 서버(<code>banking-mcp-server</code>)와 4대 시스템 엔드포인트 각각에 대해 <strong><code>roles/iap.egressor</code></strong> 권한을 에이전트 주체(<code>AGENT_PRINCIPAL</code> 등)에게 명시적으로 부여해야만 게이트웨이를 통과할 수 있습니다.
-            </p>
-          </div>
-        </div>
-
-        <!-- Quiz 2 -->
-        <div class="quiz-item-card" id="quiz-card-2">
-          <div class="quiz-item-header">
-            <span class="quiz-num-badge">🏆 QUIZ 2 · 무중단 거버넌스 운영 (Code-Free Policy)</span>
-            <span class="step-duration quiz-ref-tag">관련 단계: Step 8 &amp; Step 9</span>
-          </div>
-          <div class="quiz-question-title">
-            Q2. 금융감독 규정 강화로 인해 이체 차단 한도를 기존 <strong>$1,000 초과</strong>에서 <strong>"$500 초과 시 차단 및 야간 시간대 고액 이체 금지"</strong>로 긴급 변경해야 합니다. 본 아키텍처에서 이 정책을 가장 빠르고 안전하게 반영하는 방법은 무엇일까요?
-          </div>
-
-          <div class="quiz-options-list" data-quiz="2">
-            <button class="quiz-option-btn" type="button" data-option="1">
-              <span class="quiz-opt-num">1</span>
-              <span>에이전트의 Python 코드(<code>agent.py</code>)에 <code>if amount &gt; 500:</code> 조건문을 넣은 뒤 컨테이너를 다시 빌드·배포한다.</span>
-            </button>
-            <button class="quiz-option-btn" type="button" data-option="2">
-              <span class="quiz-opt-num">2</span>
-              <span>백엔드 Cloud Run 뱅킹 MCP 서버(<code>server.py</code>)의 코드를 수정하고 서비스를 재시작한다.</span>
-            </button>
-            <button class="quiz-option-btn" type="button" data-option="3">
-              <span class="quiz-opt-num">3</span>
-              <span>VPC 방화벽 규칙에서 Cloud Run의 IP 주소를 차단한다.</span>
-            </button>
-            <button class="quiz-option-btn" type="button" data-option="4" data-correct="true">
-              <span class="quiz-opt-num">4</span>
-              <span>에이전트나 MCP 서버의 <strong>코드 수정·재배포 전혀 없이</strong>, SGP 정책의 <code>--natural-language-constraint</code>(자연어 제약 조건)만 업데이트한다.</span>
-            </button>
-          </div>
-
-          <div class="quiz-actions-row">
-            <span style="font-size:13px;color:var(--text-muted);">💡 힌트: 본 아키텍처가 비즈니스 로직(에이전트/MCP 서버)과 보안 정책(SGP)을 분리한 가장 큰 이유입니다!</span>
-            <button class="quiz-reveal-btn" type="button" data-quiz="2">🔍 정답 확인하기</button>
-          </div>
-
-          <div class="quiz-answer-panel" id="quiz-answer-2">
-            <div class="quiz-answer-badge">✅ 정답: ④번 — 코드 수정·재배포 없이 SGP의 <code>--natural-language-constraint</code>만 업데이트</div>
-            <p style="margin-bottom:8px;color:var(--text-primary);font-size:14.5px;">
-              <strong>핵심 해설:</strong> <strong>시맨틱 거버넌스 정책(SGP)</strong>은 에이전트 애플리케이션 코드나 백엔드 MCP 서버 코드와 완전히 분리된 <strong>네트워크 경계(Out-of-Code) 거버넌스 계층</strong>입니다.
-            </p>
-            <p style="margin-bottom:0;font-size:14px;">
-              따라서 약관이나 규제가 바뀌더라도 개발자가 수십 개의 에이전트 코드를 일일이 고치고 재배포할 필요 없이, 보안/컴플라이언스 담당자가 <code>gcloud beta ai semantic-governance-policies update</code> 명령어로 <strong><code>--natural-language-constraint</code></strong> 문장만 수정하면 무중단으로 모든 에이전트 트래픽에 즉시 적용됩니다.
-            </p>
-          </div>
-        </div>
-
-        <div class="step-footer">
-          <button class="btn-nav" id="quizBackToStandardBtn" type="button">← 고객사 CLI 구축 가이드로 돌아가기</button>
-        </div>
-      </section>
-
     </main>
   </div>
 
@@ -2560,10 +2406,8 @@ gcloud compute networks delete "${NETWORK_NAME}" \
       var totalSteps = 9;
       var currentStep = 1;
       var viewAllMode = false;
-      var currentMode = 'standard';
 
       var stepCards = Array.from(document.querySelectorAll('.step-card'));
-      var quizPanel = document.getElementById('quiz-panel');
       var navItems = Array.from(document.querySelectorAll('.step-nav-item'));
       var progressBar = document.getElementById('progressBar');
       var remainingTimeText = document.getElementById('remainingTimeText');
@@ -2573,10 +2417,6 @@ gcloud compute networks delete "${NETWORK_NAME}" \
       var themeToggleText = document.getElementById('themeToggleText');
       var restartBtn = document.getElementById('restartBtn');
       var logoLink = document.getElementById('logoLink');
-      var modeTabStandard = document.getElementById('modeTabStandard');
-      var modeTabQuiz = document.getElementById('modeTabQuiz');
-      var quizBackToStandardBtn = document.getElementById('quizBackToStandardBtn');
-      var sidebarSectionLabel = document.getElementById('sidebarSectionLabel');
 
       function calculateRemainingMinutes(fromStep) {
         var total = 0;
@@ -2588,13 +2428,6 @@ gcloud compute networks delete "${NETWORK_NAME}" \
       }
 
       function renderCards() {
-        if (currentMode === 'quiz') {
-          stepCards.forEach(function (card) { card.classList.remove('active'); });
-          if (quizPanel) quizPanel.classList.add('active');
-          return;
-        }
-
-        if (quizPanel) quizPanel.classList.remove('active');
         stepCards.forEach(function (card, idx) {
           if (viewAllMode || idx + 1 === currentStep) {
             card.classList.add('active');
@@ -2604,28 +2437,8 @@ gcloud compute networks delete "${NETWORK_NAME}" \
         });
       }
 
-      function setLabMode(mode) {
-        currentMode = mode;
-        if (modeTabStandard && modeTabQuiz) {
-          modeTabStandard.classList.toggle('active', mode === 'standard');
-          modeTabQuiz.classList.toggle('active', mode === 'quiz');
-        }
-        if (sidebarSectionLabel) {
-          if (mode === 'quiz') {
-            sidebarSectionLabel.textContent = '세션 경품 퀴즈 (총 2문항)';
-          } else {
-            sidebarSectionLabel.textContent = '고객사 구축 목차 (Pure CLI · 총 55분)';
-          }
-        }
-        renderCards();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-
       function goToStep(stepNum) {
         if (stepNum < 1 || stepNum > totalSteps) return;
-        if (currentMode === 'quiz') {
-          setLabMode('standard');
-        }
         currentStep = stepNum;
         renderCards();
 
@@ -2658,57 +2471,6 @@ gcloud compute networks delete "${NETWORK_NAME}" \
           }
         }
       }
-
-      if (modeTabStandard) {
-        modeTabStandard.addEventListener('click', function () {
-          setLabMode('standard');
-        });
-      }
-
-      if (modeTabQuiz) {
-        modeTabQuiz.addEventListener('click', function () {
-          setLabMode('quiz');
-        });
-      }
-
-      if (quizBackToStandardBtn) {
-        quizBackToStandardBtn.addEventListener('click', function () {
-          setLabMode('standard');
-        });
-      }
-
-      document.querySelectorAll('.quiz-options-list').forEach(function (listEl) {
-        var buttons = listEl.querySelectorAll('.quiz-option-btn');
-        buttons.forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            buttons.forEach(function (other) {
-              other.classList.remove('selected');
-            });
-            btn.classList.add('selected');
-          });
-        });
-      });
-
-      document.querySelectorAll('.quiz-reveal-btn').forEach(function (revealBtn) {
-        revealBtn.addEventListener('click', function () {
-          var quizId = revealBtn.getAttribute('data-quiz');
-          if (!quizId) return;
-          var answerPanel = document.getElementById('quiz-answer-' + quizId);
-          var cardEl = document.getElementById('quiz-card-' + quizId);
-          if (!answerPanel) return;
-
-          var isOpen = answerPanel.classList.toggle('open');
-          revealBtn.classList.toggle('active', isOpen);
-          revealBtn.textContent = isOpen ? '🙈 정답 숨기기' : '🔍 정답 확인하기';
-
-          if (cardEl) {
-            var correctBtns = cardEl.querySelectorAll('.quiz-option-btn[data-correct="true"]');
-            correctBtns.forEach(function (cBtn) {
-              cBtn.classList.toggle('revealed-correct', isOpen);
-            });
-          }
-        });
-      });
 
       navItems.forEach(function (item) {
         item.addEventListener('click', function () {
@@ -2791,17 +2553,13 @@ gcloud compute networks delete "${NETWORK_NAME}" \
       });
 
       document.addEventListener('keydown', function (e) {
-        if (viewAllMode || currentMode === 'quiz') return;
+        if (viewAllMode) return;
         if (e.key === 'ArrowRight' && currentStep < totalSteps) {
           goToStep(currentStep + 1);
         } else if (e.key === 'ArrowLeft' && currentStep > 1) {
           goToStep(currentStep - 1);
         }
       });
-
-      if (window.location.hash === '#quiz' || window.location.search.indexOf('mode=quiz') !== -1) {
-        setLabMode('quiz');
-      }
     })();
   </script>
 </body>
