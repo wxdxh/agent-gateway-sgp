@@ -1309,7 +1309,7 @@
         </p>
 
         <div class="diagram-box">
-          <img src="img/01-iam-separation.png" alt="3-계층 서비스 주체 IAM 분리 아키텍처" loading="lazy">
+          <img src="img/01-iam-identity-model.png" alt="3-계층 서비스 주체 IAM 분리 아키텍처" loading="lazy">
           <div class="diagram-caption">그림 2-1. 최소 권한 원칙에 기반한 3-계층(Agent Identity · Agent Engine SA · Agent Gateway SA) IAM 분리 구조</div>
         </div>
 
@@ -1791,7 +1791,7 @@ done</code></pre>
         </p>
 
         <div class="diagram-box">
-          <img src="img/04-agent-registry-catalog.png" alt="Agent Registry 카탈로그 및 IAP Egressor 바인딩" loading="lazy">
+          <img src="img/04-agent-registry-allowlist.png" alt="Agent Registry 카탈로그 및 IAP Egressor 바인딩" loading="lazy">
           <div class="diagram-caption">그림 5-1. Agent Registry 도구 명세(toolspec.json) 및 4대 시스템 엔드포인트 IAP Egressor 화이트리스트 구조</div>
         </div>
 
@@ -1936,6 +1936,11 @@ done</code></pre>
           따라서 에이전트 컨테이너 내부에 <code>agent-egress</code>의 전용 Root CA 인증서를 주입해야 SSL 핸드셰이크 오류가 발생하지 않습니다.
         </p>
 
+        <div class="diagram-box">
+          <img src="img/05-tls-inspection-agent-deploy.png" alt="TLS Inspection Root CA 인증서 주입 및 에이전트 배포" loading="lazy">
+          <div class="diagram-caption">그림 6-1. agent-egress Root CA 인증서(agent-gateway-ca.crt) 주입 및 Gemini Enterprise Agent Runtime 비동기 배포</div>
+        </div>
+
         <div class="callout callout-info">
           <div class="callout-title">⚡ 병렬 배포 최적화 (<code>--no-wait</code>) 및 콜드 스타트 방지 (<code>--min-instances=1</code>)</div>
           <p style="margin-bottom:0;">
@@ -2006,7 +2011,7 @@ cd ~/agent-gateway-sgp</code></pre>
         </p>
 
         <div class="diagram-box">
-          <img src="img/05-psc-dns-routing.png" alt="PSC 포워딩 규칙 및 Cloud DNS 라우팅" loading="lazy">
+          <img src="img/06-psc-dns-routing.png" alt="PSC 포워딩 규칙 및 Cloud DNS 라우팅" loading="lazy">
           <div class="diagram-caption">그림 7-1. SGP Service Attachment, 내부 고정 IP(sgp-psc-ip), PSC 엔드포인트 및 policy.internal 프라이빗 DNS 연결 구조</div>
         </div>
 
@@ -2117,7 +2122,7 @@ gcloud dns record-sets list \
         </p>
 
         <div class="diagram-box">
-          <img src="img/06-sgp-policy-flow.png" alt="SGP 정책 평가 및 차단 흐름" loading="lazy">
+          <img src="img/07-sgp-policy-chain.png" alt="SGP 정책 평가 및 차단 흐름" loading="lazy">
           <div class="diagram-caption">그림 8-1. AuthzExtension(failOpen: false) · CONTENT_AUTHZ 정책 연동 및 자연어 SGP 제약 조건 평가 구조</div>
         </div>
 
@@ -2254,6 +2259,11 @@ gcloud beta ai semantic-governance-policies describe high-value-limit \
           <strong>Vertex AI Reasoning Engine REST API(<code>:streamQuery</code>)를 직접 호출하는 개별 <code>curl</code> 명령어</strong>로
           Turn 1(조회 허용) → Turn 2($50 소액 이체 허용) → Turn 3($2,000 고액 이체 차단)을 하나씩 실행하며 SGP 정책의 실시간 동작을 검증합니다.
         </p>
+
+        <div class="diagram-box">
+          <img src="img/08-three-turn-sequence.png" alt="3-Turn 시나리오 시퀀스 다이어그램" loading="lazy">
+          <div class="diagram-caption">그림 9-1. 3-Turn(프로필 조회 · $50 이체 허용 · $2,000 고액 이체 차단) 엔드투엔드 호출 흐름</div>
+        </div>
 
         <h2 class="section-heading">9-1. 배포된 Reasoning Engine ID (<code>RE_ID</code>) 조회</h2>
         <p>
