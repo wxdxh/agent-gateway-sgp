@@ -101,8 +101,7 @@ Run the following commands to clone the lab repository and inspect its directory
 ```bash
 cd ~
 rm -rf ~/agent-gateway-governance
-git clone https://github.com/wxdxh/agent-gateway-governance.git ~/agent-gateway-governance 2>/dev/null || \
-  git clone -b governance https://github.com/wxdxh/agent-gateway-sgp.git ~/agent-gateway-governance
+git clone -b governance https://github.com/wxdxh/agent-gateway-sgp.git ~/agent-gateway-governance
 
 cd ~/agent-gateway-governance
 ls -la
