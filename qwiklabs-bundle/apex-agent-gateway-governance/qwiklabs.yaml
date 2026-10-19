@@ -1,0 +1,63 @@
+---
+entity_type: Lab
+schema_version: 2
+default_locale: en
+title: "Gemini Enterprise Agent Platform과 Agent Gateway(IAP·Model Armor)를 활용한 에이전트 워크로드 거버넌스"
+description: "에이펙스 금융그룹(Apex Financial Group) 주택담보대출 심사 시나리오를 바탕으로, Agent Gateway의 클라이언트 사이드(agent-egress) 및 서버 사이드(cloud-run) 배포 토폴로지, IAP(CEL 기반 컨텍스트 인식 접근 제어), Model Armor + Cloud DLP(한국 주민등록번호 KOREA_RRN 및 미국 SSN 자동 마스킹), 그리고 DRY_RUN/ENFORCED 정책 라이프사이클과 통합 관측성(Observability)을 실습합니다."
+duration: 90
+max_duration: 120
+credits: 0
+level: intermediate
+tags:
+  - ce
+  - ce541
+  - GCP
+  - Gemini Enterprise
+  - Agent Gateway
+  - IAP
+  - Model Armor
+  - Cloud DLP
+  - Qwiklabs
+instruction:
+  type: md
+  uri: "instructions/en.md"
+environment:
+  resources:
+    - type: gcp_project
+      id: project_0
+      variant: gcp_medium_extra
+      ssh_key_user: user_0
+      allowed_locations:
+        - us-central1
+        - us-west1
+        - us-east1
+        - us-east4
+      allowed_locations_constraint: NONE
+      startup_script:
+        type: qwiklabs
+        path: terraform
+    - type: gcp_user
+      id: user_0
+      permissions:
+        - project: project_0
+          roles:
+            - roles/owner
+            - roles/editor
+            - roles/iam.securityAdmin
+            - roles/run.admin
+            - roles/aiplatform.admin
+            - roles/dlp.admin
+            - roles/modelarmor.admin
+            - roles/iap.settingsAdmin
+  student_visible_outputs:
+    - label: "Open Google Cloud console"
+      reference: project_0.console_url
+    - label: "Username"
+      reference: user_0.username
+    - label: "Password"
+      reference: user_0.password
+    - label: "Project ID"
+      reference: project_0.project_id
+    - label: "Region"
+      reference: project_0.startup_script.gcp_region
+assessment: assessment.yaml

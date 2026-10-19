@@ -1,0 +1,2353 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <title>Google Cloud Codelab | Gemini Enterprise Agent Platform과 Agent Gateway(IAP·Model Armor) 기반 에이전트 거버넌스</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Noto+Sans+KR:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --gcp-blue: #1a73e8;
+      --gcp-blue-dark: #1557b0;
+      --gcp-blue-light: #e8f0fe;
+      --gcp-red: #d93025;
+      --gcp-red-light: #fce8e6;
+      --gcp-yellow: #f29900;
+      --gcp-yellow-light: #fef7e0;
+      --gcp-green: #1e8e3e;
+      --gcp-green-light: #e6f4ea;
+      --gcp-purple: #8430ce;
+      --gcp-purple-light: #f3e8fd;
+      --bg-primary: #f4f6f9;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f8fafc;
+      --bg-code: #0f172a;
+      --text-primary: #1f2937;
+      --text-secondary: #4b5563;
+      --text-muted: #6b7280;
+      --border-color: #e2e8f0;
+      --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+      --shadow-md: 0 10px 25px -5px rgba(15, 23, 42, 0.06), 0 4px 10px -2px rgba(15, 23, 42, 0.04);
+      --header-height: 64px;
+      --sidebar-width: 300px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+    }
+
+    [data-theme="dark"] {
+      --gcp-blue: #8ab4f8;
+      --gcp-blue-dark: #aecbfa;
+      --gcp-blue-light: rgba(138, 180, 248, 0.14);
+      --gcp-red: #f28b82;
+      --gcp-red-light: rgba(242, 139, 130, 0.14);
+      --gcp-yellow: #fdd663;
+      --gcp-yellow-light: rgba(253, 214, 99, 0.14);
+      --gcp-green: #81c995;
+      --gcp-green-light: rgba(129, 201, 149, 0.14);
+      --gcp-purple: #c58af9;
+      --gcp-purple-light: rgba(197, 138, 249, 0.14);
+      --bg-primary: #0b0f19;
+      --bg-surface: #151c2c;
+      --bg-subtle: #1e293b;
+      --bg-code: #090d16;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --border-color: #263147;
+      --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.4);
+      --shadow-md: 0 12px 28px rgba(0, 0, 0, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Google Sans', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.72;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Top Header */
+    .codelab-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--header-height);
+      background-color: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 1000;
+      backdrop-filter: blur(8px);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .gcp-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text-primary);
+      font-weight: 700;
+      font-size: 17px;
+      white-space: nowrap;
+    }
+
+    .header-divider {
+      width: 1px;
+      height: 22px;
+      background-color: var(--border-color);
+    }
+
+    .codelab-title-top {
+      font-size: 14.5px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .time-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--gcp-blue-light);
+      color: var(--gcp-blue);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .btn-icon {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 7px 13px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.18s ease;
+      text-decoration: none;
+    }
+
+    .btn-icon:hover {
+      background-color: var(--gcp-blue-light);
+      border-color: var(--gcp-blue);
+      color: var(--gcp-blue);
+    }
+
+    /* Progress Bar */
+    .progress-bar-container {
+      position: fixed;
+      top: var(--header-height);
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--border-color);
+      z-index: 999;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4285f4, #34a853, #fbbc04, #ea4335);
+      width: 11.1%;
+      transition: width 0.3s ease;
+    }
+
+    /* Layout Container */
+    .codelab-layout {
+      display: flex;
+      margin-top: calc(var(--header-height) + 3px);
+      min-height: calc(100vh - var(--header-height) - 3px);
+    }
+
+    /* Sidebar Navigation */
+    .codelab-sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--bg-surface);
+      border-right: 1px solid var(--border-color);
+      position: fixed;
+      top: calc(var(--header-height) + 3px);
+      bottom: 0;
+      left: 0;
+      overflow-y: auto;
+      padding: 20px 12px;
+      z-index: 900;
+    }
+
+    .sidebar-section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: var(--text-muted);
+      padding: 0 12px 10px;
+    }
+
+    .step-nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .step-nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.16s ease;
+      color: var(--text-secondary);
+      font-size: 13.5px;
+      font-weight: 400;
+    }
+
+    .step-nav-item:hover {
+      background-color: var(--bg-subtle);
+      color: var(--text-primary);
+    }
+
+    .step-nav-item.active {
+      background-color: var(--gcp-blue-light);
+      color: var(--gcp-blue);
+      font-weight: 600;
+    }
+
+    .step-nav-item.completed .step-num {
+      background-color: var(--gcp-green);
+      color: #fff;
+      border-color: var(--gcp-green);
+    }
+
+    .step-nav-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .step-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border-color);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11.5px;
+      font-weight: 700;
+      flex-shrink: 0;
+      background-color: var(--bg-surface);
+      color: var(--text-secondary);
+    }
+
+    .step-nav-item.active .step-num {
+      background-color: var(--gcp-blue);
+      color: #fff;
+      border-color: var(--gcp-blue);
+    }
+
+    .step-nav-title {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .step-nav-time {
+      font-size: 11px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      margin-left: 6px;
+      background: var(--bg-subtle);
+      padding: 2px 7px;
+      border-radius: 99px;
+    }
+
+    /* Main Content */
+    .codelab-main {
+      flex: 1;
+      margin-left: var(--sidebar-width);
+      padding: 36px 48px 90px;
+      max-width: 1080px;
+    }
+
+    .step-card {
+      display: none;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: 44px 52px;
+      animation: fadeIn 0.22s ease-out;
+    }
+
+    .step-card.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .step-header {
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 22px;
+      margin-bottom: 30px;
+    }
+
+    .step-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .step-badge {
+      background-color: var(--gcp-blue-light);
+      color: var(--gcp-blue);
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 4px 11px;
+      border-radius: 99px;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+
+    .step-duration {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .step-title {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.35;
+      letter-spacing: -0.3px;
+    }
+
+    h2.section-heading {
+      font-size: 18.5px;
+      font-weight: 700;
+      margin: 34px 0 14px;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h3.subsection-heading {
+      font-size: 15.5px;
+      font-weight: 600;
+      margin: 24px 0 8px;
+      color: var(--text-primary);
+    }
+
+    p {
+      margin-bottom: 14px;
+      color: var(--text-secondary);
+      font-size: 15px;
+    }
+
+    p strong, li strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    ul, ol {
+      margin: 0 0 18px 22px;
+      font-size: 15px;
+      color: var(--text-secondary);
+    }
+
+    li {
+      margin-bottom: 8px;
+    }
+
+    code:not(pre code) {
+      font-family: 'Roboto Mono', monospace;
+      font-size: 12.5px;
+      background-color: var(--bg-subtle);
+      color: var(--gcp-blue);
+      border: 1px solid var(--border-color);
+      padding: 2px 6px;
+      border-radius: 5px;
+      font-weight: 500;
+    }
+
+    /* Code Blocks */
+    .code-container {
+      position: relative;
+      margin: 14px 0 22px;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background-color: var(--bg-code);
+      border: 1px solid #1e293b;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 16px;
+      background-color: #1e293b;
+      color: #94a3b8;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 12px;
+    }
+
+    .copy-btn {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.16);
+      color: #f1f5f9;
+      padding: 4px 11px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11.5px;
+      font-family: 'Google Sans', 'Noto Sans KR', sans-serif;
+      transition: all 0.15s;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255,255,255,0.18);
+    }
+
+    pre {
+      padding: 18px 20px;
+      overflow-x: auto;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 13px;
+      line-height: 1.65;
+      color: #e2e8f0;
+    }
+
+    /* Callouts */
+    .callout {
+      padding: 18px 22px;
+      border-radius: var(--radius-md);
+      margin: 22px 0;
+      border-left: 4px solid;
+      font-size: 14.5px;
+    }
+
+    .callout-title {
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+    }
+
+    .callout-info {
+      background-color: var(--gcp-blue-light);
+      border-left-color: var(--gcp-blue);
+    }
+    .callout-info .callout-title { color: var(--gcp-blue); }
+
+    .callout-success {
+      background-color: var(--gcp-green-light);
+      border-left-color: var(--gcp-green);
+    }
+    .callout-success .callout-title { color: var(--gcp-green); }
+
+    .callout-warning {
+      background-color: var(--gcp-yellow-light);
+      border-left-color: var(--gcp-yellow);
+    }
+    .callout-warning .callout-title { color: var(--gcp-yellow); }
+
+    .callout-danger {
+      background-color: var(--gcp-red-light);
+      border-left-color: var(--gcp-red);
+    }
+    .callout-danger .callout-title { color: var(--gcp-red); }
+
+    /* Refined Modern Tables */
+    .table-wrapper {
+      overflow-x: auto;
+      margin: 18px 0 28px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      box-shadow: var(--shadow-sm);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th {
+      background-color: var(--bg-subtle);
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      text-align: left;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 15px 18px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      vertical-align: middle;
+      line-height: 1.55;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: var(--bg-subtle);
+    }
+
+    /* Pill Badges inside Tables */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .pill-blue { background: var(--gcp-blue-light); color: var(--gcp-blue); }
+    .pill-green { background: var(--gcp-green-light); color: var(--gcp-green); }
+    .pill-red { background: var(--gcp-red-light); color: var(--gcp-red); }
+    .pill-yellow { background: var(--gcp-yellow-light); color: var(--gcp-yellow); }
+    .pill-purple { background: var(--gcp-purple-light); color: var(--gcp-purple); }
+    .pill-mono {
+      font-family: 'Roboto Mono', monospace;
+      font-size: 12px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 3px 9px;
+      border-radius: 6px;
+    }
+
+    /* Architecture Diagram Containers */
+    .diagram-box {
+      background: linear-gradient(180deg, var(--bg-subtle) 0%, var(--bg-surface) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 24px 20px 18px;
+      margin: 24px 0 30px;
+      text-align: center;
+      overflow-x: auto;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .diagram-box img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 10px;
+      box-shadow: var(--shadow-sm);
+      display: block;
+      margin: 0 auto;
+    }
+
+    .diagram-caption {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 14px;
+      font-weight: 500;
+    }
+
+    /* Feature Cards Grid */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 18px;
+      margin: 18px 0 26px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin: 18px 0 26px;
+    }
+
+    .info-card {
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 20px 22px;
+      background-color: var(--bg-subtle);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .info-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .info-card-title {
+      font-weight: 700;
+      font-size: 15px;
+      margin-bottom: 10px;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Script Anatomy Box */
+    .script-anatomy {
+      background-color: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 22px 26px;
+      margin: 22px 0;
+    }
+
+    .script-anatomy-header {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--gcp-blue);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Step Footer Navigation */
+    .step-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 36px;
+      padding-top: 22px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .btn-nav {
+      padding: 11px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      color: var(--text-primary);
+      transition: all 0.18s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-nav:hover:not(:disabled) {
+      border-color: var(--gcp-blue);
+      color: var(--gcp-blue);
+    }
+
+    .btn-nav.primary {
+      background-color: var(--gcp-blue);
+      color: #ffffff;
+      border-color: var(--gcp-blue);
+    }
+
+    .btn-nav.primary:hover:not(:disabled) {
+      background-color: var(--gcp-blue-dark);
+      color: #ffffff;
+    }
+
+    .btn-nav:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 960px) {
+      .codelab-sidebar { display: none; }
+      .codelab-main { margin-left: 0; padding: 20px 16px 60px; }
+      .step-card, .qwik-card { padding: 26px 20px; }
+      .lab-mode-tabs { flex-direction: column; }
+    }
+
+    /* Lab Mode Switcher Tabs (Standard vs Qwiklabs Cloud Shell) */
+    .lab-mode-tabs {
+      max-width: 960px;
+      margin: 0 auto 20px auto;
+      display: flex;
+      gap: 12px;
+      background: var(--bg-surface);
+      padding: 8px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .lab-mode-tab {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 18px;
+      border-radius: 12px;
+      border: 1.5px solid transparent;
+      background: var(--bg-subtle);
+      color: var(--text-secondary);
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.18s ease;
+      font-family: inherit;
+    }
+
+    .lab-mode-tab:hover {
+      border-color: var(--gcp-blue);
+      color: var(--text-primary);
+    }
+
+    .lab-mode-tab.active {
+      background: var(--gcp-blue-light);
+      border-color: var(--gcp-blue);
+      color: var(--gcp-blue-dark);
+      box-shadow: 0 2px 8px rgba(26, 115, 232, 0.12);
+    }
+
+    [data-theme="dark"] .lab-mode-tab.active {
+      color: var(--gcp-blue);
+    }
+
+    .lab-mode-tab-left {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .lab-mode-tab-title {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .lab-mode-tab-sub {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .lab-mode-tab.active .lab-mode-tab-sub {
+      color: var(--text-secondary);
+    }
+
+    .lab-mode-badge {
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--gcp-green-light);
+      color: var(--gcp-green);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .qwik-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-top: 4px solid var(--gcp-green);
+      border-radius: var(--radius-lg);
+      padding: 40px 44px;
+      box-shadow: var(--shadow-md);
+      max-width: 960px;
+      margin: 0 auto;
+      display: none;
+      animation: fadeIn 0.22s ease-out;
+    }
+
+    .qwik-card.active {
+      display: block;
+    }
+
+    .qwik-badge {
+      background-color: var(--gcp-green-light);
+      color: var(--gcp-green);
+      font-weight: 700;
+      font-size: 12.5px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      letter-spacing: 0.2px;
+    }
+
+    .qwik-verify-box {
+      margin: 22px 0;
+      padding: 20px 24px;
+      border-radius: var(--radius-md);
+      background-color: var(--gcp-green-light);
+      border: 1px solid rgba(30, 142, 62, 0.3);
+    }
+
+    .qwik-verify-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--gcp-green);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Quiz Event Tab Styles */
+    .quiz-panel-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-top: 4px solid var(--gcp-yellow);
+      border-radius: var(--radius-lg);
+      padding: 40px 44px;
+      box-shadow: var(--shadow-md);
+      max-width: 960px;
+      margin: 0 auto;
+      display: none;
+      animation: fadeIn 0.22s ease-out;
+    }
+
+    .quiz-panel-card.active {
+      display: block;
+    }
+
+    .quiz-item-card {
+      background-color: var(--bg-subtle);
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 28px 30px;
+      margin-bottom: 28px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .quiz-item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .quiz-num-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background-color: var(--gcp-yellow-light);
+      color: #b06000;
+      font-weight: 700;
+      font-size: 12.5px;
+      padding: 5px 13px;
+      border-radius: 999px;
+      border: 1px solid rgba(249, 171, 0, 0.35);
+    }
+
+    [data-theme="dark"] .quiz-num-badge {
+      color: var(--gcp-yellow);
+    }
+
+    .quiz-ref-tag {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .quiz-question-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.55;
+      margin-bottom: 18px;
+    }
+
+    .quiz-options-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .quiz-option-btn {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      width: 100%;
+      text-align: left;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border-color);
+      background-color: var(--bg-surface);
+      color: var(--text-primary);
+      font-size: 14.5px;
+      line-height: 1.5;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.16s ease;
+    }
+
+    .quiz-option-btn:hover {
+      border-color: var(--gcp-blue);
+      background-color: var(--gcp-blue-light);
+    }
+
+    .quiz-option-btn.selected {
+      border-color: var(--gcp-blue);
+      background-color: var(--gcp-blue-light);
+      font-weight: 600;
+    }
+
+    .quiz-option-btn.revealed-correct {
+      border-color: var(--gcp-green);
+      background-color: var(--gcp-green-light);
+      color: var(--text-primary);
+      font-weight: 700;
+      box-shadow: 0 0 0 2px rgba(30, 142, 62, 0.18);
+    }
+
+    .quiz-opt-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background-color: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .quiz-option-btn.revealed-correct .quiz-opt-num {
+      background-color: var(--gcp-green);
+      border-color: var(--gcp-green);
+      color: #ffffff;
+    }
+
+    .quiz-actions-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .quiz-reveal-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: 1.5px solid var(--gcp-blue);
+      background-color: var(--gcp-blue);
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.18s ease;
+    }
+
+    .quiz-reveal-btn:hover {
+      background-color: var(--gcp-blue-dark);
+      border-color: var(--gcp-blue-dark);
+    }
+
+    .quiz-reveal-btn.active {
+      background-color: var(--bg-surface);
+      color: var(--gcp-blue);
+    }
+
+    .quiz-answer-panel {
+      display: none;
+      margin-top: 18px;
+      padding: 20px 24px;
+      border-radius: 10px;
+      background-color: var(--gcp-green-light);
+      border: 1.5px solid rgba(30, 142, 62, 0.35);
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .quiz-answer-panel.open {
+      display: block;
+    }
+
+    .quiz-answer-badge {
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--gcp-green);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header class="codelab-header">
+    <div class="header-left">
+      <a href="#step-1" class="gcp-logo" id="logoLink">
+        <svg width="28" height="24" viewBox="0 0 64 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M40.4 15.6C37.1 9.9 30.9 6.5 24.2 6.5C15.1 6.5 7.4 13.1 5.8 22C2.3 24.4 0 28.5 0 33.1C0 40.5 6 46.5 13.4 46.5H45.6C54.1 46.5 61 39.6 61 31.1C61 23.1 54.9 16.5 47.1 15.7L40.4 15.6Z" stroke="#4285F4" stroke-width="3.8"/>
+          <circle cx="23" cy="27" r="5" fill="#EA4335"/>
+          <circle cx="35" cy="24" r="5" fill="#FBBC04"/>
+          <circle cx="31" cy="35" r="5" fill="#34A853"/>
+          <circle cx="44" cy="31" r="5" fill="#4285F4"/>
+        </svg>
+        <span>Google Cloud Codelabs</span>
+      </a>
+      <div class="header-divider"></div>
+      <div class="codelab-title-top">Gemini Enterprise Agent Platform · Agent Gateway (IAP &amp; Model Armor) 워크로드 거버넌스</div>
+    </div>
+    <div class="header-right">
+      <div class="time-pill" id="remainingTimeBadge">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+        <span id="remainingTimeText">총 예상 소요 시간: 65분</span>
+      </div>
+      <button class="btn-icon" id="viewAllBtn" type="button">
+        <span id="viewAllText">전체 펼쳐보기</span>
+      </button>
+      <button class="btn-icon" id="themeToggleBtn" type="button">
+        <span id="themeToggleText">다크 모드</span>
+      </button>
+      <a class="btn-icon" href="https://github.com/wxdxh/agent-gateway-sgp/tree/governance" target="_blank" rel="noopener noreferrer">
+        GitHub
+      </a>
+    </div>
+  </header>
+
+  <!-- Progress Bar -->
+  <div class="progress-bar-container">
+    <div class="progress-bar-fill" id="progressBarFill"></div>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="codelab-layout">
+    <!-- Left Sidebar -->
+    <aside class="codelab-sidebar">
+      <div class="sidebar-section-label">실습 목차 (9단계)</div>
+      <ul class="step-nav-list" id="stepNavList">
+        <li class="step-nav-item active" data-step="1" data-minutes="8">
+          <div class="step-num-circle">1</div>
+          <div class="step-nav-info">
+            <div class="step-nav-title">아키텍처 개요 및 시나리오</div>
+            <div class="step-nav-meta">3-Plane 거버넌스 · 8분</div>
+          </div>
+        </li>
+        <li class="step-nav-item" data-step="2" data-minutes="6">
+          <div class="step-num-circle">2</div>
+          <div class="step-nav-info">
+            <div class="step-nav-title">사전 요구사항 및 환경 초기화</div>
+            <div class="step-nav-meta">프로젝트 변수 &amp; 저장소 클론 · 6분</div>
+          </div>
+        </li>
+        <li class="step-nav-item" data-step="3" data-minutes="10">
+          <div class="step-num-circle">3</div>
+          <div class="step-nav-info">
+            <div class="step-nav-title">3종 MCP 서버 분석 및 이미지 빌드</div>
+            <div class="step-nav-meta">FastMCP structuredContent &amp; Skaffold · 10분</div>
+          </div>
+        </li>
+        <li class="step-nav-item" data-step="4" data-minutes="12">
+          <div class="step-num-circle">4</div>
+          <div class="step-nav-info">
+            <div class="step-nav-title">Agent Gateway · IAP · Model Armor 배포</div>
+            <div class="step-nav-meta">Terraform 인프라 프로비저닝 · 12분</div>
+          </div>
+        </li>
+        <li class="step-nav-item" data-step="5" data-minutes="8">
+          <div class="step-num-circle">5</div>
+          <div class="step-nav-info">
+            <div class="step-nav-title">ADK 심사 에이전트 배포 및 IAM 설정</div>
+            <div class="step-nav-meta">Agent Engine &amp; Egress 권한 · 8분</div>
+          </div>
+        </li>
+        <li class="step-nav-item" data-step="6" data-minutes="7">
+          <div class="step-num-circle">6</div>
+          <div class="step-nav-info">
+            <div class="step-nav-title">1단계 검증: DRY_RUN &amp; PII 마스킹</div>
+            <div class="step-nav-meta">주민등록번호(KOREA_RRN)·SSN 보호 · 7분</div>
+          </div>
+        </li>
+        <li class="step-nav-item" data-step="7" data-minutes="6">
+          <div class="step-num-circle">7</div>
+          <div class="step-nav-info">
+            <div class="step-nav-title">통합 관측성 대시보드 &amp; 로그 분석</div>
+            <div class="step-nav-meta">Cloud Monitoring · Trace · Logging · 6분</div>
+          </div>
+        </li>
+        <li class="step-nav-item" data-step="8" data-minutes="5">
+          <div class="step-num-circle">8</div>
+          <div class="step-nav-info">
+            <div class="step-nav-title">2단계 검증: IAP ENFORCED 차단</div>
+            <div class="step-nav-meta">send_email 도구 실시간 차단 · 5분</div>
+          </div>
+        </li>
+        <li class="step-nav-item" data-step="9" data-minutes="3">
+          <div class="step-num-circle">9</div>
+          <div class="step-nav-info">
+            <div class="step-nav-title">Gemini Enterprise 연동 &amp; 리소스 정리</div>
+            <div class="step-nav-meta">웹앱 등록(선택) 및 Cleanup · 3분</div>
+          </div>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="codelab-main">
+
+      <!-- ==================== STEP 1 ==================== -->
+      <section class="step-card active" id="step-1" data-step="1">
+        <div class="step-header">
+          <div class="step-badge-row">
+            <span class="step-badge">STEP 1 OF 9</span>
+            <span class="step-duration">⏱ 약 8분 소요</span>
+          </div>
+          <h1 class="step-title">1. 아키텍처 개요: Agent Gateway와 IAP · Model Armor 기반 에이전트 거버넌스</h1>
+          <p class="step-subtitle">
+            에이펙스 금융그룹(Apex Financial Group)의 주택담보대출 심사 시나리오를 통해 자율형 AI 에이전트가 외부 MCP 도구와 통신할 때 발생하는 보안 위협을 이해하고, Agent Gateway의 이중 Service Extensions(IAP + Model Armor)로 이를 통제하는 3-Plane 아키텍처를 살펴봅니다.
+          </p>
+        </div>
+
+        <h2>1.1 왜 자율형 AI 에이전트에 전용 게이트웨이(Agent Gateway)가 필요한가요?</h2>
+        <p>
+          엔터프라이즈 환경에서 AI 에이전트가 단순 질의응답을 넘어 실제 업무(대출 심사, 고객 문서 조회, 소득 검증, 결과 통보)를 자동화하려면 <strong>Model Context Protocol (MCP)</strong>을 통해 다양한 백엔드 서버와 연결되어야 합니다. 하지만 에이전트를 내부 시스템에 직접 연결하면 다음과 같은 세 가지 심각한 거버넌스 공백이 발생합니다.
+        </p>
+
+        <div class="concept-grid">
+          <div class="concept-card">
+            <div class="concept-card-title">① 도구(Tool) 단위 최소 권한 제어 불가</div>
+            <p>
+              기존 네트워크 방화벽이나 Cloud Run IAM(<code>roles/run.invoker</code>)은 <strong>서버 단위(전부 허용 또는 전부 차단)</strong>로만 작동합니다. 에이전트에게 사내 이메일 MCP 서버 호출 권한을 부여하면, 안전한 지침 열람(<code>search_emails</code>, <code>read_email</code>)뿐만 아니라 승인되지 않은 외부 이메일 발송(<code>send_email</code>)까지 실행할 수 있게 됩니다.
+            </p>
+          </div>
+          <div class="concept-card">
+            <div class="concept-card-title">② 민감 개인정보(PII)의 LLM 유입</div>
+            <p>
+              레거시 문서 관리 시스템(DMS)이나 외부 신용/소득 검증 API는 <strong>한국 주민등록번호(<code>KOREA_RRN</code>)</strong>나 <strong>미국 사회보장번호(<code>US_SOCIAL_SECURITY_NUMBER</code>)</strong> 같은 원본 개인정보를 그대로 반환합니다. 이를 중간에서 마스킹하지 않으면 민감 정보가 LLM 프롬프트 컨텍스트와 대화 이력에 그대로 노출됩니다.
+            </p>
+          </div>
+          <div class="concept-card">
+            <div class="concept-card-title">③ 파편화된 보안 정책과 관측성 부재</div>
+            <p>
+              각 MCP 서버마다 개별적으로 인증, DLP 마스킹, 감사 로깅 코드를 구현하면 정책 일관성이 깨지고 유지보수 비용이 급증합니다. 또한 에이전트가 어떤 도구를 호출하다가 지연이나 차단이 발생했는지 엔드투엔드 트레이스(Trace)로 추적하기 어렵습니다.
+            </p>
+          </div>
+        </div>
+
+        <div class="arch-diagram-box">
+          <img src="img/00-overall-architecture.png" alt="에이펙스 금융그룹 Agent Gateway 거버넌스 3-Plane 전체 아키텍처" />
+          <div class="arch-caption">그림 1-1. 에이펙스 금융그룹 주택담보대출 심사 에이전트(mortgage-agent)와 Agent Gateway 3-Plane 거버넌스 아키텍처</div>
+        </div>
+
+        <h2>1.2 실습 비즈니스 시나리오: 에이펙스 금융그룹 주택담보대출 자동 심사</h2>
+        <p>
+          이 코드랩에서는 <strong>에이펙스 금융그룹(Apex Financial Group)</strong>의 언더라이팅(대출 심사) 부서가 운영하는 <strong>주택담보대출 심사 에이전트(<code>mortgage-agent</code>)</strong>를 구축하고 보호합니다. 대출 심사관이 공동 신청자인 <strong>김민준(Minjun Kim) · 이서연(Seoyeon Lee)</strong> 부부의 2026년 신규 주택담보대출 적격 여부를 질의하면, 에이전트는 다음 3개의 MCP 서버를 순차적으로 호출합니다.
+        </p>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>MCP 서버</th>
+                <th>비즈니스 역할 및 샘플 데이터</th>
+                <th>노출된 MCP 도구 (Tools)</th>
+                <th>Agent Gateway 토폴로지</th>
+                <th>적용되는 보안/거버넌스 정책</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>legacy-dms</code></td>
+                <td>
+                  <strong>레거시 문서 관리 시스템</strong><br/>
+                  김민준·이서연 부부의 2023·2024년 소득금액증명원(<code>DOC-2024-KM-1040</code>, <code>DOC-2023-KM-1040</code>) 및 원본 주민등록번호(<code>850315-1234566</code>, <code>870822-2345673</code>)·SSN 보관
+                </td>
+                <td>
+                  <code>search_tax_returns</code><br/>
+                  <code>get_document_metadata</code>
+                </td>
+                <td>
+                  <span class="badge badge-blue">Client-Side (agent-egress)</span><br/>
+                  <code>AGENT_TO_ANYWHERE</code>
+                </td>
+                <td>
+                  <strong>Model Armor + Cloud DLP (<code>CONTENT_AUTHZ</code>)</strong>:<br/>
+                  응답 내 주민등록번호를 <code>[KOREA_RRN]</code>으로, SSN을 <code>[US_SOCIAL_SECURITY_NUMBER]</code>로 실시간 마스킹
+                </td>
+              </tr>
+              <tr>
+                <td><code>income-verification</code></td>
+                <td>
+                  <strong>외부 소득/재직 검증 API</strong><br/>
+                  김민준($142,000)·이서연($95,000) 재직 상태 및 2026년 가구 추정 DTI(<strong>28.4%</strong>) 산출
+                </td>
+                <td>
+                  <code>verify_income</code>
+                </td>
+                <td>
+                  <span class="badge badge-blue">Client-Side (agent-egress)</span><br/>
+                  <code>AGENT_TO_ANYWHERE</code>
+                </td>
+                <td>
+                  <strong>Model Armor + Cloud DLP (<code>CONTENT_AUTHZ</code>)</strong>:<br/>
+                  외부 API 요청·응답 페이로드 양방향 스캔 및 주민등록번호/SSN 자동 마스킹
+                </td>
+              </tr>
+              <tr>
+                <td><code>corporate-email</code></td>
+                <td>
+                  <strong>사내 이메일 및 언더라이팅 지침 서버</strong><br/>
+                  2026년 3월 개정 주택담보대출 최대 DTI 한도(<strong>45.0%</strong>) 사내 공지 메일(<code>msg-002</code>) 조회 및 외부 이메일 발송
+                </td>
+                <td>
+                  <code>search_emails</code> (허용)<br/>
+                  <code>read_email</code> (허용)<br/>
+                  <code>send_email</code> (차단 대상)
+                </td>
+                <td>
+                  <span class="badge badge-green">Server-Side (cloud-run)</span><br/>
+                  <code>self_managed</code> 인그레스
+                </td>
+                <td>
+                  <strong>IAP + CEL (<code>REQUEST_AUTHZ</code>)</strong>:<br/>
+                  <code>search_emails</code>·<code>read_email</code>은 허용하되, <code>send_email</code> 호출은 거부 (<code>DRY_RUN</code> 테스트 후 <code>ENFORCED</code> 전환)
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>1.3 핵심 설계 포인트 1: 클라이언트 사이드(agent-egress) vs 서버 사이드(cloud-run) 게이트웨이</h2>
+        <p>
+          <strong>Agent Gateway</strong>는 보호 대상 MCP 서버의 위치와 소유권에 따라 두 가지 배포 토폴로지를 모두 지원합니다.
+        </p>
+        <ul>
+          <li>
+            <strong>클라이언트 사이드 게이트웨이 (<code>google_managed.governed_access_path = "AGENT_TO_ANYWHERE"</code>)</strong>:
+            에이전트의 아웃바운드(Egress) 경로에 배치되는 정방향 프록시입니다. 타사 외부 SaaS API(<code>income-verification</code>)나 온프레미스 레거시 시스템(<code>legacy-dms</code>)처럼 서버 앞단에 직접 인그레스 프록시를 설치할 수 없는 경우, 에이전트가 나가는 길목에서 트래픽을 가로채어 DLP 마스킹과 감사를 수행합니다.
+          </li>
+          <li>
+            <strong>서버 사이드 게이트웨이 (<code>self_managed.resource_uri</code>)</strong>:
+            우리가 직접 운영하는 Google Cloud 내부 워크로드(<code>corporate-email</code> Cloud Run 서비스) 앞단에 배치되는 역방향(Ingress) 프록시입니다. 어떤 에이전트가 들어오든 게이트웨이에서 중앙 집중식으로 신원을 검증하고 도구 단위 접근 제어(IAP CEL)를 강제합니다.
+          </li>
+        </ul>
+
+        <div class="arch-diagram-box">
+          <img src="img/01-networking-modes.png" alt="기본 퍼블릭 인그레스 모드 vs 프라이빗 네트워킹 모드 비교" />
+          <div class="arch-caption">그림 1-2. 두 가지 네트워킹 배포 모드: 기본 퍼블릭 인그레스(Mode 1)와 엔터프라이즈 프라이빗 네트워킹(Mode 2)</div>
+        </div>
+
+        <h2>1.4 핵심 설계 포인트 2: Service Extensions 이중 보안 파이프라인 (IAP + Model Armor)</h2>
+        <p>
+          Agent Gateway는 Google Cloud의 <strong>Service Extensions</strong> 프레임워크를 통해 네트워크 데이터 플레인(Envoy)에서 두 가지 보안 엔진을 순차적으로 호출합니다.
+        </p>
+        <ul>
+          <li>
+            <strong><code>REQUEST_AUTHZ</code> 단계 (Identity-Aware Proxy + CEL)</strong>:
+            요청이 백엔드 MCP 서버에 도달하기 전에 실행됩니다. 에이전트 ID(Principal)를 검증할 뿐만 아니라, MCP JSON-RPC 본문을 파싱하여 <code>request.mcp.method</code>와 <code>request.mcp.tool.name</code> 속성을 <strong>CEL(Common Expression Language)</strong> 정책으로 평가합니다.
+          </li>
+          <li>
+            <strong><code>CONTENT_AUTHZ</code> 단계 (Model Armor + Cloud DLP)</strong>:
+            요청 프롬프트와 MCP 도구의 응답(<code>structuredContent</code>)을 실시간으로 검사합니다. 프롬프트 인젝션/탈옥 시도를 탐지하고, <strong>Cloud Data Loss Prevention (Sensitive Data Protection)</strong>의 <code>InspectTemplate</code> 및 <code>DeidentifyTemplate</code>을 호출해 한국 주민등록번호(<code>KOREA_RRN</code>)와 미국 SSN(<code>US_SOCIAL_SECURITY_NUMBER</code>)을 마스킹합니다.
+          </li>
+        </ul>
+
+        <div class="arch-diagram-box">
+          <img src="img/02-iap-cel-model-armor.png" alt="IAP REQUEST_AUTHZ 및 Model Armor CONTENT_AUTHZ 파이프라인" />
+          <div class="arch-caption">그림 1-3. Agent Gateway 내부의 REQUEST_AUTHZ(IAP CEL) 및 CONTENT_AUTHZ(Model Armor + Cloud DLP) 실행 흐름</div>
+        </div>
+
+        <div class="step-footer">
+          <span></span>
+          <button class="btn-nav next-step-btn" data-target="2" type="button">다음: 사전 요구사항 및 환경 초기화 →</button>
+        </div>
+      </section>
+
+      <!-- ==================== STEP 2 ==================== -->
+      <section class="step-card" id="step-2" data-step="2">
+        <div class="step-header">
+          <div class="step-badge-row">
+            <span class="step-badge">STEP 2 OF 9</span>
+            <span class="step-duration">⏱ 약 6분 소요</span>
+          </div>
+          <h1 class="step-title">2. 사전 요구사항 점검 및 GCP 실습 환경 초기화</h1>
+          <p class="step-subtitle">
+            Google Cloud 프로젝트 환경 변수(PROJECT_ID, PROJECT_NUMBER, ORG_ID, REGION)를 설정하고, 필수 CLI 도구(Terraform, Skaffold, uv)를 확인한 뒤 실습 소스 코드 저장소를 클론합니다.
+          </p>
+        </div>
+
+        <h2>2.1 필수 도구 및 권한 확인</h2>
+        <p>
+          본 가이드는 <strong>Google Cloud Shell</strong>(권장) 또는 로컬 터미널에서 실행할 수 있습니다. 실행하는 계정에 프로젝트 <code>Owner(roles/owner)</code> 또는 아래 관리자 권한이 부여되어 있어야 합니다.
+        </p>
+        <ul>
+          <li><strong>필수 IAM 권한</strong>: <code>roles/run.admin</code>, <code>roles/aiplatform.admin</code>, <code>roles/dlp.admin</code>, <code>roles/modelarmor.admin</code>, <code>roles/iap.settingsAdmin</code>, <code>roles/iam.securityAdmin</code></li>
+          <li><strong>필수 CLI 도구</strong>: <code>gcloud</code>, <code>terraform (&gt;= 1.5)</code>, <code>skaffold</code>, <code>uv</code> (Python 패키지 매니저), <code>jq</code></li>
+        </ul>
+
+        <div class="callout callout-info">
+          <div class="callout-title">💡 Google Cloud Shell 사용 시 참고사항</div>
+          <p>
+            Google Cloud Shell에는 <code>gcloud</code>, <code>terraform</code>, <code>skaffold</code>, <code>jq</code>가 기본 설치되어 있습니다. 만약 <code>uv</code>가 설치되어 있지 않다면 아래 명령어로 5초 만에 설치할 수 있습니다.
+          </p>
+        </div>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">bash — 필수 CLI 버전 확인 및 uv 설치 (필요시)</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>command -v uv &gt;/dev/null 2&gt;&amp;1 || curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+
+gcloud --version | head -n 1
+terraform -version | head -n 1
+skaffold version
+uv --version</code></pre>
+        </div>
+
+        <h2>2.2 프로젝트 환경 변수 설정</h2>
+        <p>
+          실습 전반에서 사용할 프로젝트 ID, 프로젝트 번호, 조직 ID(존재하는 경우), 그리고 배포 리전(<code>us-central1</code>)을 환경 변수로 설정합니다.
+        </p>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">bash — 환경 변수 설정</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code># 일반 고객사 환경에서는 본인의 프로젝트 ID를 직접 입력하거나 현재 gcloud 설정값을 사용합니다.
+export PROJECT_ID=$(gcloud config get-value project)
+export PROJECT_NUMBER=$(gcloud projects describe "${PROJECT_ID}" --format="value(projectNumber)")
+
+# 조직(Organization) 하위 프로젝트인 경우 ORG_ID를 자동 조회하고, 무조직(No Organization) 프로젝트이면 빈 값으로 설정합니다.
+export ORG_ID=$(gcloud projects get-ancestors "${PROJECT_ID}" --format='value(id)' | tail -n 1)
+if [ "${ORG_ID}" = "${PROJECT_ID}" ] || [ "${ORG_ID}" = "${PROJECT_NUMBER}" ]; then
+  export ORG_ID=""
+fi
+
+export REGION="us-central1"
+
+gcloud config set project "${PROJECT_ID}"
+gcloud config set compute/region "${REGION}"
+
+echo "PROJECT_ID     : ${PROJECT_ID}"
+echo "PROJECT_NUMBER : ${PROJECT_NUMBER}"
+echo "ORG_ID         : ${ORG_ID:-'(No Organization - Project Fallback Mode)'}"
+echo "REGION         : ${REGION}"</code></pre>
+        </div>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">✅ 조직(Organization) 유무에 따른 에이전트 ID(Principal) 자동 호환</div>
+          <p>
+            Vertex AI Agent Engine이 생성하는 에이전트 고유 ID(Agent Identity)는 조직이 있는 프로젝트에서는 <code>principal://agents.global.org-${ORG_ID}.system.id.goog/resources/aiplatform/projects/${PROJECT_NUMBER}/locations/${REGION}/reasoningEngines/${ENGINE_ID}</code> 형식을 사용하며, 조직이 없는 독립 프로젝트에서는 <code>principal://agents.global.proj-${PROJECT_NUMBER}.system.id.goog/...</code> 형식을 사용합니다. 본 실습의 스크립트와 Terraform 모듈은 두 환경을 모두 자동으로 감지하여 처리합니다.
+          </p>
+        </div>
+
+        <h2>2.3 실습 소스 저장소 클론 및 디렉터리 구조 확인</h2>
+        <p>
+          에이펙스 금융그룹 주택담보대출 심사 시나리오(김민준·이서연 부부 샘플 데이터 및 한국 주민등록번호 <code>KOREA_RRN</code> 마스킹 정책)가 구성된 실습 저장소를 클론합니다.
+        </p>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">bash — 실습 저장소 클론</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~
+rm -rf ~/agent-gateway-governance
+git clone https://github.com/wxdxh/agent-gateway-governance.git ~/agent-gateway-governance 2&gt;/dev/null || \
+  git clone -b governance https://github.com/wxdxh/agent-gateway-sgp.git ~/agent-gateway-governance
+
+cd ~/agent-gateway-governance
+ls -la</code></pre>
+        </div>
+
+        <p>클론된 저장소의 핵심 디렉터리 구조는 다음과 같습니다.</p>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">text — 디렉터리 구조</span>
+          </div>
+          <pre><code>agent-gateway-governance/
+├── skaffold.yaml                         # 3종 MCP 서버 컨테이너 일괄 빌드 정의
+├── scripts/
+│   └── grant_agent_mcp_egress.sh         # Agent Identity에 Agent Gateway &amp; Cloud Run IAM 권한 부여
+├── src/
+│   ├── legacy-dms/                       # [MCP 서버 1] 소득금액증명원 조회 (주민등록번호·SSN 포함)
+│   ├── income-verification-api/          # [MCP 서버 2] 소득/재직 검증 및 2026 DTI 비율 산출
+│   ├── corporate-email/                  # [MCP 서버 3] 사내 지침 메일 열람 및 이메일 발송(send_email)
+│   └── mortgage-agent/                   # [ADK 에이전트] 주택담보대출 심사 에이전트 및 배포 스크립트
+└── terraform/
+    ├── main.tf                           # Cloud Run, Agent Gateway, IAP CEL, 대시보드 오케스트레이션
+    ├── variables.tf                      # KOREA_RRN/SSN 마스킹 및 배포 모드 변수 정의
+    └── modules/
+        ├── agent-gateway/                # Client-Side(agent-egress) &amp; Server-Side(cloud-run) 게이트웨이
+        ├── model-armor/                  # Cloud DLP Inspect/Deidentify 템플릿 + Model Armor 템플릿
+        ├── iap/                          # IAP CEL 정책(DRY_RUN / ENFORCED) 및 IAM 바인딩
+        └── agent-engine/                 # Vertex AI Agent Engine 셸 및 서비스 에이전트 권한</code></pre>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" data-target="1" type="button">← 이전 단계</button>
+          <button class="btn-nav next-step-btn" data-target="3" type="button">다음: 3종 MCP 서버 분석 및 이미지 빌드 →</button>
+        </div>
+      </section>
+
+      <!-- ==================== STEP 3 ==================== -->
+      <section class="step-card" id="step-3" data-step="3">
+        <div class="step-header">
+          <div class="step-badge-row">
+            <span class="step-badge">STEP 3 OF 9</span>
+            <span class="step-duration">⏱ 약 10분 소요</span>
+          </div>
+          <h1 class="step-title">3. 3종 백엔드 MCP 서버 코드 분석 및 Skaffold 컨테이너 빌드</h1>
+          <p class="step-subtitle">
+            Model Armor(CONTENT_AUTHZ)가 MCP 도구 응답을 마스킹하기 위한 필수 조건인 FastMCP structuredContent 반환 구조를 살펴보고, Artifact Registry 저장소를 생성하여 3개 서버 이미지를 빌드합니다.
+          </p>
+        </div>
+
+        <h2>3.1 중요 설계 규칙: 왜 FastMCP 도구는 <code>structured_content</code>만 반환해야 하나요?</h2>
+        <p>
+          Python <code>FastMCP</code> 프레임워크에서 도구 함수가 일반 <code>dict</code>를 반환하면, MCP JSON-RPC 응답에는 두 개의 필드가 동시에 생성됩니다.
+        </p>
+        <ul>
+          <li><code>content</code>: LLM이나 텍스트 클라이언트를 위해 JSON을 문자열로 직렬화한 일반 텍스트 블록 배열 (예: <code>[{"type": "text", "text": "{...}"}]</code>)</li>
+          <li><code>structuredContent</code>: JSON 스키마 구조를 유지하는 키-값 객체</li>
+        </ul>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">⚠️ Model Armor + Agent Gateway 연동 시 주의사항 (PII 누출 방지)</div>
+          <p>
+            현재 Agent Gateway의 <strong>Model Armor(<code>CONTENT_AUTHZ</code>) 확장 프로그램은 MCP 도구 응답에서 <code>structuredContent</code> 필드 내부의 값만 검사하고 마스킹(Redaction)</strong>합니다. 만약 <code>content</code> 배열에 동일한 텍스트가 중복 포함되어 있으면, <code>structuredContent</code>는 마스킹되더라도 <code>content</code> 텍스트 블록을 통해 원본 주민등록번호(<code>850315-1234566</code>)와 SSN(<code>323-45-6789</code>)이 에이전트로 유출될 수 있습니다. 따라서 모든 MCP 도구는 반드시 <code>ToolResult(content=[], structured_content=...)</code>를 반환하여 <code>content</code> 배열을 비워두어야 합니다.
+          </p>
+        </div>
+
+        <p>
+          실제 <code>src/legacy-dms/server.py</code> 코드에 정의된 김민준·이서연 부부의 소득금액증명원 데이터와 <code>ToolResult</code> 반환 코드를 확인해 봅니다.
+        </p>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">bash — legacy-dms/server.py 핵심 코드 확인</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>sed -n '48,140p' ~/agent-gateway-governance/src/legacy-dms/server.py</code></pre>
+        </div>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">python — src/legacy-dms/server.py (핵심 발췌)</span>
+          </div>
+          <pre><code>MOCK_DOCUMENTS: list[dict[str, Any]] = [
+    {
+        "document_id": "DOC-2024-KM-1040",
+        "applicant": "김민준 &amp; 이서연 (Minjun Kim &amp; Seoyeon Lee)",
+        "year": 2024,
+        "form_type": "소득금액증명원 / Form 1040 (Joint)",
+        "ssn": "323-45-6789",
+        "rrn": "850315-1234566",
+        "spouse_ssn": "321-54-9876",
+        "spouse_rrn": "870822-2345673",
+        "stated_income": 237000,
+        "filing_status": "Married Filing Jointly (부부 합산 신고)",
+        "summary": (
+            "2024년도 부부 합산 소득금액증명원(Joint Tax Return). 합산 신고 소득 $237,000 "
+            "(김민준 $142,000 + 이서연 $95,000). 주 신청자 주민등록번호(RRN): 850315-1234566, "
+            "SSN: 323-45-6789."
+        ),
+    },
+    ...
+]
+
+@mcp.tool
+def search_tax_returns(applicant_name: str) -&gt; ToolResult:
+    # Search the Legacy DMS for tax return filings by applicant name.
+    query = applicant_name.strip().lower()
+    matches = [
+        doc for doc in MOCK_DOCUMENTS if query in str(doc["applicant"]).lower()
+    ]
+    # Model Armor CONTENT_AUTHZ가 마스킹할 수 있도록 content=[]로 비우고 structured_content만 반환합니다.
+    return ToolResult(
+        content=[],
+        structured_content={"results": matches, "count": len(matches)},
+    )</code></pre>
+        </div>
+
+        <div class="callout callout-info">
+          <div class="callout-title">🔍 한국 주민등록번호(KOREA_RRN) 체크섬 검증 규칙</div>
+          <p>
+            Google Cloud DLP의 <code>KOREA_RRN</code> 인포타입(InfoType) 탐지기는 단순 정규식 매칭뿐만 아니라 <strong>주민등록번호 13자리 중 마지막 검증 번호(Checksum digit)의 수학적 유효성</strong>까지 검증합니다. 본 실습 데이터의 <code>850315-1234566</code>(김민준)과 <code>870822-2345673</code>(이서연)은 체크섬 공식(가중치 <code>2,3,4,5,6,7,8,9,2,3,4,5</code> 모듈로 연산)을 만족하는 테스트용 번호이므로 Cloud DLP가 <code>VERY_LIKELY</code> 등급으로 즉시 탐지하여 <code>[KOREA_RRN]</code>으로 치환합니다.
+          </p>
+        </div>
+
+        <h2>3.2 Artifact Registry 저장소 우선 생성</h2>
+        <p>
+          컨테이너 이미지를 푸시할 Artifact Registry 저장소(<code>mcp-servers</code>)와 필수 Google Cloud API를 Terraform의 <code>-target</code> 옵션으로 먼저 생성합니다.
+        </p>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">bash — Terraform 초기화 및 Artifact Registry 생성</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-governance/terraform
+terraform init
+
+terraform apply \
+  -target=google_project_service.apis \
+  -target=google_artifact_registry_repository.mcp_servers \
+  -var="project_id=${PROJECT_ID}" \
+  -var="region=${REGION}" \
+  -auto-approve</code></pre>
+        </div>
+
+        <h2>3.3 Skaffold로 3종 MCP 서버 이미지 빌드 및 푸시</h2>
+        <p>
+          루트 디렉터리의 <code>skaffold.yaml</code>은 Cloud Build를 사용하여 <code>legacy-dms</code>, <code>income-verification</code>, <code>corporate-email</code> 3개의 컨테이너 이미지를 병렬로 빌드하고 Artifact Registry에 업로드합니다.
+        </p>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">bash — Skaffold 컨테이너 빌드 실행</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-governance
+export REPO="${REGION}-docker.pkg.dev/${PROJECT_ID}/mcp-servers"
+
+skaffold build --default-repo="${REPO}"</code></pre>
+        </div>
+
+        <p>빌드가 완료된 후 3개의 컨테이너 이미지가 정상적으로 등록되었는지 확인합니다.</p>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">bash — 빌드된 컨테이너 이미지 목록 확인</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>gcloud artifacts docker images list "${REPO}" --include-tags</code></pre>
+        </div>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">text — 예상 출력 결과</span>
+          </div>
+          <pre><code>IMAGE                                                                DIGEST         TAGS
+us-central1-docker.pkg.dev/.../mcp-servers/corporate-email           sha256:...     latest
+us-central1-docker.pkg.dev/.../mcp-servers/income-verification       sha256:...     latest
+us-central1-docker.pkg.dev/.../mcp-servers/legacy-dms                sha256:...     latest</code></pre>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" data-target="2" type="button">← 이전 단계</button>
+          <button class="btn-nav next-step-btn" data-target="4" type="button">다음: Agent Gateway · IAP · Model Armor 배포 →</button>
+        </div>
+      </section>
+
+      <!-- ==================== STEP 4 ==================== -->
+      <section class="step-card" id="step-4" data-step="4">
+        <div class="step-header">
+          <div class="step-badge-row">
+            <span class="step-badge">STEP 4 OF 9</span>
+            <span class="step-duration">⏱ 약 12분 소요</span>
+          </div>
+          <h1 class="step-title">4. Agent Gateway 3종 및 IAP · Model Armor(KOREA_RRN/SSN) Terraform 프로비저닝</h1>
+          <p class="step-subtitle">
+            Terraform 모듈을 분석하여 클라이언트/서버 사이드 Agent Gateway, Cloud DLP 마스킹 템플릿, Model Armor, 그리고 IAP CEL(DRY_RUN 모드) 정책이 어떻게 결합되는지 이해하고 전체 인프라를 배포합니다.
+          </p>
+        </div>
+
+        <h2>4.1 Terraform 핵심 리소스 구성 분석</h2>
+
+        <h3>① Cloud DLP(Sensitive Data Protection) 및 Model Armor 템플릿 (<code>terraform/modules/model-armor/main.tf</code>)</h3>
+        <p>
+          Model Armor가 MCP 페이로드에서 주민등록번호와 SSN을 마스킹할 수 있도록, 먼저 Cloud DLP의 <strong>검사 템플릿(<code>agw-ssn-inspect-template</code>)</strong>과 <strong>비식별화 템플릿(<code>agw-ssn-redaction-template</code>)</strong>을 정의하고 이를 Model Armor 템플릿(<code>agw-ma-template</code>)의 <code>sdp_settings.advanced_config</code>에 연결합니다.
+        </p>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">hcl — terraform/modules/model-armor/main.tf (핵심 발췌)</span>
+          </div>
+          <pre><code># 1. Cloud DLP 검사 템플릿: US_SOCIAL_SECURITY_NUMBER 및 KOREA_RRN 탐지
+resource "google_data_loss_prevention_inspect_template" "ssn_inspect" {
+  parent       = "projects/${var.project_id}/locations/${var.location}"
+  template_id  = "agw-ssn-inspect-template"
+  display_name = "Agent Gateway Sensitive Data Inspect Template"
+
+  inspect_config {
+    dynamic "info_types" {
+      for_each = var.pii_types # ["US_SOCIAL_SECURITY_NUMBER", "KOREA_RRN"]
+      content {
+        name = info_types.value
+      }
+    }
+    min_likelihood = "POSSIBLE"
+  }
+}
+
+# 2. Cloud DLP 비식별화(Redaction) 템플릿: 탐지된 값을 [KOREA_RRN], [US_SOCIAL_SECURITY_NUMBER]로 치환
+resource "google_data_loss_prevention_deidentify_template" "ssn_redaction" {
+  parent       = "projects/${var.project_id}/locations/${var.location}"
+  template_id  = "agw-ssn-redaction-template"
+  display_name = "Agent Gateway Sensitive Data Redaction Template"
+
+  deidentify_config {
+    info_type_transformations {
+      transformations {
+        dynamic "info_types" {
+          for_each = var.pii_types
+          content {
+            name = info_types.value
+          }
+        }
+        primitive_transformation {
+          replace_with_info_type_config {}
+        }
+      }
+    }
+  }
+}</code></pre>
+        </div>
+
+        <h3>② Agent Gateway 3종 및 Service Extensions 연결 (<code>terraform/main.tf</code>)</h3>
+        <p>
+          <code>legacy-dms</code>와 <code>income-verification</code>은 <strong>클라이언트 사이드(<code>agent-egress</code>)</strong> 모드로 배포되어 Model Armor(<code>CONTENT_AUTHZ</code>) 플러그인을 장착하고, <code>corporate-email</code>은 <strong>서버 사이드(<code>cloud-run</code>)</strong> 모드로 배포되어 IAP(<code>REQUEST_AUTHZ</code>)와 Model Armor(<code>CONTENT_AUTHZ</code>)를 모두 장착합니다.
+        </p>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">hcl — terraform/main.tf (게이트웨이별 Service Extensions 구성)</span>
+          </div>
+          <pre><code># [클라이언트 사이드] legacy-dms &amp; income-verification: Model Armor CONTENT_AUTHZ 마스킹 적용
+plugins = [{
+  name       = "model-armor-plugin"
+  type       = "CONTENT_AUTHZ"
+  uri        = module.model_armor.service_extension_uri
+  fail_open  = false
+  timeout    = "1s"
+  config_map = { template_id = module.model_armor.template_id }
+}]
+
+# [서버 사이드] corporate-email: IAP REQUEST_AUTHZ (CEL 도구 제어) + Model Armor CONTENT_AUTHZ 동시 적용
+plugins = [
+  {
+    name       = "iap-plugin"
+    type       = "REQUEST_AUTHZ"
+    uri        = module.iap_corporate_email.service_extension_uri
+    fail_open  = false
+    timeout    = "1s"
+    config_map = {}
+  },
+  {
+    name       = "model-armor-plugin"
+    type       = "CONTENT_AUTHZ"
+    uri        = module.model_armor.service_extension_uri
+    fail_open  = false
+    timeout    = "1s"
+    config_map = { template_id = module.model_armor.template_id }
+  }
+]</code></pre>
+        </div>
+
+        <h2>4.2 <code>terraform.tfvars</code> 작성 및 전체 인프라 배포</h2>
+        <p>
+          1단계 검증을 위해 먼저 <code>enforcement_mode = "DRY_RUN"</code>으로 설정한 <code>terraform.tfvars</code> 파일을 생성하고 <code>terraform apply</code>를 실행합니다.
+        </p>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">bash — terraform.tfvars 생성 및 terraform apply 실행</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-governance/terraform
+
+cat &lt;&lt;EOF &gt; terraform.tfvars
+project_id                = "${PROJECT_ID}"
+region                    = "${REGION}"
+enable_private_networking = false
+enforcement_mode          = "DRY_RUN"
+EOF
+
+terraform apply -auto-approve</code></pre>
+        </div>
+
+        <div class="callout callout-info">
+          <div class="callout-title">💡 엔터프라이즈 폐쇄망(Private Networking) 모드로 배포하려면?</div>
+          <p>
+            만약 외부 인터넷 노출을 완전히 차단하고 커스텀 VPC, <code>REGIONAL_MANAGED_PROXY</code> 전용 서브넷, Network Attachment, 그리고 프라이빗 Cloud DNS(<code>*.run.app</code> 내부 라우팅)로만 통신하는 <strong>Mode 2 (Secure Private Networking)</strong>를 구성하려면 <code>enable_private_networking = true</code>로 설정하기만 하면 됩니다. Terraform이 VPC와 프라이빗 DNS 레코드, Serverless Direct VPC Egress를 자동으로 구성합니다.
+          </p>
+        </div>
+
+        <h2>4.3 프로비저닝된 리소스 및 엔드포인트 확인</h2>
+        <p>
+          <code>terraform apply</code>가 완료되면 출력된 Agent Gateway 엔드포인트 3개와 Agent Engine 리소스 이름을 확인합니다.
+        </p>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">bash — Terraform 출력값 확인</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>terraform output</code></pre>
+        </div>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">text — 예상 출력 결과</span>
+          </div>
+          <pre><code>agent_engine_resource_name = "projects/123456789012/locations/us-central1/reasoningEngines/9876543210987654321"
+agent_gateway_endpoints = {
+  "corporate-email" = "https://agw-corporate-email-xxxxx.us-central1.agentgateway.cloud.goog/mcp"
+  "income-verification" = "https://agw-income-verification-xxxxx.us-central1.agentgateway.cloud.goog/mcp"
+  "legacy-dms" = "https://agw-legacy-dms-xxxxx.us-central1.agentgateway.cloud.goog/mcp"
+}</code></pre>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" data-target="3" type="button">← 이전 단계</button>
+          <button class="btn-nav next-step-btn" data-target="5" type="button">다음: ADK 심사 에이전트 배포 및 IAM 설정 →</button>
+        </div>
+      </section>
+
+      <!-- ==================== STEP 5 ==================== -->
+      <section class="step-card" id="step-5" data-step="5">
+        <div class="step-header">
+          <div class="step-badge-row">
+            <span class="step-badge">STEP 5 OF 9</span>
+            <span class="step-duration">⏱ 약 8분 소요</span>
+          </div>
+          <h1 class="step-title">5. ADK 주택담보대출 심사 에이전트(mortgage-agent) 배포 및 Egress IAM 설정</h1>
+          <p class="step-subtitle">
+            Google Agent Development Kit(ADK)로 구현된 mortgage-agent가 Agent Gateway 엔드포인트와 인증하는 구조를 확인하고, Vertex AI Agent Engine에 에이전트 코드를 배포한 뒤 최소 권한 IAM을 부여합니다.
+          </p>
+        </div>
+
+        <h2>5.1 ADK 에이전트의 <code>McpToolset</code> 및 <code>GoogleCredentialsAuth</code> 구조</h2>
+        <p>
+          <code>src/mortgage-agent/agent/agent.py</code>를 열어 에이전트가 어떻게 3개의 Agent Gateway 엔드포인트(<code>legacy-dms</code>, <code>income-verification</code>, <code>corporate-email</code>)에 연결하고 인증 토큰을 주입하는지 확인합니다.
+        </p>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">bash — mortgage-agent/agent/agent.py 코드 확인</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>sed -n '90,175p' ~/agent-gateway-governance/src/mortgage-agent/agent/agent.py</code></pre>
+        </div>
+
+        <ul>
+          <li>
+            <strong>엔드포인트 분리</strong>: 에이전트는 백엔드 Cloud Run URL(<code>*.a.run.app</code>)을 알지 못하며, 오직 Terraform이 생성한 3개의 <strong>Agent Gateway URL(<code>https://agw-*.agentgateway.cloud.goog/mcp</code>)</strong>만 환경 변수로 전달받습니다.
+          </li>
+          <li>
+            <strong>이중 토큰 자동 주입 (<code>GoogleCredentialsAuth</code>)</strong>:
+            클라이언트 사이드 게이트웨이(<code>agent-egress</code>)는 에이전트 ID의 <strong>OAuth2 Access Token</strong>을 요구하고, 서버 사이드 Cloud Run은 타깃 URL을 Audience로 하는 <strong>Google ID Token(OIDC)</strong>을 요구합니다. <code>GoogleCredentialsAuth</code> 클래스는 두 가지 인증 방식을 자동으로 협상하여 요청 헤더에 주입합니다.
+          </li>
+        </ul>
+
+        <h2>5.2 Vertex AI Agent Engine에 <code>mortgage-agent</code> 배포</h2>
+        <p>
+          <code>src/mortgage-agent/deploy_agent.py</code> 스크립트는 Terraform 출력값에서 빈 Agent Engine 리소스 이름과 3개의 Agent Gateway 엔드포인트를 자동으로 읽어와, ADK 에이전트 패키지를 빌드하고 Vertex AI Agent Engine에 인플레이스 업데이트(In-place Update)합니다.
+        </p>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">bash — deploy_agent.py로 에이전트 배포</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-governance/src/mortgage-agent
+uv run deploy_agent.py</code></pre>
+        </div>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">text — 예상 출력 결과</span>
+          </div>
+          <pre><code>Auto-resolved AGENT_ENGINE_RESOURCE_NAME from terraform: projects/.../locations/us-central1/reasoningEngines/...
+Auto-resolved AGENT_GATEWAY_ENDPOINTS from terraform: {"corporate-email": "...", "income-verification": "...", "legacy-dms": "..."}
+Updating existing AgentEngine: projects/.../locations/us-central1/reasoningEngines/...
+Update completed: projects/.../locations/us-central1/reasoningEngines/...</code></pre>
+        </div>
+
+        <h2>5.3 에이전트 고유 ID(Agent Identity)에 Egress IAM 권한 부여</h2>
+        <p>
+          배포된 <code>mortgage-agent</code>가 Agent Gateway를 통과하고 백엔드 Cloud Run을 호출할 수 있도록 <code>scripts/grant_agent_mcp_egress.sh</code> 스크립트를 실행합니다.
+        </p>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">bash — grant_agent_mcp_egress.sh 실행</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-governance
+chmod +x ./scripts/grant_agent_mcp_egress.sh
+./scripts/grant_agent_mcp_egress.sh</code></pre>
+        </div>
+
+        <p>이 스크립트가 내부적으로 수행하는 두 가지 핵심 IAM 바인딩은 다음과 같습니다.</p>
+        <ol>
+          <li>
+            <strong>프로젝트 수준 <code>roles/networkservices.agentGatewayUser</code></strong>:
+            에이전트 ID(<code>principal://agents.global.org-${ORG_ID}.system.id.goog/...</code> 또는 <code>principal://agents.global.proj-${PROJECT_NUMBER}.system.id.goog/...</code>)가 프로젝트의 Agent Gateway 인스턴스를 통과할 수 있도록 허용합니다.
+          </li>
+          <li>
+            <strong>Cloud Run 서비스 수준 <code>roles/run.invoker</code></strong>:
+            클라이언트 사이드 게이트웨이(<code>legacy-dms</code>, <code>income-verification</code>)에서는 게이트웨이 서비스 에이전트가 백엔드 Cloud Run을 대신 호출하고, 서버 사이드 게이트웨이(<code>corporate-email</code>)에서는 검증된 에이전트 ID가 Cloud Run을 호출할 수 있도록 허용합니다.
+          </li>
+        </ol>
+
+        <div class="callout callout-info">
+          <div class="callout-title">⏱ IAM 정책 전파 대기 (약 60초)</div>
+          <p>
+            Google Cloud IAM 및 IAP 설정이 전역 데이터 플레인에 반영되는 데 약 60초가 소요됩니다. 잠시 대기한 후 다음 단계의 Playground 테스트를 진행해 주세요.
+          </p>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" data-target="4" type="button">← 이전 단계</button>
+          <button class="btn-nav next-step-btn" data-target="6" type="button">다음: 1단계 검증 (DRY_RUN &amp; PII 마스킹) →</button>
+        </div>
+      </section>
+
+      <!-- ==================== STEP 6 ==================== -->
+      <section class="step-card" id="step-6" data-step="6">
+        <div class="step-header">
+          <div class="step-badge-row">
+            <span class="step-badge">STEP 6 OF 9</span>
+            <span class="step-duration">⏱ 약 7분 소요</span>
+          </div>
+          <h1 class="step-title">6. 1단계 검증: IAP DRY_RUN 모드 및 Model Armor 실시간 PII 마스킹 확인</h1>
+          <p class="step-subtitle">
+            Vertex AI Agent Engine Playground에서 김민준·이서연 부부의 주택담보대출 심사를 요청하여, 주민등록번호(KOREA_RRN)와 미국 SSN이 실시간 마스킹되는지, 그리고 DRY_RUN 모드에서 이메일 발송이 어떻게 처리되는지 검증합니다.
+          </p>
+        </div>
+
+        <div class="arch-diagram-box">
+          <img src="img/03-dryrun-vs-enforced-flow.png" alt="IAP DRY_RUN 모드 vs ENFORCED 모드 비교 및 관측성 대시보드" />
+          <div class="arch-caption">그림 6-1. IAP DRY_RUN 모드(1단계 검증)와 ENFORCED 모드(2단계 검증)의 동작 비교</div>
+        </div>
+
+        <h2>6.1 Vertex AI Agent Engine Playground 접속</h2>
+        <ol>
+          <li>Google Cloud 콘솔 상단 검색창에 <strong>Agent Engine</strong>을 입력하여 <strong>Vertex AI &gt; Agent Engine</strong> 메뉴로 이동합니다.</li>
+          <li>상단 리전 선택기가 <strong><code>us-central1</code></strong>으로 되어 있는지 확인합니다.</li>
+          <li>목록에서 방금 배포한 <strong><code>mortgage_agent</code></strong>를 클릭한 뒤, 상단 탭에서 <strong>Playground</strong>를 클릭합니다.</li>
+        </ol>
+
+        <h2>6.2 김민준·이서연 부부 주택담보대출 심사 프롬프트 실행</h2>
+        <p>
+          Playground 채팅 입력창에 아래 프롬프트를 복사하여 붙여넣고 전송합니다. (한국어 프롬프트와 영문 프롬프트 모두 완벽하게 호환됩니다.)
+        </p>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">text — Playground 테스트 프롬프트 (한국어)</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>김민준(Minjun Kim)과 이서연(Seoyeon Lee) 부부가 2026년 신규 주택담보대출 적격 요건을 충족하는지 심사해 주세요.
+1) legacy-dms에서 김민준 가족의 세금 신고서(소득금액증명원)와 문서 메타데이터를 조회해 주민등록번호(RRN)와 SSN, 소득을 확인하고,
+2) income-verification으로 두 사람의 소득 및 2026년 DTI 비율을 검증한 뒤,
+3) corporate-email에서 최신 2026년 언더라이팅 DTI 한도 지침 이메일을 찾아 읽고,
+4) 심사 요약 결과를 underwriting-team@apex-financial.kr 로 이메일 발송(send_email)해 주세요.</code></pre>
+        </div>
+
+        <h2>6.3 1단계 검증 결과 분석</h2>
+        <p>
+          에이전트가 <code>search_tax_returns</code>, <code>get_document_metadata</code>, <code>verify_income</code>, <code>search_emails</code>, <code>read_email</code>, <code>send_email</code> 도구를 순차적으로 호출한 뒤 출력하는 최종 심사 보고서를 확인합니다.
+        </p>
+
+        <div class="concept-grid">
+          <div class="concept-card">
+            <div class="concept-card-title">✅ 검증 포인트 1: 주민등록번호·SSN 마스킹 (Model Armor)</div>
+            <p>
+              <code>legacy-dms</code>와 <code>income-verification</code> 서버는 실제로 김민준의 주민등록번호(<code>850315-1234566</code>), 이서연의 주민등록번호(<code>870822-2345673</code>), 그리고 미국 SSN(<code>323-45-6789</code>, <code>321-54-9876</code>)을 반환했습니다. 그러나 <strong>Agent Gateway의 Model Armor(<code>CONTENT_AUTHZ</code>)가 응답의 <code>structuredContent</code>를 가로채어 각각 <code>[KOREA_RRN]</code>과 <code>[US_SOCIAL_SECURITY_NUMBER]</code>로 마스킹</strong>했기 때문에, LLM 컨텍스트와 채팅 화면에는 마스킹된 토큰만 안전하게 표시됩니다.
+            </p>
+          </div>
+          <div class="concept-card">
+            <div class="concept-card-title">✅ 검증 포인트 2: 2026년 DTI 심사 및 DRY_RUN 이메일 발송</div>
+            <p>
+              에이전트는 <code>corporate-email</code>에서 <code>msg-002</code>(2026년 3월 개정 언더라이팅 지침: 최대 DTI 한도 <strong>45.0%</strong>)를 읽어 김민준·이서연 부부의 합산 소득($237,000) 및 추정 DTI(<strong>28.4%</strong>)가 기준 이내임을 확인하고 <strong>적격(Eligible)</strong> 판정을 내립니다. 또한 현재 IAP가 <strong><code>DRY_RUN</code> 모드</strong>이므로 마지막 <code>send_email</code> 호출이 차단되지 않고 정상 실행(<code>status: sent</code>)됩니다.
+            </p>
+          </div>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" data-target="5" type="button">← 이전 단계</button>
+          <button class="btn-nav next-step-btn" data-target="7" type="button">다음: 통합 관측성 대시보드 &amp; 로그 분석 →</button>
+        </div>
+      </section>
+
+      <!-- ==================== STEP 7 ==================== -->
+      <section class="step-card" id="step-7" data-step="7">
+        <div class="step-header">
+          <div class="step-badge-row">
+            <span class="step-badge">STEP 7 OF 9</span>
+            <span class="step-duration">⏱ 약 6분 소요</span>
+          </div>
+          <h1 class="step-title">7. 통합 관측성(Observability) 대시보드 및 Cloud Trace · Logging 심층 분석</h1>
+          <p class="step-subtitle">
+            Agent Gateway가 자동 수집하는 메트릭 대시보드(Agent Gateway Governance Overview), 엔드투엔드 분산 트레이스(Cloud Trace), 그리고 IAP·Model Armor 감사 로그(Cloud Logging)를 분석합니다.
+          </p>
+        </div>
+
+        <h2>7.1 Cloud Monitoring 커스텀 대시보드 확인</h2>
+        <p>
+          Terraform은 배포 시 에이전트 거버넌스 지표를 한눈에 모니터링할 수 있는 <strong><code>Agent Gateway Governance Overview</code></strong> 대시보드를 자동으로 생성했습니다.
+        </p>
+        <ol>
+          <li>Google Cloud 콘솔 좌측 탐색 메뉴에서 <strong>Monitoring &gt; Dashboards(대시보드)</strong>로 이동합니다.</li>
+          <li>목록에서 <strong><code>Agent Gateway Governance Overview</code></strong>를 클릭하여 엽니다.</li>
+        </ol>
+
+        <div class="arch-diagram-box">
+          <img src="img/05-observability-dashboard.png" alt="Agent Gateway Governance Overview Cloud Monitoring 대시보드" />
+          <div class="arch-caption">그림 7-1. Agent Gateway Governance Overview 대시보드 (도구별 호출 빈도, 지연 시간, Model Armor 판정 비율, 활성 세션)</div>
+        </div>
+
+        <p>대시보드에서 제공하는 4가지 핵심 패널의 의미는 다음과 같습니다.</p>
+        <ul>
+          <li><strong>MCP Request Rate by Tool</strong>: 에이전트가 어떤 MCP 도구(<code>search_tax_returns</code>, <code>verify_income</code>, <code>read_email</code>, <code>send_email</code> 등)를 얼마나 자주 호출하는지 실시간 시계열로 보여줍니다.</li>
+          <li><strong>Agent Gateway Latency (p50 / p95)</strong>: Agent Gateway 데이터 플레인 및 Service Extensions(IAP, Model Armor)가 추가하는 왕복 지연 시간(중위값 및 95백분위수)을 추적합니다.</li>
+          <li><strong>Model Armor Verdict Breakdown</strong>: <code>CONTENT_AUTHZ</code> 단계에서 민감 정보(<code>KOREA_RRN</code>, <code>US_SOCIAL_SECURITY_NUMBER</code>)가 탐지되어 마스킹된 요청과 정상 통과된 요청의 비율을 시각화합니다.</li>
+          <li><strong>Active MCP Sessions</strong>: 게이트웨이를 통해 유지되고 있는 동시 MCP 스트리밍 세션 수를 표시합니다.</li>
+        </ul>
+
+        <h2>7.2 Cloud Logging으로 거버넌스 감사 로그 상세 조회</h2>
+        <p>
+          운영 환경에서 보안 감사관(Auditor)은 Cloud Logging을 통해 어떤 에이전트가 어떤 도구를 호출했고, IAP <code>DRY_RUN</code> 정책이나 Model Armor DLP 정책이 어떻게 평가되었는지 건별로 추적할 수 있습니다. 아래 3가지 핵심 로그 쿼리를 Cloud Shell에서 실행해 보세요.
+        </p>
+
+        <h3>① Agent Gateway 전체 MCP 트래픽 로그 조회</h3>
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">bash — Agent Gateway 데이터 플레인 로그 조회</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>gcloud logging read \
+  'resource.type="networkservices.googleapis.com/AgentGateway"' \
+  --project="${PROJECT_ID}" \
+  --limit=10 \
+  --format="table(timestamp, resource.labels.agent_gateway_name, httpRequest.status, jsonPayload.mcpMethod, jsonPayload.mcpToolName)"</code></pre>
+        </div>
+
+        <h3>② 백엔드 Cloud Run MCP 서버 3종의 요청 처리 로그 조회</h3>
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">bash — 3종 Cloud Run MCP 서버 요청 로그 조회</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>gcloud logging read \
+  'resource.type="cloud_run_revision" AND (resource.labels.service_name="legacy-dms" OR resource.labels.service_name="income-verification" OR resource.labels.service_name="corporate-email")' \
+  --project="${PROJECT_ID}" \
+  --limit=15 \
+  --format="table(timestamp, resource.labels.service_name, httpRequest.requestMethod, httpRequest.status, httpRequest.latency)"</code></pre>
+        </div>
+
+        <h3>③ Cloud Trace에서 분산 트레이스(Span) 확인</h3>
+        <p>
+          Google Cloud 콘솔에서 <strong>Trace &gt; Trace Explorer(트레이스 탐색기)</strong>로 이동하면 <code>mortgage-agent (Vertex AI Agent Engine) ➔ Agent Gateway ➔ IAP Service Extension ➔ Model Armor Service Extension ➔ Cloud Run MCP Server</code>로 이어지는 전체 호출 워터폴(Waterfall)과 각 구간별 소요 시간(ms)을 시각적으로 확인할 수 있습니다.
+        </p>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" data-target="6" type="button">← 이전 단계</button>
+          <button class="btn-nav next-step-btn" data-target="8" type="button">다음: 2단계 검증 (IAP ENFORCED 차단) →</button>
+        </div>
+      </section>
+
+      <!-- ==================== STEP 8 ==================== -->
+      <section class="step-card" id="step-8" data-step="8">
+        <div class="step-header">
+          <div class="step-badge-row">
+            <span class="step-badge">STEP 8 OF 9</span>
+            <span class="step-duration">⏱ 약 5분 소요</span>
+          </div>
+          <h1 class="step-title">8. 2단계 검증: IAP 접근 제어 ENFORCED 모드 전환 및 send_email 실시간 차단</h1>
+          <p class="step-subtitle">
+            DRY_RUN 검증이 완료된 agw-corporate-email 게이트웨이의 IAP CEL 정책을 ENFORCED 모드(enforcement_mode = null)로 전환하여, 에이전트의 무단 이메일 발송(send_email)을 실시간으로 차단합니다.
+          </p>
+        </div>
+
+        <h2>8.1 IAP CEL(Common Expression Language) 정책 동작 원리</h2>
+        <p>
+          <code>terraform/main.tf</code>에서 <code>agw-corporate-email</code> 게이트웨이에 연결된 IAP 액세스 수준(Access Level)의 CEL 표현식은 다음과 같습니다.
+        </p>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">cel — agw-corporate-email IAP CEL 정책</span>
+          </div>
+          <pre><code>request.mcp.method in ["initialize", "notifications/initialized", "tools/list", "ResourceList", "PromptList"] ||
+(request.mcp.method == "tools/call" &amp;&amp; request.mcp.tool.name != "send_email")</code></pre>
+        </div>
+
+        <ul>
+          <li><strong>MCP 핸드셰이크 및 디스커버리 허용</strong>: 에이전트가 MCP 서버에 처음 연결할 때 수행하는 <code>initialize</code>, <code>notifications/initialized</code>, <code>tools/list</code> 메서드는 항상 허용합니다.</li>
+          <li><strong>읽기 전용 도구 허용</strong>: <code>request.mcp.method == "tools/call"</code>이면서 도구 이름이 <code>search_emails</code> 또는 <code>read_email</code>인 경우(<code>!= "send_email"</code>) 정상 통과합니다.</li>
+          <li><strong>외부 발송 도구 정밀 차단</strong>: 에이전트가 <code>send_email</code> 도구를 호출하는 순간 CEL 평가 결과가 <code>false</code>가 되어 Agent Gateway가 요청을 즉시 <code>403 Permission Denied</code>로 차단합니다.</li>
+        </ul>
+
+        <h2>8.2 Terraform으로 <code>enforcement_mode = null</code> (ENFORCED 모드) 적용</h2>
+        <p>
+          IAP 설정에서 <code>enforcement_mode</code>를 <code>"DRY_RUN"</code> 대신 <code>null</code>(기본값 = Enforced)로 변경하면 정책이 즉시 강제 적용 모드로 전환됩니다. Cloud Shell에서 아래 명령어를 실행합니다.
+        </p>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">bash — IAP ENFORCED 모드로 전환 배포</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-governance/terraform
+
+cat &lt;&lt;EOF &gt; terraform.tfvars
+project_id                = "${PROJECT_ID}"
+region                    = "${REGION}"
+enable_private_networking = false
+enforcement_mode          = null
+EOF
+
+terraform apply -auto-approve</code></pre>
+        </div>
+
+        <div class="callout callout-info">
+          <div class="callout-title">⏱ IAP 정책 전환 전파 대기 (약 60~90초)</div>
+          <p>
+            <code>google_iap_settings</code> 리소스가 업데이트된 후 Agent Gateway의 IAP Service Extension에 새로운 Enforced 설정이 반영되기까지 약 60~90초가 소요됩니다.
+          </p>
+        </div>
+
+        <h2>8.3 Playground에서 <code>send_email</code> 차단 동작 재검증</h2>
+        <p>
+          약 60초 후 <strong>Vertex AI &gt; Agent Engine &gt; <code>mortgage_agent</code> &gt; Playground</strong> 화면으로 돌아가서 <strong>새 세션(Reset / New Session)</strong>을 열고 아래 프롬프트를 입력합니다.
+        </p>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">text — Enforced 모드 검증 프롬프트</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>김민준(Minjun Kim)과 이서연(Seoyeon Lee) 부부의 2026년 주택담보대출 적격 여부를 다시 심사하고, 결과를 underwriting-team@apex-financial.kr 로 이메일 발송(send_email)해 주세요.</code></pre>
+        </div>
+
+        <h3>기대 결과 (DRY_RUN vs ENFORCED 비교)</h3>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>검증 항목</th>
+                <th>1단계: <code>DRY_RUN</code> 모드</th>
+                <th>2단계: <code>ENFORCED</code> 모드 (<code>enforcement_mode = null</code>)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>소득금액증명원 조회 (<code>legacy-dms</code>)</strong></td>
+                <td>허용 + <code>[KOREA_RRN]</code>, <code>[US_SOCIAL_SECURITY_NUMBER]</code> 마스킹</td>
+                <td>허용 + <code>[KOREA_RRN]</code>, <code>[US_SOCIAL_SECURITY_NUMBER]</code> 마스킹</td>
+              </tr>
+              <tr>
+                <td><strong>소득/DTI 검증 (<code>income-verification</code>)</strong></td>
+                <td>허용 (DTI 28.4% 산출) + 주민등록번호/SSN 마스킹</td>
+                <td>허용 (DTI 28.4% 산출) + 주민등록번호/SSN 마스킹</td>
+              </tr>
+              <tr>
+                <td><strong>사내 지침 메일 조회 (<code>search_emails</code>, <code>read_email</code>)</strong></td>
+                <td>허용 (2026년 최대 DTI 45% 기준 확인)</td>
+                <td>허용 (2026년 최대 DTI 45% 기준 확인)</td>
+              </tr>
+              <tr>
+                <td><strong>외부 심사 결과 메일 발송 (<code>send_email</code>)</strong></td>
+                <td><span class="badge badge-yellow">허용 (감사 로그에만 위반 기록)</span></td>
+                <td><span class="badge badge-red">403 Permission Denied 즉시 차단!</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          에이전트는 김민준·이서연 부부의 대출 적격 심사 요약(합산 소득 $237,000, 추정 DTI 28.4% &lt; 한도 45.0%, 주민등록번호 <code>[KOREA_RRN]</code> 및 SSN <code>[US_SOCIAL_SECURITY_NUMBER]</code> 마스킹 완료)을 정확히 보고하면서도, 마지막 이메일 발송 단계에 대해서는 <strong>"보안 정책(접근 제어 제한)으로 인해 <code>send_email</code> 도구 호출이 거부되어 이메일을 발송할 수 없습니다"</strong>라고 안내합니다.
+        </p>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" data-target="7" type="button">← 이전 단계</button>
+          <button class="btn-nav next-step-btn" data-target="9" type="button">다음: Gemini Enterprise 연동 &amp; 리소스 정리 →</button>
+        </div>
+      </section>
+
+      <!-- ==================== STEP 9 ==================== -->
+      <section class="step-card" id="step-9" data-step="9">
+        <div class="step-header">
+          <div class="step-badge-row">
+            <span class="step-badge">STEP 9 OF 9</span>
+            <span class="step-duration">⏱ 약 3분 소요</span>
+          </div>
+          <h1 class="step-title">9. (선택) Gemini Enterprise 웹앱 연동 및 실습 리소스 정리(Cleanup)</h1>
+          <p class="step-subtitle">
+            배포된 mortgage-agent를 현업 대출 심사관이 사용하는 Gemini Enterprise 웹 애플리케이션에 연결하는 방법을 살펴보고, 실습 종료 후 과금 방지를 위해 리소스를 정리합니다.
+          </p>
+        </div>
+
+        <h2>9.1 (선택/참고) Gemini Enterprise 웹앱에 에이전트 등록하기</h2>
+        <p>
+          Vertex AI Agent Engine에 배포된 <code>mortgage-agent</code>는 몇 번의 클릭만으로 <strong>Gemini Enterprise</strong> 웹앱에 서브에이전트로 등록하여 현업 대출 심사관들에게 제공할 수 있습니다.
+        </p>
+        <ol>
+          <li>Cloud Shell에서 아래 명령어로 에이전트의 <strong>Reasoning Engine Resource Name</strong>을 확인하고 복사합니다.
+            <div class="code-container">
+              <div class="code-header">
+                <span class="code-lang">bash — Reasoning Engine 리소스 경로 출력</span>
+                <button class="copy-btn" type="button">복사</button>
+              </div>
+              <pre><code>cd ~/agent-gateway-governance/terraform
+terraform output -raw agent_engine_resource_name ; echo ""</code></pre>
+            </div>
+          </li>
+          <li>Google Cloud 콘솔에서 <strong>Gemini Enterprise &gt; Apps</strong>로 이동한 뒤 연결할 엔터프라이즈 웹앱을 선택합니다.</li>
+          <li>좌측 메뉴에서 <strong>Agents &gt; Add Agents &gt; Custom agent via Agent Engine</strong>을 선택합니다.</li>
+          <li>표시 이름에 <code>Apex Mortgage Underwriting Agent</code>를 입력하고, 복사한 Reasoning Engine 경로(<code>projects/.../locations/us-central1/reasoningEngines/...</code>)를 붙여넣어 등록을 완료합니다.</li>
+        </ol>
+
+        <h2>9.2 실습 리소스 정리 (Cleanup)</h2>
+        <p>
+          자체 GCP 프로젝트에서 실습을 진행한 경우, 불필요한 지속 과금을 방지하기 위해 아래 명령어로 배포된 Cloud Run 서비스, Agent Gateway, DLP/Model Armor 템플릿, 그리고 Vertex AI Agent Engine을 일괄 삭제할 수 있습니다.
+        </p>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span class="code-lang">bash — Terraform 리소스 일괄 삭제</span>
+            <button class="copy-btn" type="button">복사</button>
+          </div>
+          <pre><code>cd ~/agent-gateway-governance/terraform
+terraform destroy -auto-approve</code></pre>
+        </div>
+
+        <h2>9.3 실습 완료 및 핵심 요약</h2>
+        <div class="callout callout-tip">
+          <div class="callout-title">🎉 축하합니다! 모든 실습 단계를 완료했습니다.</div>
+          <p>
+            여러분은 에이펙스 금융그룹의 주택담보대출 심사 시나리오를 통해 <strong>Agent Gateway(클라이언트 사이드 <code>agent-egress</code> 및 서버 사이드 <code>cloud-run</code>)</strong>, <strong>IAP(CEL 기반 도구 단위 인가 및 <code>DRY_RUN</code> ➔ <code>ENFORCED</code> 라이프사이클)</strong>, <strong>Model Armor + Cloud DLP(한국 주민등록번호 <code>KOREA_RRN</code> 및 미국 SSN 실시간 마스킹)</strong>, 그리고 <strong>Cloud Monitoring/Trace 통합 관측성</strong>을 결합한 엔터프라이즈 에이전트 거버넌스 아키텍처를 성공적으로 구축했습니다.
+          </p>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav prev-step-btn" data-target="8" type="button">← 이전 단계</button>
+          <button class="btn-nav" id="restartBtn" type="button">처음으로 돌아가기 ↺</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      var totalSteps = 9;
+      var currentStep = 1;
+      var viewAllMode = false;
+
+      var stepCards = Array.from(document.querySelectorAll('.step-card'));
+      var navItems = Array.from(document.querySelectorAll('.step-nav-item'));
+      var progressBar = document.getElementById('progressBar');
+      var remainingTimeText = document.getElementById('remainingTimeText');
+      var viewAllBtn = document.getElementById('viewAllBtn');
+      var viewAllText = document.getElementById('viewAllText');
+      var themeToggleBtn = document.getElementById('themeToggleBtn');
+      var themeToggleText = document.getElementById('themeToggleText');
+      var restartBtn = document.getElementById('restartBtn');
+      var logoLink = document.getElementById('logoLink');
+
+      function calculateRemainingMinutes(fromStep) {
+        var total = 0;
+        for (var i = fromStep - 1; i < stepCards.length; i++) {
+          var d = parseInt(stepCards[i].getAttribute('data-duration') || '0', 10);
+          total += d;
+        }
+        return total;
+      }
+
+      function renderCards() {
+        stepCards.forEach(function (card, idx) {
+          card.style.marginBottom = viewAllMode ? '28px' : '0';
+          if (viewAllMode || idx + 1 === currentStep) {
+            card.classList.add('active');
+          } else {
+            card.classList.remove('active');
+          }
+        });
+      }
+
+      function goToStep(stepNum) {
+        if (stepNum < 1 || stepNum > totalSteps) return;
+        currentStep = stepNum;
+        renderCards();
+
+        navItems.forEach(function (item, idx) {
+          var s = idx + 1;
+          item.classList.remove('active', 'completed');
+          if (s < currentStep) {
+            item.classList.add('completed');
+          } else if (s === currentStep) {
+            item.classList.add('active');
+          }
+        });
+
+        var pct = ((currentStep / totalSteps) * 100).toFixed(1);
+        if (progressBar) {
+          progressBar.style.width = pct + '%';
+        }
+
+        var rem = calculateRemainingMinutes(currentStep);
+        if (remainingTimeText) {
+          remainingTimeText.textContent = '남은 예상 시간: 약 ' + rem + '분 (총 65분)';
+        }
+
+        if (!viewAllMode) {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          var targetEl = document.getElementById('step-' + currentStep);
+          if (targetEl) {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
+      }
+
+      navItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+          var targetStep = parseInt(item.getAttribute('data-step') || '1', 10);
+          goToStep(targetStep);
+        });
+      });
+
+      document.querySelectorAll('.next-step-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var target = parseInt(btn.getAttribute('data-target') || '1', 10);
+          goToStep(target);
+        });
+      });
+
+      document.querySelectorAll('.prev-step-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var target = parseInt(btn.getAttribute('data-target') || '1', 10);
+          goToStep(target);
+        });
+      });
+
+      if (restartBtn) {
+        restartBtn.addEventListener('click', function () {
+          goToStep(1);
+        });
+      }
+
+      if (logoLink) {
+        logoLink.addEventListener('click', function (e) {
+          e.preventDefault();
+          goToStep(1);
+        });
+      }
+
+      if (viewAllBtn) {
+        viewAllBtn.addEventListener('click', function () {
+          viewAllMode = !viewAllMode;
+          if (viewAllText) {
+            viewAllText.textContent = viewAllMode ? '단계별 보기' : '전체 펼쳐보기';
+          }
+          renderCards();
+        });
+      }
+
+      if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', function () {
+          var root = document.documentElement;
+          var isDark = root.getAttribute('data-theme') === 'dark';
+          if (isDark) {
+            root.removeAttribute('data-theme');
+            if (themeToggleText) {
+              themeToggleText.textContent = '다크 모드';
+            }
+          } else {
+            root.setAttribute('data-theme', 'dark');
+            if (themeToggleText) {
+              themeToggleText.textContent = '라이트 모드';
+            }
+          }
+        });
+      }
+
+      document.querySelectorAll('.copy-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var container = btn.closest('.code-container');
+          if (!container) return;
+          var codeEl = container.querySelector('code');
+          if (!codeEl) return;
+          var textToCopy = codeEl.textContent || '';
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(textToCopy).then(function () {
+              btn.textContent = '복사됨 ✓';
+              setTimeout(function () {
+                btn.textContent = '복사';
+              }, 1800);
+            });
+          }
+        });
+      });
+
+      document.addEventListener('keydown', function (e) {
+        if (viewAllMode) return;
+        if (e.key === 'ArrowRight' && currentStep < totalSteps) {
+          goToStep(currentStep + 1);
+        } else if (e.key === 'ArrowLeft' && currentStep > 1) {
+          goToStep(currentStep - 1);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

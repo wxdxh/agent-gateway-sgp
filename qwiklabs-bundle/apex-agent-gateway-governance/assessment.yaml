@@ -1,0 +1,42 @@
+passing_percentage: 75
+steps:
+  - title: "작업 1~3: Artifact Registry 및 Cloud Run MCP 서버 3종(legacy-dms, income-verification, corporate-email) 배포 확인"
+    locale_id: step-1
+    maximum_score: 25
+    student_messages:
+      success: "Artifact Registry(mcp-servers)와 Cloud Run MCP 서버 3종(legacy-dms, income-verification, corporate-email) 배포가 확인되었습니다."
+      mcp_missing: "작업 2와 작업 3의 안내에 따라 Skaffold와 Terraform으로 3개의 MCP 서버를 빌드 및 배포해 주세요."
+    services:
+      - project_0.ComputeV1
+      - project_0.LoggingV2
+    method_name: step_one_check
+  - title: "작업 3: Agent Gateway 3종 및 IAP(CEL) + Model Armor(KOREA_RRN/SSN 마스킹) 구성 확인"
+    locale_id: step-2
+    maximum_score: 25
+    student_messages:
+      success: "Agent Gateway 3종(agw-legacy-dms, agw-income-verification, agw-corporate-email) 및 Model Armor/Cloud DLP 템플릿 구성이 확인되었습니다."
+      agw_missing: "작업 3의 안내에 따라 Terraform을 실행하여 Agent Gateway 3종과 IAP, Model Armor/DLP 템플릿을 프로비저닝해 주세요."
+    services:
+      - project_0.ComputeV1
+      - project_0.LoggingV2
+    method_name: step_two_check
+  - title: "작업 4: Vertex AI Agent Engine(mortgage-agent) 배포 및 Egress IAM 권한 설정 확인"
+    locale_id: step-3
+    maximum_score: 25
+    student_messages:
+      success: "Vertex AI Agent Engine에 mortgage-agent가 배포되고 Agent Gateway Egress IAM 권한이 정상 설정되었습니다."
+      agent_missing: "작업 4의 안내에 따라 mortgage-agent를 배포하고 grant_agent_mcp_egress.sh 스크립트를 실행해 주세요."
+    services:
+      - project_0.ComputeV1
+      - project_0.LoggingV2
+    method_name: step_three_check
+  - title: "작업 5~7: DRY_RUN 테스트 후 IAP 접근 제어 Enforced 모드 전환 및 차단 검증 확인"
+    locale_id: step-4
+    maximum_score: 25
+    student_messages:
+      success: "IAP Enforced 모드 전환(enforcement_mode = null) 및 에이전트 거버넌스 정책 검증이 확인되었습니다."
+      enforced_missing: "작업 7의 안내에 따라 enforcement_mode를 null(Enforced 모드)로 변경하여 terraform apply를 실행하고 Playground에서 차단을 확인해 주세요."
+    services:
+      - project_0.ComputeV1
+      - project_0.LoggingV2
+    method_name: step_four_check
