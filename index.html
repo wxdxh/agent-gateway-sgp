@@ -575,6 +575,7 @@
 
     /* Architecture Diagram Containers */
     .diagram-box {
+      position: relative;
       background: linear-gradient(180deg, var(--bg-subtle) 0%, var(--bg-surface) 100%);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-lg);
@@ -592,6 +593,13 @@
       box-shadow: var(--shadow-sm);
       display: block;
       margin: 0 auto;
+      cursor: zoom-in;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .diagram-box img:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
     }
 
     .diagram-caption {
@@ -599,6 +607,114 @@
       color: var(--text-muted);
       margin-top: 14px;
       font-weight: 500;
+    }
+
+    .diagram-caption::after {
+      content: " · 🔍 클릭하여 확대 보기";
+      color: var(--google-blue);
+      font-size: 12px;
+      font-weight: 600;
+      opacity: 0.88;
+    }
+
+    /* Diagram Lightbox Modal */
+    .diagram-lightbox-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .diagram-lightbox-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .diagram-lightbox-toolbar {
+      position: absolute;
+      top: 20px;
+      right: 24px;
+      display: flex;
+      gap: 10px;
+      z-index: 10001;
+    }
+
+    .diagram-lightbox-btn {
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s ease, transform 0.15s ease;
+    }
+
+    .diagram-lightbox-btn:hover {
+      background: rgba(255, 255, 255, 0.26);
+      transform: translateY(-1px);
+    }
+
+    .diagram-lightbox-stage {
+      max-width: 95vw;
+      max-height: 82vh;
+      overflow: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+      background: #ffffff;
+      padding: 12px;
+    }
+
+    .diagram-lightbox-stage img {
+      max-width: 92vw;
+      max-height: 78vh;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border-radius: 8px;
+      display: block;
+      cursor: zoom-in;
+      transition: max-width 0.2s ease, max-height 0.2s ease;
+    }
+
+    .diagram-lightbox-stage.zoomed {
+      align-items: flex-start;
+      justify-content: flex-start;
+    }
+
+    .diagram-lightbox-stage.zoomed img {
+      max-width: none;
+      max-height: none;
+      width: 150%;
+      cursor: zoom-out;
+    }
+
+    .diagram-lightbox-caption {
+      margin-top: 14px;
+      color: #f1f5f9;
+      font-size: 14px;
+      font-weight: 500;
+      text-align: center;
+      max-width: 85vw;
+      line-height: 1.5;
     }
 
     /* Feature Cards Grid */
@@ -836,6 +952,196 @@
       align-items: center;
       gap: 8px;
     }
+
+    /* Quiz Event Tab Styles */
+    .quiz-panel-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-top: 4px solid var(--gcp-yellow);
+      border-radius: var(--radius-lg);
+      padding: 40px 44px;
+      box-shadow: var(--shadow-md);
+      max-width: 960px;
+      margin: 0 auto;
+      display: none;
+      animation: fadeIn 0.22s ease-out;
+    }
+
+    .quiz-panel-card.active {
+      display: block;
+    }
+
+    .quiz-item-card {
+      background-color: var(--bg-subtle);
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 28px 30px;
+      margin-bottom: 28px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .quiz-item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .quiz-num-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background-color: var(--gcp-yellow-light);
+      color: #b06000;
+      font-weight: 700;
+      font-size: 12.5px;
+      padding: 5px 13px;
+      border-radius: 999px;
+      border: 1px solid rgba(249, 171, 0, 0.35);
+    }
+
+    [data-theme="dark"] .quiz-num-badge {
+      color: var(--gcp-yellow);
+    }
+
+    .quiz-ref-tag {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .quiz-question-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.55;
+      margin-bottom: 18px;
+    }
+
+    .quiz-options-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .quiz-option-btn {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      width: 100%;
+      text-align: left;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border-color);
+      background-color: var(--bg-surface);
+      color: var(--text-primary);
+      font-size: 14.5px;
+      line-height: 1.5;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.16s ease;
+    }
+
+    .quiz-option-btn:hover {
+      border-color: var(--gcp-blue);
+      background-color: var(--gcp-blue-light);
+    }
+
+    .quiz-option-btn.selected {
+      border-color: var(--gcp-blue);
+      background-color: var(--gcp-blue-light);
+      font-weight: 600;
+    }
+
+    .quiz-option-btn.revealed-correct {
+      border-color: var(--gcp-green);
+      background-color: var(--gcp-green-light);
+      color: var(--text-primary);
+      font-weight: 700;
+      box-shadow: 0 0 0 2px rgba(30, 142, 62, 0.18);
+    }
+
+    .quiz-opt-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background-color: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .quiz-option-btn.revealed-correct .quiz-opt-num {
+      background-color: var(--gcp-green);
+      border-color: var(--gcp-green);
+      color: #ffffff;
+    }
+
+    .quiz-actions-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .quiz-reveal-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: 1.5px solid var(--gcp-blue);
+      background-color: var(--gcp-blue);
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.18s ease;
+    }
+
+    .quiz-reveal-btn:hover {
+      background-color: var(--gcp-blue-dark);
+      border-color: var(--gcp-blue-dark);
+    }
+
+    .quiz-reveal-btn.active {
+      background-color: var(--bg-surface);
+      color: var(--gcp-blue);
+    }
+
+    .quiz-answer-panel {
+      display: none;
+      margin-top: 18px;
+      padding: 20px 24px;
+      border-radius: 10px;
+      background-color: var(--gcp-green-light);
+      border: 1.5px solid rgba(30, 142, 62, 0.35);
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .quiz-answer-panel.open {
+      display: block;
+    }
+
+    .quiz-answer-badge {
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--gcp-green);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
   </style>
 </head>
 <body>
@@ -955,7 +1261,7 @@
     <!-- Main Step Content -->
     <main class="codelab-main">
 
-      <!-- Mode Switcher Tabs: Standard Codelab vs Qwiklabs Cloud Shell -->
+      <!-- Mode Switcher Tabs: Standard Codelab vs Qwiklabs Cloud Shell vs Session Quiz -->
       <div class="lab-mode-tabs" role="tablist" aria-label="코드랩 문서 모드 선택">
         <button class="lab-mode-tab active" id="modeTabStandard" type="button" data-mode="standard">
           <div class="lab-mode-tab-left">
@@ -970,6 +1276,13 @@
             <div class="lab-mode-tab-sub">Google Cloud Qwiklabs 및 Cloud Shell 터미널 실행 전용 가이드 (Task 0~8)</div>
           </div>
           <span class="lab-mode-badge">Cloud Shell 전용</span>
+        </button>
+        <button class="lab-mode-tab" id="modeTabQuiz" type="button" data-mode="quiz">
+          <div class="lab-mode-tab-left">
+            <div class="lab-mode-tab-title">🎁 세션 퀴즈 이벤트</div>
+            <div class="lab-mode-tab-sub">참여자 경품 증정용 핵심 아키텍처 퀴즈 2선 (정답 확인 토글)</div>
+          </div>
+          <span class="lab-mode-badge" style="background:var(--gcp-yellow-light);color:#b06000;">퀴즈 2문항</span>
         </button>
       </div>
 
@@ -2823,7 +3136,7 @@ Prompt: transfer 2000 to 555-0002
 source env.sh
 
 gcloud logging read \
-  "logName=\"projects/${PROJECT_ID}/logs/semantic-governance-policy\"" \
+  "logName=\"projects/${PROJECT_ID}/logs/semantic-governance-policy\" AND jsonPayload.verdict:*" \
   --project="${PROJECT_ID}" \
   --limit=5 \
   --format=json</code></pre>
@@ -2843,6 +3156,142 @@ gcloud logging read \
         </div>
       </section>
 
+      <!-- ==================== SESSION QUIZ PANEL ==================== -->
+      <section class="quiz-panel-card" id="quiz-panel" aria-label="세션 퀴즈 이벤트">
+        <div class="step-header">
+          <div class="step-meta">
+            <span class="quiz-num-badge">🎁 LIVE SESSION QUIZ EVENT</span>
+            <span class="step-duration">총 2문항 · 정답 확인 토글 지원</span>
+          </div>
+          <h1 class="step-title">세션 퀴즈 이벤트: 자율형 금융 에이전트 보안 거버넌스</h1>
+        </div>
+
+        <p>
+          오늘 실습에서 다룬 <strong>Google Cloud Agent Gateway</strong>와 <strong>시맨틱 거버넌스 정책(SGP)</strong>의 핵심 아키텍처를 점검하는 경품 퀴즈 2문항입니다.
+          각 문항의 보기를 선택한 뒤 <strong>"🔍 정답 확인하기"</strong> 버튼을 클릭하면 숨겨진 정답과 해설이 표시됩니다.
+        </p>
+
+        <!-- QUIZ 1 (Candidate 1) -->
+        <div class="quiz-item-card" id="quiz-card-1">
+          <div class="quiz-item-header">
+            <span class="quiz-num-badge">QUIZ 01 · 제로 트러스트 아웃바운드 통제</span>
+            <span class="quiz-ref-tag">관련 단계: 작업 4 (Agent Registry &amp; Global API Allowlist)</span>
+          </div>
+          <div class="quiz-question-title">
+            Q1. <code>AGENT_TO_ANYWHERE</code> 모드로 동작하는 Agent Gateway는 <strong>기본 거부(Default Deny)</strong> 원칙을 따릅니다. 그래서 오늘 실습(작업 4)에서는 뱅킹 MCP 서버뿐만 아니라, 에이전트가 <code>gemini-3.8-flash</code> 모델을 호출하기 위해 통신하는 Google Cloud 시스템 API 도메인(<code>https://aiplatform.googleapis.com</code> 등)까지 Agent Registry에 등록하고 <strong>이 IAM 역할(Role)</strong>을 부여해야 했는데요.<br>
+            게이트웨이 아웃바운드 통과를 허용하는 이 IAM 역할의 이름은 무엇일까요?
+          </div>
+
+          <div class="quiz-options-list" data-quiz-group="1">
+            <button class="quiz-option-btn" type="button" data-option="1">
+              <span class="quiz-opt-num">1</span>
+              <span><code>roles/run.invoker</code> (Cloud Run Invoker)</span>
+            </button>
+            <button class="quiz-option-btn" type="button" data-option="2" data-correct="true">
+              <span class="quiz-opt-num">2</span>
+              <span><code>roles/iap.egressor</code> (IAP Egressor)</span>
+            </button>
+            <button class="quiz-option-btn" type="button" data-option="3">
+              <span class="quiz-opt-num">3</span>
+              <span><code>roles/aiplatform.user</code> (Vertex AI User)</span>
+            </button>
+            <button class="quiz-option-btn" type="button" data-option="4">
+              <span class="quiz-opt-num">4</span>
+              <span><code>roles/networksecurity.admin</code> (Network Security Admin)</span>
+            </button>
+          </div>
+
+          <div class="quiz-actions-row">
+            <button class="quiz-reveal-btn" type="button" data-quiz="1">
+              🔍 정답 확인하기
+            </button>
+            <span class="quiz-ref-tag">💡 보기를 클릭해 선택한 뒤 정답을 확인해 보세요.</span>
+          </div>
+
+          <div class="quiz-answer-panel" id="quiz-answer-1">
+            <div class="quiz-answer-badge">✅ 정답: 2번 — <code>roles/iap.egressor</code> (IAP Egressor)</div>
+            <p style="margin-bottom:10px;">
+              <strong>핵심 해설:</strong> <code>AGENT_TO_ANYWHERE</code> 모드로 구성된 Agent Gateway는 에이전트에서 외부로 나가는 모든 아웃바운드 트래픽에 대해 <strong>IAP(Identity-Aware Proxy) 기반 제로 트러스트 제어</strong>를 수행합니다.
+              따라서 Agent Registry에 명시적으로 등록되고 <code>roles/iap.egressor</code> 권한이 바인딩된 엔드포인트(뱅킹 MCP 서버 및 Gemini Enterprise Global API 등 4대 시스템 API)로만 통신이 허용되며, 프롬프트 인젝션 공격에 의한 외부 서버로의 데이터 유출(Exfiltration)은 네트워크 수준에서 원천 차단됩니다.
+            </p>
+            <div class="code-container" style="margin-bottom:0;">
+              <div class="code-header">
+                <span>작업 4 (04-register-mcp.sh) — IAP Egress 권한 바인딩 명령어</span>
+              </div>
+              <pre><code>gcloud alpha iap web add-iam-policy-binding \
+  --resource-type=agent-registry \
+  --endpoint="${ep_id}" \
+  --region="${LOCATION}" \
+  --project="${PROJECT_ID}" \
+  --member="${AGW_SA}" \
+  --role="roles/iap.egressor"</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- QUIZ 2 (Candidate 5) -->
+        <div class="quiz-item-card" id="quiz-card-2">
+          <div class="quiz-item-header">
+            <span class="quiz-num-badge">QUIZ 02 · 코드 무변경 비즈니스 거버넌스</span>
+            <span class="quiz-ref-tag">관련 단계: 작업 7~8 (자연어 SGP 정책 생성 및 3-Turn 검증)</span>
+          </div>
+          <div class="quiz-question-title">
+            Q2. 오늘 실습에서는 1회 이체 한도를 <code>$1,000</code>(100만 원)으로 설정해 Turn 2의 <code>$50</code> 송금은 <strong>ALLOW</strong>, Turn 3의 <code>$2,000</code> 송금은 <strong>DENY</strong>되는 것을 확인했습니다.<br>
+            만약 금융 당국의 긴급 지시로 심야 시간 이체 한도를 <code>$500</code>로 즉시 낮춰야 한다면, 오늘 구축한 아키텍처에서는 무엇을 수정해야 할까요?
+          </div>
+
+          <div class="quiz-options-list" data-quiz-group="2">
+            <button class="quiz-option-btn" type="button" data-option="1">
+              <span class="quiz-opt-num">1</span>
+              <span><code>agent.py</code>의 시스템 프롬프트를 수정하고 에이전트 컨테이너를 다시 빌드·재배포한다.</span>
+            </button>
+            <button class="quiz-option-btn" type="button" data-option="2">
+              <span class="quiz-opt-num">2</span>
+              <span>Cloud Run의 <code>banking-mcp-server</code> 파이썬 백엔드 코드를 수정하고 재배포한다.</span>
+            </button>
+            <button class="quiz-option-btn" type="button" data-option="3" data-correct="true">
+              <span class="quiz-opt-num">3</span>
+              <span>에이전트나 MCP 서버 코드 변경 없이, SGP 정책(<code>high-value-limit</code>)의 <code>--natural-language-constraint</code>(자연어 제약 조건)만 업데이트한다.</span>
+            </button>
+            <button class="quiz-option-btn" type="button" data-option="4">
+              <span class="quiz-opt-num">4</span>
+              <span>VPC 서브넷 대역을 새로 할당하고 Cloud Router 설정을 초기화한다.</span>
+            </button>
+          </div>
+
+          <div class="quiz-actions-row">
+            <button class="quiz-reveal-btn" type="button" data-quiz="2">
+              🔍 정답 확인하기
+            </button>
+            <span class="quiz-ref-tag">💡 보기를 클릭해 선택한 뒤 정답을 확인해 보세요.</span>
+          </div>
+
+          <div class="quiz-answer-panel" id="quiz-answer-2">
+            <div class="quiz-answer-badge">✅ 정답: 3번 — 코드 재배포 없이 SGP의 <code>--natural-language-constraint</code>(자연어 제약 조건)만 업데이트</div>
+            <p style="margin-bottom:10px;">
+              <strong>핵심 해설:</strong> <strong>시맨틱 거버넌스 정책(SGP)</strong>은 에이전트 애플리케이션 코드나 백엔드 MCP 서버 코드와 완전히 분리된 <strong>네트워크 경계(Agent Gateway + SGP 정책 엔진)</strong>에서 강제 집행됩니다.
+              따라서 금융 당국의 규제 변경이나 이상 거래 탐지(FDS) 기준 강화로 이체 한도를 즉시 변경해야 할 때, 에이전트 컨테이너를 다시 빌드·배포할 필요 없이 아래 명령 한 줄로 자연어 제약 조건만 수정하면 즉시 네트워크 경계에 반영됩니다.
+            </p>
+            <div class="code-container" style="margin-bottom:0;">
+              <div class="code-header">
+                <span>작업 7 응용 — 에이전트 재배포 없이 이체 한도를 USD 500으로 즉시 변경</span>
+              </div>
+              <pre><code>gcloud beta ai semantic-governance-policies update high-value-limit \
+  --project="${PROJECT_ID}" \
+  --location="${LOCATION}" \
+  --agent="projects/${PROJECT_ID}/locations/${LOCATION}/agents/${AGENT_ID}" \
+  --mcp-tools="mcp-server=projects/${PROJECT_ID}/locations/${LOCATION}/mcpServers/${MCP_SERVER_NAME},tools=Banking_MCP_Server_transfer_to_phone" \
+  --natural-language-constraint="Block any transfer value exceeding USD 500."</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-footer">
+          <button class="btn-nav" id="quizBackToStandardBtn" type="button">← 표준 가이드로 돌아가기</button>
+          <button class="btn-nav primary" id="quizBackToQwiklabsBtn" type="button">☁️ Qwiklabs 실습 가이드로 이동 →</button>
+        </div>
+      </section>
+
     </main>
   </div>
 
@@ -2854,10 +3303,12 @@ gcloud logging read \
       var totalSteps = 9;
       var currentStep = 1;
       var viewAllMode = false;
-      var currentMode = 'standard'; // 'standard' | 'qwiklabs'
+      var currentMode = 'standard'; // 'standard' | 'qwiklabs' | 'quiz'
+      var lastLabMode = 'standard';
 
       var stepCards = document.querySelectorAll('.step-card');
       var qwikCards = document.querySelectorAll('.qwik-card');
+      var quizPanel = document.getElementById('quiz-panel');
       var navItems = document.querySelectorAll('.step-nav-item');
       var progressBar = document.getElementById('progressBar');
       var remainingTimeText = document.getElementById('remainingTimeText');
@@ -2867,9 +3318,12 @@ gcloud logging read \
       var themeToggleText = document.getElementById('themeToggleText');
       var restartBtn = document.getElementById('restartBtn');
       var qwikRestartBtn = document.getElementById('qwikRestartBtn');
+      var quizBackToStandardBtn = document.getElementById('quizBackToStandardBtn');
+      var quizBackToQwiklabsBtn = document.getElementById('quizBackToQwiklabsBtn');
       var logoLink = document.getElementById('logoLink');
       var modeTabStandard = document.getElementById('modeTabStandard');
       var modeTabQwiklabs = document.getElementById('modeTabQwiklabs');
+      var modeTabQuiz = document.getElementById('modeTabQuiz');
       var sidebarSectionLabel = document.getElementById('sidebarSectionLabel');
 
       var standardNavTitles = [
@@ -2910,11 +3364,13 @@ gcloud logging read \
 
       function renderCards() {
         var isQwik = currentMode === 'qwiklabs';
+        var isQuiz = currentMode === 'quiz';
+        var isStd = currentMode === 'standard';
 
         stepCards.forEach(function (card, idx) {
           var stepIdx = idx + 1;
           card.style.marginBottom = viewAllMode ? '28px' : '0';
-          if (!isQwik && (viewAllMode || stepIdx === currentStep)) {
+          if (isStd && (viewAllMode || stepIdx === currentStep)) {
             card.classList.add('active');
           } else {
             card.classList.remove('active');
@@ -2931,37 +3387,69 @@ gcloud logging read \
           }
         });
 
+        if (quizPanel) {
+          if (isQuiz) {
+            quizPanel.classList.add('active');
+          } else {
+            quizPanel.classList.remove('active');
+          }
+        }
+
+        var showQwikTitles = isQwik || (isQuiz && lastLabMode === 'qwiklabs');
         navItems.forEach(function (item, idx) {
           var titleEl = item.querySelector('.step-nav-title');
           if (titleEl) {
-            titleEl.textContent = isQwik ? qwiklabsNavTitles[idx] : standardNavTitles[idx];
+            titleEl.textContent = showQwikTitles ? qwiklabsNavTitles[idx] : standardNavTitles[idx];
           }
         });
 
         if (sidebarSectionLabel) {
-          sidebarSectionLabel.textContent = isQwik
+          sidebarSectionLabel.textContent = showQwikTitles
             ? 'Qwiklabs 실습 목차 (Cloud Shell · 45분)'
             : '실습 목차 (병렬 최적화 · 총 45분)';
         }
       }
 
       function setLabMode(mode) {
-        currentMode = mode === 'qwiklabs' ? 'qwiklabs' : 'standard';
-        if (modeTabStandard && modeTabQwiklabs) {
-          if (currentMode === 'qwiklabs') {
-            modeTabStandard.classList.remove('active');
-            modeTabQwiklabs.classList.add('active');
-          } else {
-            modeTabQwiklabs.classList.remove('active');
-            modeTabStandard.classList.add('active');
-          }
+        if (mode === 'qwiklabs' || mode === 'standard') {
+          lastLabMode = mode;
+          currentMode = mode;
+        } else if (mode === 'quiz') {
+          currentMode = 'quiz';
+        } else {
+          currentMode = 'standard';
+        }
+
+        if (modeTabStandard) {
+          modeTabStandard.classList.toggle('active', currentMode === 'standard');
+        }
+        if (modeTabQwiklabs) {
+          modeTabQwiklabs.classList.toggle('active', currentMode === 'qwiklabs');
+        }
+        if (modeTabQuiz) {
+          modeTabQuiz.classList.toggle('active', currentMode === 'quiz');
         }
         renderCards();
+        if (currentMode === 'quiz') {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
       }
 
       function goToStep(stepNumber) {
         if (stepNumber < 1 || stepNumber > totalSteps) {
           return;
+        }
+        if (currentMode === 'quiz') {
+          currentMode = lastLabMode;
+          if (modeTabStandard) {
+            modeTabStandard.classList.toggle('active', currentMode === 'standard');
+          }
+          if (modeTabQwiklabs) {
+            modeTabQwiklabs.classList.toggle('active', currentMode === 'qwiklabs');
+          }
+          if (modeTabQuiz) {
+            modeTabQuiz.classList.remove('active');
+          }
         }
         currentStep = stepNumber;
         renderCards();
@@ -3011,6 +3499,58 @@ gcloud logging read \
           setLabMode('qwiklabs');
         });
       }
+
+      if (modeTabQuiz) {
+        modeTabQuiz.addEventListener('click', function () {
+          setLabMode('quiz');
+        });
+      }
+
+      if (quizBackToStandardBtn) {
+        quizBackToStandardBtn.addEventListener('click', function () {
+          setLabMode('standard');
+        });
+      }
+
+      if (quizBackToQwiklabsBtn) {
+        quizBackToQwiklabsBtn.addEventListener('click', function () {
+          setLabMode('qwiklabs');
+        });
+      }
+
+      // Interactive Quiz Option Selection & Answer Reveal Toggle
+      document.querySelectorAll('.quiz-options-list').forEach(function (listEl) {
+        var buttons = listEl.querySelectorAll('.quiz-option-btn');
+        buttons.forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            buttons.forEach(function (other) {
+              other.classList.remove('selected');
+            });
+            btn.classList.add('selected');
+          });
+        });
+      });
+
+      document.querySelectorAll('.quiz-reveal-btn').forEach(function (revealBtn) {
+        revealBtn.addEventListener('click', function () {
+          var quizId = revealBtn.getAttribute('data-quiz');
+          if (!quizId) return;
+          var answerPanel = document.getElementById('quiz-answer-' + quizId);
+          var cardEl = document.getElementById('quiz-card-' + quizId);
+          if (!answerPanel) return;
+
+          var isOpen = answerPanel.classList.toggle('open');
+          revealBtn.classList.toggle('active', isOpen);
+          revealBtn.textContent = isOpen ? '🙈 정답 숨기기' : '🔍 정답 확인하기';
+
+          if (cardEl) {
+            var correctBtns = cardEl.querySelectorAll('.quiz-option-btn[data-correct="true"]');
+            correctBtns.forEach(function (cBtn) {
+              cBtn.classList.toggle('revealed-correct', isOpen);
+            });
+          }
+        });
+      });
 
       navItems.forEach(function (item) {
         item.addEventListener('click', function () {
@@ -3098,8 +3638,88 @@ gcloud logging read \
         });
       });
 
+      // Diagram Click-to-Zoom Lightbox
+      var lightboxOverlay = document.createElement('div');
+      lightboxOverlay.className = 'diagram-lightbox-overlay';
+      lightboxOverlay.id = 'diagramLightbox';
+      lightboxOverlay.innerHTML =
+        '<div class="diagram-lightbox-toolbar">' +
+          '<button type="button" class="diagram-lightbox-btn" id="lightboxZoomBtn">🔍 150% 확대 보기</button>' +
+          '<button type="button" class="diagram-lightbox-btn" id="lightboxCloseBtn">✕ 닫기 (ESC)</button>' +
+        '</div>' +
+        '<div class="diagram-lightbox-stage" id="lightboxStage">' +
+          '<img id="lightboxImg" src="" alt="" />' +
+        '</div>' +
+        '<div class="diagram-lightbox-caption" id="lightboxCaption"></div>';
+      document.body.appendChild(lightboxOverlay);
+
+      var lightboxStage = document.getElementById('lightboxStage');
+      var lightboxImg = document.getElementById('lightboxImg');
+      var lightboxCaption = document.getElementById('lightboxCaption');
+      var lightboxZoomBtn = document.getElementById('lightboxZoomBtn');
+      var lightboxCloseBtn = document.getElementById('lightboxCloseBtn');
+
+      function closeLightbox() {
+        lightboxOverlay.classList.remove('open');
+        lightboxStage.classList.remove('zoomed');
+        if (lightboxZoomBtn) lightboxZoomBtn.textContent = '🔍 150% 확대 보기';
+      }
+
+      function toggleLightboxZoom() {
+        var isZoomed = lightboxStage.classList.toggle('zoomed');
+        if (lightboxZoomBtn) {
+          lightboxZoomBtn.textContent = isZoomed ? '🗗 화면 맞춤 보기' : '🔍 150% 확대 보기';
+        }
+      }
+
+      document.querySelectorAll('.diagram-box img').forEach(function (imgEl) {
+        imgEl.addEventListener('click', function () {
+          lightboxImg.src = imgEl.getAttribute('src') || '';
+          lightboxImg.alt = imgEl.getAttribute('alt') || '';
+          var box = imgEl.closest('.diagram-box');
+          var cap = box ? box.querySelector('.diagram-caption') : null;
+          lightboxCaption.textContent = cap ? cap.textContent : (imgEl.getAttribute('alt') || '');
+          lightboxStage.classList.remove('zoomed');
+          if (lightboxZoomBtn) lightboxZoomBtn.textContent = '🔍 150% 확대 보기';
+          lightboxOverlay.classList.add('open');
+        });
+      });
+
+      if (lightboxCloseBtn) {
+        lightboxCloseBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          closeLightbox();
+        });
+      }
+
+      if (lightboxZoomBtn) {
+        lightboxZoomBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          toggleLightboxZoom();
+        });
+      }
+
+      if (lightboxImg) {
+        lightboxImg.addEventListener('click', function (e) {
+          e.stopPropagation();
+          toggleLightboxZoom();
+        });
+      }
+
+      lightboxOverlay.addEventListener('click', function (e) {
+        if (e.target === lightboxOverlay) {
+          closeLightbox();
+        }
+      });
+
       document.addEventListener('keydown', function (e) {
-        if (viewAllMode) return;
+        if (lightboxOverlay.classList.contains('open')) {
+          if (e.key === 'Escape') {
+            closeLightbox();
+          }
+          return;
+        }
+        if (viewAllMode || currentMode === 'quiz') return;
         if (e.key === 'ArrowRight' && currentStep < totalSteps) {
           goToStep(currentStep + 1);
         } else if (e.key === 'ArrowLeft' && currentStep > 1) {
@@ -3107,7 +3727,9 @@ gcloud logging read \
         }
       });
 
-      if (window.location.hash === '#qwiklabs' || window.location.search.indexOf('mode=qwiklabs') !== -1) {
+      if (window.location.hash === '#quiz' || window.location.search.indexOf('mode=quiz') !== -1) {
+        setLabMode('quiz');
+      } else if (window.location.hash === '#qwiklabs' || window.location.search.indexOf('mode=qwiklabs') !== -1) {
         setLabMode('qwiklabs');
       }
     })();

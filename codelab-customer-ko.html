@@ -575,6 +575,7 @@
 
     /* Architecture Diagram Containers */
     .diagram-box {
+      position: relative;
       background: linear-gradient(180deg, var(--bg-subtle) 0%, var(--bg-surface) 100%);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-lg);
@@ -592,6 +593,13 @@
       box-shadow: var(--shadow-sm);
       display: block;
       margin: 0 auto;
+      cursor: zoom-in;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .diagram-box img:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
     }
 
     .diagram-caption {
@@ -599,6 +607,114 @@
       color: var(--text-muted);
       margin-top: 14px;
       font-weight: 500;
+    }
+
+    .diagram-caption::after {
+      content: " · 🔍 클릭하여 확대 보기";
+      color: var(--google-blue);
+      font-size: 12px;
+      font-weight: 600;
+      opacity: 0.88;
+    }
+
+    /* Diagram Lightbox Modal */
+    .diagram-lightbox-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .diagram-lightbox-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .diagram-lightbox-toolbar {
+      position: absolute;
+      top: 20px;
+      right: 24px;
+      display: flex;
+      gap: 10px;
+      z-index: 10001;
+    }
+
+    .diagram-lightbox-btn {
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s ease, transform 0.15s ease;
+    }
+
+    .diagram-lightbox-btn:hover {
+      background: rgba(255, 255, 255, 0.26);
+      transform: translateY(-1px);
+    }
+
+    .diagram-lightbox-stage {
+      max-width: 95vw;
+      max-height: 82vh;
+      overflow: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+      background: #ffffff;
+      padding: 12px;
+    }
+
+    .diagram-lightbox-stage img {
+      max-width: 92vw;
+      max-height: 78vh;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border-radius: 8px;
+      display: block;
+      cursor: zoom-in;
+      transition: max-width 0.2s ease, max-height 0.2s ease;
+    }
+
+    .diagram-lightbox-stage.zoomed {
+      align-items: flex-start;
+      justify-content: flex-start;
+    }
+
+    .diagram-lightbox-stage.zoomed img {
+      max-width: none;
+      max-height: none;
+      width: 150%;
+      cursor: zoom-out;
+    }
+
+    .diagram-lightbox-caption {
+      margin-top: 14px;
+      color: #f1f5f9;
+      font-size: 14px;
+      font-weight: 500;
+      text-align: center;
+      max-width: 85vw;
+      line-height: 1.5;
     }
 
     /* Feature Cards Grid */
@@ -3075,7 +3191,87 @@ gcloud compute networks delete "${NETWORK_NAME}" \
         });
       });
 
+      // Diagram Click-to-Zoom Lightbox
+      var lightboxOverlay = document.createElement('div');
+      lightboxOverlay.className = 'diagram-lightbox-overlay';
+      lightboxOverlay.id = 'diagramLightbox';
+      lightboxOverlay.innerHTML =
+        '<div class="diagram-lightbox-toolbar">' +
+          '<button type="button" class="diagram-lightbox-btn" id="lightboxZoomBtn">🔍 150% 확대 보기</button>' +
+          '<button type="button" class="diagram-lightbox-btn" id="lightboxCloseBtn">✕ 닫기 (ESC)</button>' +
+        '</div>' +
+        '<div class="diagram-lightbox-stage" id="lightboxStage">' +
+          '<img id="lightboxImg" src="" alt="" />' +
+        '</div>' +
+        '<div class="diagram-lightbox-caption" id="lightboxCaption"></div>';
+      document.body.appendChild(lightboxOverlay);
+
+      var lightboxStage = document.getElementById('lightboxStage');
+      var lightboxImg = document.getElementById('lightboxImg');
+      var lightboxCaption = document.getElementById('lightboxCaption');
+      var lightboxZoomBtn = document.getElementById('lightboxZoomBtn');
+      var lightboxCloseBtn = document.getElementById('lightboxCloseBtn');
+
+      function closeLightbox() {
+        lightboxOverlay.classList.remove('open');
+        lightboxStage.classList.remove('zoomed');
+        if (lightboxZoomBtn) lightboxZoomBtn.textContent = '🔍 150% 확대 보기';
+      }
+
+      function toggleLightboxZoom() {
+        var isZoomed = lightboxStage.classList.toggle('zoomed');
+        if (lightboxZoomBtn) {
+          lightboxZoomBtn.textContent = isZoomed ? '🗗 화면 맞춤 보기' : '🔍 150% 확대 보기';
+        }
+      }
+
+      document.querySelectorAll('.diagram-box img').forEach(function (imgEl) {
+        imgEl.addEventListener('click', function () {
+          lightboxImg.src = imgEl.getAttribute('src') || '';
+          lightboxImg.alt = imgEl.getAttribute('alt') || '';
+          var box = imgEl.closest('.diagram-box');
+          var cap = box ? box.querySelector('.diagram-caption') : null;
+          lightboxCaption.textContent = cap ? cap.textContent : (imgEl.getAttribute('alt') || '');
+          lightboxStage.classList.remove('zoomed');
+          if (lightboxZoomBtn) lightboxZoomBtn.textContent = '🔍 150% 확대 보기';
+          lightboxOverlay.classList.add('open');
+        });
+      });
+
+      if (lightboxCloseBtn) {
+        lightboxCloseBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          closeLightbox();
+        });
+      }
+
+      if (lightboxZoomBtn) {
+        lightboxZoomBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          toggleLightboxZoom();
+        });
+      }
+
+      if (lightboxImg) {
+        lightboxImg.addEventListener('click', function (e) {
+          e.stopPropagation();
+          toggleLightboxZoom();
+        });
+      }
+
+      lightboxOverlay.addEventListener('click', function (e) {
+        if (e.target === lightboxOverlay) {
+          closeLightbox();
+        }
+      });
+
       document.addEventListener('keydown', function (e) {
+        if (lightboxOverlay.classList.contains('open')) {
+          if (e.key === 'Escape') {
+            closeLightbox();
+          }
+          return;
+        }
         if (viewAllMode) return;
         if (e.key === 'ArrowRight' && currentStep < totalSteps) {
           goToStep(currentStep + 1);
