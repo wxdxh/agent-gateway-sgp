@@ -18,16 +18,20 @@ def step_three_check(handles:, maximum_score:, resources:)
     if auth_handle && project_id
       [
         "https://us-central1-aiplatform.googleapis.com/v1beta1/projects/#{project_id}/locations/us-central1/reasoningEngines",
-        "https://us-central1-aiplatform.googleapis.com/v1/projects/#{project_id}/locations/us-central1/reasoningEngines",
-        "https://cloudresourcemanager.googleapis.com/v1/projects/#{project_id}:getIamPolicy"
+        "https://us-central1-aiplatform.googleapis.com/v1/projects/#{project_id}/locations/us-central1/reasoningEngines"
       ].each do |url|
         break if agent_found
         begin
           uri = URI(url)
-          req = url.end_with?(':getIamPolicy') ? Net::HTTP::Post.new(uri) : Net::HTTP::Get.new(uri)
+          req = Net::HTTP::Get.new(uri)
           auth_handle.authorization.apply!(req)
           resp = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |http| http.request(req) }
-          if resp.is_a?(Net::HTTPSuccess) && (resp.body.include?('mortgage_agent') || resp.body.include?('mortgage-agent') || resp.body.include?('roles/networkservices.agentGatewayUser'))
+          if resp.is_a?(Net::HTTPSuccess) && (
+            resp.body.include?('mortgage_agent') ||
+            resp.body.include?('mortgage-agent') ||
+            resp.body.include?('Mortgage Assistant Agent') ||
+            resp.body.include?('reasoningEngines/')
+          )
             agent_found = true
           end
         rescue
@@ -42,7 +46,7 @@ def step_three_check(handles:, maximum_score:, resources:)
         lab_start_time = Time.at(Time.now.to_i - 86400)
         log_filters = [
           'timestamp>"' + lab_start_time.utc.iso8601 + '"',
-          '(protoPayload.resourceName:"reasoningEngines" OR protoPayload.request.policy.bindings.role="roles/networkservices.agentGatewayUser")'
+          '(protoPayload.resourceName:"reasoningEngines" OR protoPayload.request.policy.bindings.role="roles/iap.egressor")'
         ]
         req = Google::Apis::LoggingV2::ListLogEntriesRequest.new
         req.resource_names = ['projects/' + project_id]

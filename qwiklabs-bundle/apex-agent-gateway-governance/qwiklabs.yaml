@@ -43,12 +43,28 @@ environment:
       roles:
       - roles/owner
       - roles/editor
+      - roles/resourcemanager.projectIamAdmin
+      - roles/serviceusage.serviceUsageAdmin
       - roles/iam.securityAdmin
+      - roles/iam.serviceAccountAdmin
+      - roles/iam.serviceAccountUser
+      - roles/iam.serviceAccountTokenCreator
+      - roles/artifactregistry.admin
+      - roles/cloudbuild.builds.editor
       - roles/run.admin
       - roles/aiplatform.admin
+      - roles/networkservices.admin
+      - roles/networksecurity.admin
+      - roles/compute.networkAdmin
+      - roles/compute.securityAdmin
+      - roles/dns.admin
       - roles/dlp.admin
       - roles/modelarmor.admin
+      - roles/iap.admin
       - roles/iap.settingsAdmin
+      - roles/agentregistry.admin
+      - roles/cloudapiregistry.admin
+      - roles/storage.admin
   student_visible_outputs:
   - label: Open Google Cloud console
     reference: project_0.console_url

@@ -115,13 +115,13 @@ The repository contains the following core directories:
 * `src/corporate-email/`: FastMCP server providing internal underwriting guideline email search/read tools (`search_emails`, `read_email`) and an outbound email tool (`send_email`).
 * `src/mortgage-agent/`: Google ADK mortgage underwriting agent and deployment script (`deploy_agent.py`).
 * `terraform/`: Terraform module that provisions Cloud Run, Agent Gateway, IAP, Model Armor/DLP, Vertex AI Agent Engine, and the Cloud Monitoring dashboard.
-* `scripts/grant_agent_mcp_egress.sh`: Script that grants Agent Gateway invocation permissions (`roles/networkservices.agentGatewayUser`) and Cloud Run invoker permissions (`roles/run.invoker`) to the deployed Agent Identity.
+* `scripts/grant_agent_mcp_egress.sh`: Script that grants per-resource `roles/iap.egressor` (including conditional CEL bindings) to the deployed Agent Identity across Agent Registry endpoints and MCP servers.
 
 ---
 
-## Task 2. Inspect the Backend MCP Server Code and Build Container Images
+## Task 2. Provision Agent Gateway, IAP (`DRY_RUN`), and Model Armor (`KOREA_RRN`/`SSN`) with Terraform
 
-For Agent Gateway's Model Armor (`CONTENT_AUTHZ`) integration to accurately redact sensitive PII from MCP tool responses, it is important to understand how the MCP servers return data.
+First, you will inspect how the FastMCP servers format responses for Model Armor (`CONTENT_AUTHZ`), and then use Terraform to provision the foundational VPC, Artifact Registry (`gateway-docker`), placeholder Cloud Run services, Agent Gateway (`agent-gateway`), IAP AuthzExtension (in `DRY_RUN` mode), Model Armor + Cloud DLP templates (`KOREA_RRN` and `US_SOCIAL_SECURITY_NUMBER`), and Agent Registry endpoints.
 
 ### 1. Inspect the FastMCP `structuredContent` Return Structure
 
@@ -134,152 +134,190 @@ sed -n '95,145p' ~/agent-gateway-governance/src/legacy-dms/server.py
 * By default, when FastMCP serializes a Python dictionary return value, it populates both a plain-text array (`content`) and a structured JSON block (`structuredContent`).
 * Currently, **Agent Gateway's Model Armor integration inspects and redacts only the `structuredContent` field of MCP responses**. If raw strings remain in the `content` array, unredacted RRNs or SSNs could leak to the agent. Therefore, all MCP tools in this lab explicitly return `ToolResult(content=[], structured_content=...)`.
 
-### 2. Create the Artifact Registry Repository
+### 2. Inspect the Terraform Governance Configuration
 
-First, use Terraform to create the Artifact Registry repository (`mcp-servers`) that will store the container images:
-
-```bash
-cd ~/agent-gateway-governance/terraform
-terraform init
-
-terraform apply \
-  -target=google_project_service.apis \
-  -target=google_artifact_registry_repository.mcp_servers \
-  -var="project_id=${PROJECT_ID}" \
-  -var="region=${REGION}" \
-  -auto-approve
-```
-
-### 3. Build and Push the Three MCP Server Images with Skaffold
-
-Return to the repository root and run `skaffold build` to build and push the `legacy-dms`, `income-verification`, and `corporate-email` container images to Artifact Registry:
+Inspect `terraform/example.tfvars` to see how each governance layer is configured:
 
 ```bash
-cd ~/agent-gateway-governance
-export REPO="${REGION}-docker.pkg.dev/${PROJECT_ID}/mcp-servers"
-
-skaffold build --default-repo="${REPO}"
-```
-
-Once the build completes, verify that all three images are registered in Artifact Registry:
-
-```bash
-gcloud artifacts docker images list "${REPO}" --include-tags
-```
-
-<ql-activity-tracking step=1>
-Check Artifact Registry and MCP Server Container Builds
-</ql-activity-tracking>
-
----
-
-## Task 3. Provision Agent Gateways, IAP, and Model Armor (KOREA_RRN/SSN) with Terraform
-
-Next, use Terraform to provision the three Cloud Run MCP servers, three Agent Gateways, IAP (`DRY_RUN` mode), Model Armor and Cloud DLP templates, the Vertex AI Agent Engine shell, and the observability dashboard.
-
-### 1. Inspect the Terraform Governance Configuration
-
-Before deploying, inspect `terraform/variables.tf` to see how each security layer is configured:
-
-```bash
-cat ~/agent-gateway-governance/terraform/variables.tf
+cat ~/agent-gateway-governance/terraform/example.tfvars
 ```
 
 Key configuration highlights include:
 
-1. **`model_armor_pii_types`**: Defaults to `["US_SOCIAL_SECURITY_NUMBER", "KOREA_RRN"]`, enabling Cloud DLP to detect both US Social Security Numbers (`323-45-6789`) and Korean Resident Registration Numbers (`850315-1234566`, `870822-2345673`) and redact them as `[US_SOCIAL_SECURITY_NUMBER]` and `[KOREA_RRN]`.
-2. **`enforcement_mode = "DRY_RUN"`**: Deploys the IAP CEL policy (`request.mcp.tool.name != "send_email"`) in front of `corporate-email` in `DRY_RUN` mode initially. During the first test, `send_email` calls are logged as audit findings without being blocked.
-3. **`enable_private_networking`**: Defaults to `false` (public `*.run.app` ingress + IAM authentication) for rapid lab execution, and can be set to `true` in isolated enterprise networks to provision a custom VPC, Proxy-Only Subnet, Network Attachment, and Private Cloud DNS.
+1. **`model_armor_pii_types`**: Configured with `["US_SOCIAL_SECURITY_NUMBER", "KOREA_RRN"]`, enabling Cloud DLP (`agw-ssn-inspect-template` and `agw-ssn-redaction-template`) to detect both US Social Security Numbers (`323-45-6789`) and Korean Resident Registration Numbers (`850315-1234566`, `870822-2345673`) and redact them as `[US_SOCIAL_SECURITY_NUMBER]` and `[KOREA_RRN]`.
+2. **`agent_gateway_iap_iam_enforcement_mode = "DRY_RUN"`**: Deploys the IAP `AuthzExtension` (`agent-gateway-iap-authz`) in `DRY_RUN` mode initially. During the first test, unauthorized tool calls (`send_email`) are logged as audit findings without being blocked.
+3. **`enable_cloud_run_private_networking = false`**: Uses public `*.run.app` ingress with IAM OIDC authentication for rapid lab execution (and can be switched to `true` in isolated enterprise networks to route through an Internal Application Load Balancer and Private Cloud DNS).
 
-### 2. Create `terraform.tfvars` and Provision All Infrastructure
+### 3. Create the Terraform State Bucket and Provision Infrastructure
 
-Run the following commands to generate `terraform.tfvars` and execute `terraform apply`:
+Run the following commands to create a GCS state bucket, configure `terraform/terraform.tfvars` from `example.tfvars`, and execute `terraform apply`:
 
 ```bash
-cd ~/agent-gateway-governance/terraform
+cd ~/agent-gateway-governance
 
-cat <<EOF > terraform.tfvars
-project_id                = "${PROJECT_ID}"
-region                    = "${REGION}"
-enable_private_networking = false
-enforcement_mode          = "DRY_RUN"
+gcloud storage buckets create "gs://${PROJECT_ID}-tfstate" \
+  --location="${REGION}" \
+  --uniform-bucket-level-access 2>/dev/null || true
+
+cat <<EOF > terraform/backend.conf
+bucket = "${PROJECT_ID}-tfstate"
+prefix = "terraform/state"
 EOF
 
-terraform apply -auto-approve
+cp terraform/example.tfvars terraform/terraform.tfvars
+USER_EMAIL=$(gcloud config get-value account)
+
+sed -i "s|YOUR_PROJECT_ID|${PROJECT_ID}|g" terraform/terraform.tfvars
+sed -i "s|YOUR_ORG_ID|${ORG_ID}|g" terraform/terraform.tfvars
+sed -i "s|YOUR_ADMIN_EMAIL|${USER_EMAIL}|g" terraform/terraform.tfvars
+
+terraform -chdir=terraform init -backend-config=backend.conf
+terraform -chdir=terraform apply -auto-approve
 ```
 
-> **Note**: Provisioning the Cloud DLP templates, Model Armor template, three Cloud Run services, three Agent Gateways, and IAP bindings takes approximately 2 to 3 minutes.
+> **Note**: Provisioning the VPC, Artifact Registry (`gateway-docker`), Cloud DLP templates, Model Armor templates (`agw-request-template`, `agw-response-template`), placeholder Cloud Run services, Agent Gateway (`agent-gateway`), IAP/Model Armor AuthzPolicies, and Agent Registry registrations takes approximately 3 to 5 minutes.
 
-### 3. Verify Terraform Outputs
+### 4. Verify Terraform Outputs
 
-Once provisioning finishes, inspect the generated Agent Gateway endpoint URLs and Agent Engine resource name:
+Once provisioning finishes, inspect the generated outputs:
 
 ```bash
-terraform output
+terraform -chdir=terraform output
 ```
 
-Example output:
-
-```text
-agent_engine_resource_name = "projects/123456789012/locations/us-central1/reasoningEngines/9876543210987654321"
-agent_gateway_endpoints = {
-  "corporate-email" = "https://agw-corporate-email-xxxxx.us-central1.agentgateway.cloud.goog/mcp"
-  "income-verification" = "https://agw-income-verification-xxxxx.us-central1.agentgateway.cloud.goog/mcp"
-  "legacy-dms" = "https://agw-legacy-dms-xxxxx.us-central1.agentgateway.cloud.goog/mcp"
-}
-```
-
-<ql-activity-tracking step=2>
-Check Agent Gateways, IAP, and Model Armor Provisioning
+<ql-activity-tracking step=1>
+Check Agent Gateway, IAP (DRY_RUN), and Model Armor Provisioning
 </ql-activity-tracking>
 
 ---
 
-## Task 4. Deploy the Mortgage Underwriting Agent (`mortgage-agent`) and Grant Egress IAM Roles
+## Task 3. Build and Deploy the Three Mortgage MCP Servers to Cloud Run with Skaffold
 
-Terraform pre-created an empty Vertex AI Agent Engine (Reasoning Engine) shell so that its dedicated Agent Identity is issued ahead of time. Now you will upload the ADK `mortgage-agent` Python code to that Agent Engine resource and grant least-privilege IAM permissions so the agent can traverse the Agent Gateways.
+Terraform created placeholder Cloud Run services (`legacy-dms`, `income-verification`, `corporate-email`) so their `*.run.app` URLs could be registered in Agent Registry. Now you will render the Skaffold and Cloud Run manifests and run `skaffold run` to build and deploy the actual FastMCP server containers.
 
-### 1. Inspect the ADK Agent's Agent Gateway Authentication Code
+### 1. Grant Service Account User Role for Cloud Build / Cloud Run Deployment
 
-Check how the agent connects to the three Agent Gateway endpoints in `src/mortgage-agent/agent/agent.py`:
-
-```bash
-sed -n '90,155p' ~/agent-gateway-governance/src/mortgage-agent/agent/agent.py
-```
-
-* Rather than calling backend Cloud Run URLs directly, the agent communicates exclusively through the three **Agent Gateway URLs (`*.agentgateway.cloud.goog/mcp`)** injected via `AGENT_GATEWAY_ENDPOINTS`.
-* The `GoogleCredentialsAuth` class automatically mints OAuth2 access tokens and Google ID tokens for the Agent Identity at runtime and injects them into the HTTP `Authorization: Bearer ...` header.
-
-### 2. Deploy the `mortgage-agent` Code to Vertex AI Agent Engine
-
-Use `uv` to run `deploy_agent.py`, which reads the Terraform outputs and updates the existing Agent Engine resource with the agent code and system instructions:
+Grant `roles/iam.serviceAccountUser` on the default Compute Engine service account to your user account so Skaffold can deploy the Cloud Run services:
 
 ```bash
-cd ~/agent-gateway-governance/src/mortgage-agent
-uv run deploy_agent.py
+cd ~/agent-gateway-governance
+USER_EMAIL=$(gcloud config get-value account)
+
+gcloud iam service-accounts add-iam-policy-binding \
+  "${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+  --project="${PROJECT_ID}" \
+  --member="user:${USER_EMAIL}" \
+  --role="roles/iam.serviceAccountUser"
 ```
 
-When the deployment completes, you will see `Update completed: projects/.../locations/us-central1/reasoningEngines/...`.
+### 2. Render Manifest Templates and Run Skaffold
 
-### 3. Grant Agent Egress IAM Roles (`grant_agent_mcp_egress.sh`)
+Render `skaffold.yaml` and the three Cloud Run service manifests (`cloudrun/*.yaml`) from their `.tmpl` templates, then run `skaffold run`:
 
-To traverse the Agent Gateway data plane and invoke the server-side Cloud Run service (`corporate-email`), the Agent Identity requires two IAM roles:
+```bash
+cd ~/agent-gateway-governance
+export MCP_INGRESS="all"
 
-1. **`roles/networkservices.agentGatewayUser`**: Allows the agent to send traffic through the Agent Gateways in the project.
-2. **`roles/run.invoker`**: Allows the server-side Agent Gateway (`corporate-email`) to invoke the backing Cloud Run service on behalf of the verified Agent Identity.
+envsubst '${PROJECT_ID} ${REGION} ${MCP_INGRESS}' < skaffold.yaml.tmpl > skaffold.yaml
+for tmpl in cloudrun/*.yaml.tmpl; do
+  envsubst '${PROJECT_ID} ${REGION} ${MCP_INGRESS}' < "${tmpl}" > "${tmpl%.tmpl}"
+done
 
-Run the helper script to bind these permissions:
+skaffold run
+```
+
+### 3. Verify Deployed Cloud Run Services and Container Images
+
+Confirm that all three container images are built in `gateway-docker` and deployed to Cloud Run:
+
+```bash
+gcloud artifacts docker images list "${REGION}-docker.pkg.dev/${PROJECT_ID}/gateway-docker" --include-tags
+gcloud run services list --region="${REGION}"
+```
+
+<ql-activity-tracking step=2>
+Check Skaffold Build and Cloud Run MCP Server Deployment
+</ql-activity-tracking>
+
+---
+
+## Task 4. Deploy the Mortgage Underwriting Agent (`mortgage-agent`) and Configure Conditional IAP CEL Egress
+
+Now you will deploy the Google ADK `mortgage-agent` to Vertex AI Agent Engine with **Agent Identity (`--enable-agent-identity`)** and **Agent Gateway egress (`--agent-gateway`)**, and configure fine-grained per-tool IAP authorization using `scripts/grant_agent_mcp_egress.sh`.
+
+### 1. Inspect the ADK Agent and Dynamic MCP Discovery Code
+
+Inspect `src/mortgage-agent/agent/agent.py` to see how the agent discovers registered MCP servers from Agent Registry and authenticates to Cloud Run:
+
+```bash
+sed -n '1,95p' ~/agent-gateway-governance/src/mortgage-agent/agent/agent.py
+```
+
+* At startup, the agent queries **Agent Registry (`agentregistry.googleapis.com`)** to dynamically discover the URLs of `legacy-dms`, `income-verification`, and `corporate-email`.
+* Because the agent is deployed with `--agent-gateway`, all outbound HTTP/MCP calls from the agent are transparently routed through **`agent-gateway`** (`AGENT_TO_ANYWHERE` forward proxy), where IAP (`REQUEST_AUTHZ`) and Model Armor (`CONTENT_AUTHZ`) inspect the traffic.
+
+### 2. Grant Endpoint Egress and Deploy `mortgage-agent` to Vertex AI Agent Engine
+
+First, grant project-wide Agent Engine egress to the registered Google API endpoints (`aiplatform`, `agentregistry`, `iamcredentials`, `telemetry`), then deploy `mortgage-agent` using `uv`:
 
 ```bash
 cd ~/agent-gateway-governance
 chmod +x ./scripts/grant_agent_mcp_egress.sh
-./scripts/grant_agent_mcp_egress.sh
+
+./scripts/grant_agent_mcp_egress.sh --bind-all-agents --endpoints
+
+cd ~/agent-gateway-governance/src/mortgage-agent
+uv sync
+
+uv run python deploy_agent.py \
+  --project="${PROJECT_ID}" \
+  --region="${REGION}" \
+  --enable-agent-identity \
+  --agent-name=mortgage-agent \
+  --agent-gateway="projects/${PROJECT_ID}/locations/${REGION}/agentGateways/agent-gateway" \
+  --mcp-invoker-sa="$(terraform -chdir=../../terraform output -raw agent_mcp_invoker_email)" \
+  --model-endpoint-location=global
 ```
 
-> **Note**: IAM policy bindings can take roughly 60 seconds to propagate globally across Google Cloud.
+> **Note**: Deploying the Reasoning Engine to Vertex AI Agent Engine takes approximately 3 to 5 minutes.
+
+### 3. Grant Conditional IAP CEL Egress (`roles/iap.egressor`) per MCP Server
+
+Capture the deployed Reasoning Engine ID (`AGENT_ID`) and grant `roles/iap.egressor` on the three MCP servers in Agent Registry:
+
+1. **Unconditional access** to `legacy-dms` and `income-verification`.
+2. **Conditional CEL access (`ReadOnlyToolsOnly`)** to `corporate-email`, allowing only tools marked `isReadOnly == true` (`search_emails`, `read_email`) and MCP handshake methods (`toolName == ''`), while denying `send_email` (`isReadOnly == false`).
+
+```bash
+cd ~/agent-gateway-governance
+
+export AGENT_ID=$(gcloud beta ai reasoning-engines list \
+  --project="${PROJECT_ID}" \
+  --region="${REGION}" \
+  --filter='displayName="Mortgage Assistant Agent"' \
+  --format='value(name)' | head -n 1 | awk -F'/' '{print $NF}')
+echo "AGENT_ID: ${AGENT_ID}"
+
+# 1. Grant unconditional egress to legacy-dms and income-verification
+./scripts/grant_agent_mcp_egress.sh \
+  --mcp \
+  --agent-id "${AGENT_ID}" \
+  --mcp-filter "legacy-dms income-verification"
+
+# 2. Grant conditional CEL egress (ReadOnlyToolsOnly) to corporate-email
+./scripts/grant_agent_mcp_egress.sh \
+  --mcp \
+  --agent-id "${AGENT_ID}" \
+  --mcp-filter "corporate-email" \
+  --condition-expression "api.getAttribute('iap.googleapis.com/mcp.tool.isReadOnly', false) == true || api.getAttribute('iap.googleapis.com/mcp.toolName', '') == ''" \
+  --condition-title "ReadOnlyToolsOnly" \
+  --condition-description "Restrict ${AGENT_ID} to read-only tools on corporate-email"
+```
+
+> **Note**: IAM policy bindings can take roughly 60 seconds to propagate across Google Cloud.
 
 <ql-activity-tracking step=3>
-Check Vertex AI Agent Engine Deployment and Egress IAM Roles
+Check Vertex AI Agent Engine Deployment and Conditional IAP Egress
 </ql-activity-tracking>
 
 ---
@@ -289,14 +327,14 @@ Check Vertex AI Agent Engine Deployment and Egress IAM Roles
 Now open the **Agent Engine Playground** in the Google Cloud Console and run the mortgage underwriting scenario to verify two behaviors simultaneously:
 
 1. **Model Armor + Cloud DLP (`CONTENT_AUTHZ`)**: Verify that Korean Resident Registration Numbers (`850315-1234566`, `870822-2345673`) and US SSNs (`323-45-6789`, `321-54-9876`) returned by `legacy-dms` and `income-verification` are redacted into `[KOREA_RRN]` and `[US_SOCIAL_SECURITY_NUMBER]`.
-2. **IAP (`REQUEST_AUTHZ` - `DRY_RUN` Mode)**: Verify that the `send_email` tool on `corporate-email` is permitted to execute while the policy is in `DRY_RUN` mode.
+2. **IAP (`REQUEST_AUTHZ` - `DRY_RUN` Mode)**: Verify that the `send_email` tool on `corporate-email` is permitted to execute while the IAP AuthzExtension (`agent-gateway-iap-authz`) is in `DRY_RUN` mode.
 
 ![Comparison of DRY_RUN vs. ENFORCED Mode and Observability Dashboard](img/03-dryrun-vs-enforced-flow.png)
 
 ### 1. Open the Vertex AI Agent Engine Playground
 
 1. In the Google Cloud Console top search bar, type **Agent Engine** and navigate to **Vertex AI > Agent Engine**.
-2. Confirm that the region is set to **`us-central1`**, then click the deployed **`mortgage_agent`**.
+2. Confirm that the region is set to **`us-central1`**, then click the deployed **`Mortgage Assistant Agent`**.
 3. Click the **Playground** tab at the top.
 
 ### 2. Run the Mortgage Underwriting and Email Prompt
@@ -320,7 +358,7 @@ Confirm that the agent invokes the tools across all three MCP servers and return
   * Their US SSNs (`323-45-6789`, `321-54-9876`) are masked as **`[US_SOCIAL_SECURITY_NUMBER]`**, ensuring raw identifiers never enter the LLM context or chat output.
 * **2026 DTI Assessment & Outbound Email Verified (IAP `DRY_RUN` Mode)**:
   * Compared against the 2026 maximum DTI cap (**45.0%**) specified in internal email `msg-002`, the applicants' combined estimated DTI (**28.4%** on $237,000 combined annual income) qualifies as **Eligible**.
-  * Because the IAP policy is currently in `DRY_RUN` mode, the `send_email` tool call succeeds (`status: sent`).
+  * Because `agent-gateway-iap-authz` is currently in `DRY_RUN` mode, the `send_email` tool call succeeds (`status: sent`) even though it violates the `ReadOnlyToolsOnly` CEL condition.
 
 ---
 
@@ -331,16 +369,15 @@ Agent Gateway automatically emits standardized metrics, distributed traces (Clou
 ### 1. View the Cloud Monitoring Governance Dashboard
 
 1. In the Google Cloud Console, navigate to **Monitoring > Dashboards**.
-2. Click the **`Agent Gateway Governance Overview`** dashboard created by Terraform.
+2. Click the **`Agent Gateway Governance`** dashboard created by Terraform.
 
 ![Agent Gateway Governance Overview Dashboard](img/05-observability-dashboard.png)
 
-The dashboard displays four key governance panels:
+The dashboard displays key governance panels across the data plane:
 
-* **MCP Request Rate by Tool**: Per-second invocation rate broken down by tool (`search_tax_returns`, `get_document_metadata`, `verify_income`, `search_emails`, `read_email`, `send_email`).
+* **MCP Request Rate by Tool**: Invocation rate broken down by tool (`search_tax_returns`, `get_document_metadata`, `verify_income`, `search_emails`, `read_email`, `send_email`).
 * **Agent Gateway Latency (p50 / p95)**: Processing latency across the gateway and Service Extensions (IAP, Model Armor).
-* **Model Armor Verdict Breakdown**: Ratio of requests where PII detection and redaction occurred during the `CONTENT_AUTHZ` phase.
-* **Active MCP Sessions**: Number of active agent-to-gateway MCP sessions.
+* **Model Armor & IAP Verdicts**: Requests inspected, redacted, or flagged during `REQUEST_AUTHZ` and `CONTENT_AUTHZ`.
 
 ### 2. Query Agent Gateway and Model Armor Logs in Cloud Logging
 
@@ -358,44 +395,25 @@ gcloud logging read \
 
 ## Task 7. Phase 2 Verification: Switch IAP to `ENFORCED` Mode and Verify Real-Time `send_email` Blocking
 
-Having verified in `DRY_RUN` mode that read-only tools (`search_emails`, `read_email`) are permitted while `send_email` is flagged as a policy violation, you will now switch the IAP policy on `agw-corporate-email` to **`ENFORCED` mode (`enforcement_mode = null`)** to block unauthorized outbound email calls in real time.
+Having verified in `DRY_RUN` mode that read-only tools (`search_emails`, `read_email`) satisfy the `ReadOnlyToolsOnly` CEL condition while `send_email` is flagged as a violation, you will now switch the IAP AuthzExtension (`agent-gateway-iap-authz`) to **Enforced mode (`agent_gateway_iap_iam_enforcement_mode = null`)** to block unauthorized outbound email calls in real time.
 
-### 1. Review the IAP CEL Policy Expression
+### 1. Apply `agent_gateway_iap_iam_enforcement_mode = null` (Enforced Mode) with Terraform
 
-Inspect the CEL expression defined for `agw-corporate-email` in `terraform/main.tf`:
-
-```hcl
-expression = <<-EOT
-  request.mcp.method in ["initialize", "notifications/initialized", "tools/list", "ResourceList", "PromptList"] ||
-  (request.mcp.method == "tools/call" && request.mcp.tool.name != "send_email")
-EOT
-```
-
-* Allows MCP session initialization (`initialize`) and tool discovery (`tools/list`).
-* For tool invocations (`tools/call`), permits only tools whose name is not `send_email` (`search_emails`, `read_email`), immediately rejecting `send_email` calls with `403 Permission Denied`.
-
-### 2. Apply `enforcement_mode = null` (Enforced Mode) with Terraform
-
-In Cloud Shell, update `enforcement_mode` to `null` in `terraform.tfvars` and run `terraform apply`:
+In Cloud Shell, update `agent_gateway_iap_iam_enforcement_mode` from `"DRY_RUN"` to `null` in `terraform/terraform.tfvars` and run `terraform apply`:
 
 ```bash
-cd ~/agent-gateway-governance/terraform
+cd ~/agent-gateway-governance
 
-cat <<EOF > terraform.tfvars
-project_id                = "${PROJECT_ID}"
-region                    = "${REGION}"
-enable_private_networking = false
-enforcement_mode          = null
-EOF
+sed -i 's|agent_gateway_iap_iam_enforcement_mode = "DRY_RUN"|agent_gateway_iap_iam_enforcement_mode = null|g' terraform/terraform.tfvars
 
-terraform apply -auto-approve
+terraform -chdir=terraform apply -auto-approve
 ```
 
-> **Note**: It takes approximately 60 to 90 seconds for the updated IAP policy to propagate to the Agent Gateway data plane.
+> **Note**: Wait approximately 60 seconds after `terraform apply` completes for the updated IAP enforcement mode to propagate to the Agent Gateway data plane.
 
-### 3. Verify Real-Time `send_email` Blocking in the Playground
+### 2. Verify Real-Time `send_email` Blocking in the Playground
 
-After waiting 60 seconds, return to **Vertex AI > Agent Engine > `mortgage_agent` > Playground**, start a new session, and submit the prompt again:
+After waiting 60 seconds, return to **Vertex AI > Agent Engine > `Mortgage Assistant Agent` > Playground**, start a new session, and submit the prompt again:
 
 ```text
 Please re-evaluate whether co-applicants Minjun Kim and Seoyeon Lee qualify for the 2026 residential mortgage, and send the underwriting summary via email (send_email) to underwriting-team@apex-financial.kr.
@@ -404,7 +422,7 @@ Please re-evaluate whether co-applicants Minjun Kim and Seoyeon Lee qualify for 
 Observe the enforced governance behavior:
 
 1. **Read Lookups & PII Redaction Succeed**: Calls to `legacy-dms` (`search_tax_returns`), `income-verification` (`verify_income`), and `corporate-email` (`search_emails`, `read_email`) succeed, and Korean RRNs (`[KOREA_RRN]`) and US SSNs (`[US_SOCIAL_SECURITY_NUMBER]`) remain redacted.
-2. **`send_email` Call Blocked Immediately**: As soon as the agent attempts to invoke `send_email`, **IAP (`REQUEST_AUTHZ`) on `agw-corporate-email` rejects the request with `403 Forbidden / Permission Denied`**.
+2. **`send_email` Call Blocked Immediately**: As soon as the agent attempts to invoke `send_email`, **IAP (`REQUEST_AUTHZ`) evaluates the `ReadOnlyToolsOnly` CEL condition (`isReadOnly == false`) and rejects the request with `403 PermissionDenied`**.
 3. **Graceful Agent Degradation**: The agent presents the complete underwriting summary in the chat response while noting that the outbound email could not be sent because `send_email` was denied by security policy.
 
 <ql-activity-tracking step=4>

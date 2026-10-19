@@ -14,20 +14,27 @@ def step_one_check(handles:, maximum_score:, resources:)
                  (logging.project rescue nil) ||
                  (compute.project rescue nil)
 
-    mcp_found = false
+    agw_found = false
     if auth_handle && project_id
       [
-        "https://run.googleapis.com/v2/projects/#{project_id}/locations/-/services",
-        "https://artifactregistry.googleapis.com/v1/projects/#{project_id}/locations/-/repositories"
+        "https://networkservices.googleapis.com/v1/projects/#{project_id}/locations/-/agentGateways",
+        "https://networkservices.googleapis.com/v1beta1/projects/#{project_id}/locations/-/agentGateways",
+        "https://dlp.googleapis.com/v2/projects/#{project_id}/locations/us-central1/inspectTemplates",
+        "https://dlp.googleapis.com/v2/projects/#{project_id}/inspectTemplates"
       ].each do |url|
-        break if mcp_found
+        break if agw_found
         begin
           uri = URI(url)
           req = Net::HTTP::Get.new(uri)
           auth_handle.authorization.apply!(req)
           resp = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |http| http.request(req) }
-          if resp.is_a?(Net::HTTPSuccess) && (resp.body.include?('legacy-dms') || resp.body.include?('income-verification') || resp.body.include?('corporate-email'))
-            mcp_found = true
+          if resp.is_a?(Net::HTTPSuccess) && (
+            resp.body.include?('agent-gateway') ||
+            resp.body.include?('AGENT_TO_ANYWHERE') ||
+            resp.body.include?('agw-ssn-inspect-template') ||
+            resp.body.include?('KOREA_RRN')
+          )
+            agw_found = true
           end
         rescue
           nil
@@ -37,11 +44,11 @@ def step_one_check(handles:, maximum_score:, resources:)
 
     log_found = false
     begin
-      if !mcp_found && logging && project_id
+      if !agw_found && logging && project_id
         lab_start_time = Time.at(Time.now.to_i - 86400)
         log_filters = [
           'timestamp>"' + lab_start_time.utc.iso8601 + '"',
-          '(protoPayload.resourceName:"legacy-dms" OR protoPayload.resourceName:"income-verification" OR protoPayload.resourceName:"corporate-email")'
+          '(protoPayload.resourceName:"agent-gateway" OR protoPayload.resourceName:"agw-request-template" OR protoPayload.resourceName:"agw-response-template" OR protoPayload.resourceName:"agw-ssn-inspect-template")'
         ]
         req = Google::Apis::LoggingV2::ListLogEntriesRequest.new
         req.resource_names = ['projects/' + project_id]
@@ -53,7 +60,7 @@ def step_one_check(handles:, maximum_score:, resources:)
       nil
     end
 
-    if mcp_found || log_found
+    if agw_found || log_found
       ret_hash = {
         :done => true,
         :score => maximum_score,
@@ -61,12 +68,12 @@ def step_one_check(handles:, maximum_score:, resources:)
         :student_message => 'success'
       }
     else
-      ret_hash[:message] = 'mcp_missing'
-      ret_hash[:student_message] = 'mcp_missing'
+      ret_hash[:message] = 'agw_missing'
+      ret_hash[:student_message] = 'agw_missing'
     end
   rescue => e
     ret_hash[:message] = e.message
-    ret_hash[:student_message] = 'mcp_missing'
+    ret_hash[:student_message] = 'agw_missing'
   end
 
   return ret_hash

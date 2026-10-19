@@ -115,13 +115,13 @@ ls -la
 * `src/corporate-email/`: 사내 언더라이팅 지침 이메일 검색·열람(`search_emails`, `read_email`) 및 이메일 발송(`send_email`) 도구를 가진 FastMCP 서버
 * `src/mortgage-agent/`: Google ADK 기반 주택담보대출 심사 에이전트 및 배포 스크립트(`deploy_agent.py`)
 * `terraform/`: Cloud Run, Agent Gateway, IAP, Model Armor/DLP, Vertex AI Agent Engine, Cloud Monitoring 대시보드를 배포하는 Terraform 모듈
-* `scripts/grant_agent_mcp_egress.sh`: 배포된 에이전트 ID에 Agent Gateway 호출 권한(`roles/networkservices.agentGatewayUser`) 및 Cloud Run 호출 권한(`roles/run.invoker`)을 부여하는 스크립트
+* `scripts/grant_agent_mcp_egress.sh`: 배포된 에이전트 고유 ID(Agent Identity)에 Agent Registry 엔드포인트 및 MCP 서버별 `roles/iap.egressor` 권한(조건부 CEL 정책 포함)을 부여하는 스크립트
 
 ---
 
-## 작업 2. 3종 백엔드 MCP 서버 코드 점검 및 컨테이너 이미지 빌드
+## 작업 2. Agent Gateway, IAP(`DRY_RUN`) 및 Model Armor(`KOREA_RRN`/`SSN`) Terraform 프로비저닝
 
-Agent Gateway의 Model Armor(`CONTENT_AUTHZ`)가 MCP 도구 응답에서 민감 정보를 정확히 마스킹하려면, MCP 서버가 데이터를 반환하는 방식을 이해해야 합니다.
+먼저 Agent Gateway의 Model Armor(`CONTENT_AUTHZ`)가 MCP 도구 응답에서 민감 정보를 마스킹할 수 있도록 FastMCP 서버의 응답 구조를 점검한 뒤, Terraform을 사용하여 VPC, Artifact Registry(`gateway-docker`), 플레이스홀더 Cloud Run 서비스, Agent Gateway(`agent-gateway`), IAP AuthzExtension(`DRY_RUN` 모드), Model Armor 및 Cloud DLP 템플릿(`KOREA_RRN` 및 `US_SOCIAL_SECURITY_NUMBER`), 그리고 Agent Registry 엔드포인트를 프로비저닝합니다.
 
 ### 1. FastMCP의 `structuredContent` 반환 구조 확인
 
@@ -132,154 +132,192 @@ sed -n '95,145p' ~/agent-gateway-governance/src/legacy-dms/server.py
 ```
 
 * FastMCP는 기본적으로 파이썬 딕셔너리 반환값을 직렬화할 때 일반 텍스트 블록(`content`)과 구조화된 JSON 블록(`structuredContent`)을 동시에 생성합니다.
-* 현재 Agent Gateway의 Model Armor 연동은 MCP 응답의 `structuredContent` 필드만 검사하고 마스킹(Redaction) 합니다. 만약 `content` 배열에 원본 문자열이 남아 있으면 마스킹되지 않은 주민등록번호나 SSN이 에이전트로 유출될 수 있으므로, 모든 MCP 도구는 반드시 `ToolResult(content=[], structured_content=...)` 형태로 반환하도록 설계되어 있습니다.
+* 현재 Agent Gateway의 Model Armor 연동은 MCP 응답의 `structuredContent` 필드만 검사하고 마스킹(Redaction)합니다. 만약 `content` 배열에 원본 문자열이 남아 있으면 마스킹되지 않은 주민등록번호나 SSN이 에이전트로 유출될 수 있으므로, 모든 MCP 도구는 반드시 `ToolResult(content=[], structured_content=...)` 형태로 반환하도록 설계되어 있습니다.
 
-### 2. Artifact Registry 저장소 생성
+### 2. Terraform 거버넌스 구성 파일 점검
 
-컨테이너 이미지를 저장할 Artifact Registry 저장소(`mcp-servers`)를 Terraform으로 먼저 생성합니다.
-
-```bash
-cd ~/agent-gateway-governance/terraform
-terraform init
-
-terraform apply \
-  -target=google_project_service.apis \
-  -target=google_artifact_registry_repository.mcp_servers \
-  -var="project_id=${PROJECT_ID}" \
-  -var="region=${REGION}" \
-  -auto-approve
-```
-
-### 3. Skaffold를 이용한 3종 MCP 서버 이미지 빌드 및 푸시
-
-루트 디렉터리로 이동한 뒤 `skaffold build` 명령어로 `legacy-dms`, `income-verification`, `corporate-email` 3개 컨테이너 이미지를 빌드하여 Artifact Registry에 푸시합니다.
+배포 전에 `terraform/example.tfvars`에서 각 보안 계층이 어떻게 정의되어 있는지 확인합니다.
 
 ```bash
-cd ~/agent-gateway-governance
-export REPO="${REGION}-docker.pkg.dev/${PROJECT_ID}/mcp-servers"
-
-skaffold build --default-repo="${REPO}"
-```
-
-빌드가 완료되면 Artifact Registry에 3개의 이미지가 정상 등록되었는지 확인합니다.
-
-```bash
-gcloud artifacts docker images list "${REPO}" --include-tags
-```
-
-<ql-activity-tracking step=1>
-Artifact Registry 및 MCP 서버 컨테이너 빌드 확인하기
-</ql-activity-tracking>
-
----
-
-## 작업 3. Agent Gateway 3종 및 IAP · Model Armor(KOREA_RRN/SSN) Terraform 배포
-
-이제 Terraform을 사용하여 Cloud Run MCP 서버 3종, Agent Gateway 3종, IAP(`DRY_RUN` 모드), Model Armor 및 Cloud DLP 템플릿, Vertex AI Agent Engine 셸, 그리고 관측성 대시보드를 한 번에 프로비저닝합니다.
-
-### 1. Terraform 거버넌스 구성 파일 점검
-
-배포 전에 `terraform/main.tf`와 `terraform/variables.tf`에서 각 보안 계층이 어떻게 정의되어 있는지 확인합니다.
-
-```bash
-cat ~/agent-gateway-governance/terraform/variables.tf
+cat ~/agent-gateway-governance/terraform/example.tfvars
 ```
 
 주요 구성 포인트는 다음과 같습니다.
 
-1. `model_armor_pii_types`: 기본값으로 `["US_SOCIAL_SECURITY_NUMBER", "KOREA_RRN"]`이 설정되어 있어, Cloud DLP가 미국 사회보장번호(`323-45-6789`)와 한국 주민등록번호(`850315-1234566`, `870822-2345673`)를 모두 탐지하고 각각 `[US_SOCIAL_SECURITY_NUMBER]`, `[KOREA_RRN]`으로 마스킹합니다.
-2. `enforcement_mode = "DRY_RUN"`: `corporate-email` 서버 앞단의 IAP CEL 정책(`request.mcp.tool.name != "send_email"`)이 초기에는 `DRY_RUN` 모드로 배포됩니다. 즉, 첫 테스트에서는 `send_email` 호출이 실제로 차단되지 않고 감사 로그에만 기록됩니다.
-3. `enable_private_networking`: 기본값은 `false`(퍼블릭 `*.run.app` 인그레스 + IAM 인증)로 설정되어 있어 빠른 실습이 가능하며, 엔터프라이즈 폐쇄망 환경에서는 `true`로 설정하여 커스텀 VPC, Proxy-Only 서브넷, Network Attachment, 프라이빗 Cloud DNS 구성을 활성화할 수 있습니다.
+1. `model_armor_pii_types`: `["US_SOCIAL_SECURITY_NUMBER", "KOREA_RRN"]`이 설정되어 있어, Cloud DLP(`agw-ssn-inspect-template` 및 `agw-ssn-redaction-template`)가 미국 사회보장번호(`323-45-6789`)와 한국 주민등록번호(`850315-1234566`, `870822-2345673`)를 모두 탐지하고 각각 `[US_SOCIAL_SECURITY_NUMBER]`, `[KOREA_RRN]`으로 마스킹합니다.
+2. `agent_gateway_iap_iam_enforcement_mode = "DRY_RUN"`: Agent Gateway의 IAP 확장(`agent-gateway-iap-authz`)이 초기에는 `DRY_RUN` 모드로 배포됩니다. 즉, 첫 테스트에서는 권한이 없는 `send_email` 호출이 실제로 차단되지 않고 감사 로그에만 기록됩니다.
+3. `enable_cloud_run_private_networking = false`: 빠른 실습을 위해 퍼블릭 `*.run.app` 인그레스와 IAM OIDC 인증을 사용하며, 엔터프라이즈 폐쇄망 환경에서는 `true`로 설정하여 내부 애플리케이션 부하 분산기(ILB)와 프라이빗 Cloud DNS 경로로 전환할 수 있습니다.
 
-### 2. `terraform.tfvars` 생성 및 전체 인프라 프로비저닝
+### 3. Terraform 상태 버킷 생성 및 전체 인프라 프로비저닝
 
-다음 명령어로 `terraform.tfvars` 파일을 생성하고 `terraform apply`를 실행합니다.
+다음 명령어로 GCS 상태 버킷을 생성하고 `example.tfvars`를 기반으로 `terraform/terraform.tfvars`를 구성한 뒤 `terraform apply`를 실행합니다.
 
 ```bash
-cd ~/agent-gateway-governance/terraform
+cd ~/agent-gateway-governance
 
-cat <<EOF > terraform.tfvars
-project_id                = "${PROJECT_ID}"
-region                    = "${REGION}"
-enable_private_networking = false
-enforcement_mode          = "DRY_RUN"
+gcloud storage buckets create "gs://${PROJECT_ID}-tfstate" \
+  --location="${REGION}" \
+  --uniform-bucket-level-access 2>/dev/null || true
+
+cat <<EOF > terraform/backend.conf
+bucket = "${PROJECT_ID}-tfstate"
+prefix = "terraform/state"
 EOF
 
-terraform apply -auto-approve
+cp terraform/example.tfvars terraform/terraform.tfvars
+USER_EMAIL=$(gcloud config get-value account)
+
+sed -i "s|YOUR_PROJECT_ID|${PROJECT_ID}|g" terraform/terraform.tfvars
+sed -i "s|YOUR_ORG_ID|${ORG_ID}|g" terraform/terraform.tfvars
+sed -i "s|YOUR_ADMIN_EMAIL|${USER_EMAIL}|g" terraform/terraform.tfvars
+
+terraform -chdir=terraform init -backend-config=backend.conf
+terraform -chdir=terraform apply -auto-approve
 ```
 
-> **참고**: Cloud DLP 템플릿, Model Armor 템플릿, 3개의 Cloud Run 서비스, 3개의 Agent Gateway 및 IAP 바인딩이 생성되는 데 약 2~3분이 소요됩니다.
+> **참고**: VPC, Artifact Registry(`gateway-docker`), Cloud DLP 템플릿, Model Armor 템플릿(`agw-request-template`, `agw-response-template`), 플레이스홀더 Cloud Run 서비스, Agent Gateway(`agent-gateway`), IAP/Model Armor AuthzPolicy 및 Agent Registry 등록이 완료되는 데 약 3~5분이 소요됩니다.
 
-### 3. Terraform 출력값(Outputs) 확인
+### 4. Terraform 출력값(Outputs) 확인
 
-프로비저닝이 완료되면 생성된 Agent Gateway 엔드포인트 URL과 Agent Engine 리소스 이름을 확인합니다.
+프로비저닝이 완료되면 생성된 리소스 출력값을 확인합니다.
 
 ```bash
-terraform output
+terraform -chdir=terraform output
 ```
 
-출력 예시:
-
-```text
-agent_engine_resource_name = "projects/123456789012/locations/us-central1/reasoningEngines/9876543210987654321"
-agent_gateway_endpoints = {
-  "corporate-email" = "https://agw-corporate-email-xxxxx.us-central1.agentgateway.cloud.goog/mcp"
-  "income-verification" = "https://agw-income-verification-xxxxx.us-central1.agentgateway.cloud.goog/mcp"
-  "legacy-dms" = "https://agw-legacy-dms-xxxxx.us-central1.agentgateway.cloud.goog/mcp"
-}
-```
-
-<ql-activity-tracking step=2>
-Agent Gateway 3종 및 IAP · Model Armor 구성 확인하기
+<ql-activity-tracking step=1>
+Agent Gateway, IAP(DRY_RUN) 및 Model Armor 프로비저닝 확인하기
 </ql-activity-tracking>
 
 ---
 
-## 작업 4. 주택담보대출 심사 에이전트(`mortgage-agent`) 배포 및 Egress IAM 권한 설정
+## 작업 3. Skaffold를 이용한 3종 주택담보대출 MCP 서버 빌드 및 Cloud Run 배포
 
-Terraform은 에이전트의 고유 ID(Agent Identity)를 선발급하기 위해 빈 Vertex AI Agent Engine(Reasoning Engine) 셸을 먼저 생성했습니다. 이제 ADK로 작성된 실제 `mortgage-agent` 파이썬 코드를 해당 Agent Engine에 업로드하고, 에이전트가 Agent Gateway를 통과해 MCP 서버를 호출할 수 있도록 최소 권한 IAM을 부여합니다.
+Terraform은 Agent Registry에 서비스 URL을 선등록하기 위해 3개의 플레이스홀더 Cloud Run 서비스(`legacy-dms`, `income-verification`, `corporate-email`)를 먼저 생성했습니다. 이제 Skaffold 및 Cloud Run 매니페스트 템플릿을 렌더링하고 `skaffold run`을 실행하여 실제 FastMCP 서버 컨테이너를 빌드 및 배포합니다.
 
-### 1. ADK 에이전트의 Agent Gateway 인증 코드 확인
+### 1. Cloud Build / Cloud Run 배포를 위한 서비스 계정 사용자 권한 부여
 
-`src/mortgage-agent/agent/agent.py`에서 에이전트가 3개의 Agent Gateway 엔드포인트에 연결하는 방식을 확인합니다.
-
-```bash
-sed -n '90,155p' ~/agent-gateway-governance/src/mortgage-agent/agent/agent.py
-```
-
-* 에이전트는 백엔드 Cloud Run URL을 직접 호출하지 않고, 환경 변수(`AGENT_GATEWAY_ENDPOINTS`)로 주입된 3개의 Agent Gateway URL(`*.agentgateway.cloud.goog/mcp`) 로만 통신합니다.
-* `GoogleCredentialsAuth` 클래스가 런타임에 에이전트 고유 ID(Agent Identity)의 OAuth2 액세스 토큰과 Google ID 토큰을 자동으로 발급받아 HTTP `Authorization: Bearer ...` 헤더에 주입합니다.
-
-### 2. Vertex AI Agent Engine에 `mortgage-agent` 코드 배포
-
-`uv` 패키지 매니저를 사용하여 `deploy_agent.py` 스크립트를 실행합니다. 이 스크립트는 Terraform 출력값을 자동으로 읽어 기존 Agent Engine 리소스를 최신 에이전트 코드와 시스템 프롬프트로 업데이트합니다.
+Skaffold가 Cloud Run 서비스를 배포할 수 있도록 기본 Compute Engine 서비스 계정에 대한 `roles/iam.serviceAccountUser` 역할을 현재 사용자 계정에 부여합니다.
 
 ```bash
-cd ~/agent-gateway-governance/src/mortgage-agent
-uv run deploy_agent.py
+cd ~/agent-gateway-governance
+USER_EMAIL=$(gcloud config get-value account)
+
+gcloud iam service-accounts add-iam-policy-binding \
+  "${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+  --project="${PROJECT_ID}" \
+  --member="user:${USER_EMAIL}" \
+  --role="roles/iam.serviceAccountUser"
 ```
 
-배포가 완료되면 마지막 줄에 `Update completed: projects/.../locations/us-central1/reasoningEngines/...` 메시지가 출력됩니다.
+### 2. 매니페스트 템플릿 렌더링 및 Skaffold 빌드·배포 실행
 
-### 3. 에이전트 Egress IAM 권한 부여 (`grant_agent_mcp_egress.sh`)
+`.tmpl` 템플릿 파일들로부터 `skaffold.yaml`과 `cloudrun/*.yaml` 매니페스트를 생성한 후 `skaffold run`을 실행합니다.
 
-에이전트가 Agent Gateway 데이터 플레인을 통과하고 서버 사이드 Cloud Run(`corporate-email`)을 호출하려면 두 가지 IAM 역할이 필요합니다.
+```bash
+cd ~/agent-gateway-governance
+export MCP_INGRESS="all"
 
-1. `roles/networkservices.agentGatewayUser`: 에이전트가 프로젝트 내 Agent Gateway를 통과할 수 있는 권한
-2. `roles/run.invoker`: 서버 사이드 토폴로지(`corporate-email`)에서 Agent Gateway가 검증된 에이전트 ID를 대신해 Cloud Run 서비스를 호출할 수 있는 권한
+envsubst '${PROJECT_ID} ${REGION} ${MCP_INGRESS}' < skaffold.yaml.tmpl > skaffold.yaml
+for tmpl in cloudrun/*.yaml.tmpl; do
+  envsubst '${PROJECT_ID} ${REGION} ${MCP_INGRESS}' < "${tmpl}" > "${tmpl%.tmpl}"
+done
 
-다음 스크립트를 실행하여 에이전트 ID에 권한을 부여합니다.
+skaffold run
+```
+
+### 3. 빌드된 이미지 및 Cloud Run 서비스 확인
+
+`gateway-docker` 저장소에 3개의 컨테이너 이미지가 등록되고 Cloud Run 서비스가 정상 업데이트되었는지 확인합니다.
+
+```bash
+gcloud artifacts docker images list "${REGION}-docker.pkg.dev/${PROJECT_ID}/gateway-docker" --include-tags
+gcloud run services list --region="${REGION}"
+```
+
+<ql-activity-tracking step=2>
+Skaffold 이미지 빌드 및 Cloud Run MCP 서버 배포 확인하기
+</ql-activity-tracking>
+
+---
+
+## 작업 4. 주택담보대출 심사 에이전트(`mortgage-agent`) 배포 및 조건부 IAP CEL Egress 설정
+
+이제 Google ADK로 작성된 `mortgage-agent`를 **에이전트 고유 ID(`--enable-agent-identity`)** 및 **Agent Gateway 연동(`--agent-gateway`)** 옵션과 함께 Vertex AI Agent Engine에 배포하고, `scripts/grant_agent_mcp_egress.sh`를 사용하여 MCP 서버별 세분화된 IAP 도구 인가 정책을 바인딩합니다.
+
+### 1. ADK 에이전트 및 동적 MCP 디스커버리 코드 확인
+
+`src/mortgage-agent/agent/agent.py`에서 에이전트가 Agent Registry로부터 MCP 서버를 동적으로 검색하고 인증하는 방식을 확인합니다.
+
+```bash
+sed -n '1,95p' ~/agent-gateway-governance/src/mortgage-agent/agent/agent.py
+```
+
+* 에이전트는 시작 시 **Agent Registry(`agentregistry.googleapis.com`)**를 조회하여 `legacy-dms`, `income-verification`, `corporate-email`의 MCP 엔드포인트 URL을 동적으로 가져옵니다.
+* `--agent-gateway` 옵션으로 배포되므로 에이전트에서 나가는 모든 HTTP/MCP 호출은 자동으로 **`agent-gateway`(`AGENT_TO_ANYWHERE` 정방향 프록시)**를 경유하며, 이 지점에서 IAP(`REQUEST_AUTHZ`)와 Model Armor(`CONTENT_AUTHZ`)가 실행됩니다.
+
+### 2. 엔드포인트 Egress 권한 부여 및 Vertex AI Agent Engine에 `mortgage-agent` 배포
+
+먼저 프로젝트 내 에이전트가 기본 Google API 엔드포인트(`aiplatform`, `agentregistry`, `iamcredentials`, `telemetry`)를 호출할 수 있도록 권한을 부여한 뒤, `uv`를 사용해 `mortgage-agent`를 배포합니다.
 
 ```bash
 cd ~/agent-gateway-governance
 chmod +x ./scripts/grant_agent_mcp_egress.sh
-./scripts/grant_agent_mcp_egress.sh
+
+./scripts/grant_agent_mcp_egress.sh --bind-all-agents --endpoints
+
+cd ~/agent-gateway-governance/src/mortgage-agent
+uv sync
+
+uv run python deploy_agent.py \
+  --project="${PROJECT_ID}" \
+  --region="${REGION}" \
+  --enable-agent-identity \
+  --agent-name=mortgage-agent \
+  --agent-gateway="projects/${PROJECT_ID}/locations/${REGION}/agentGateways/agent-gateway" \
+  --mcp-invoker-sa="$(terraform -chdir=../../terraform output -raw agent_mcp_invoker_email)" \
+  --model-endpoint-location=global
+```
+
+> **참고**: Vertex AI Agent Engine에 Reasoning Engine이 배포되는 데 약 3~5분이 소요됩니다.
+
+### 3. MCP 서버별 조건부 IAP CEL Egress 권한(`roles/iap.egressor`) 부여
+
+배포된 에이전트의 Reasoning Engine ID(`AGENT_ID`)를 조회한 후, Agent Registry에 등록된 3개 MCP 서버에 대해 `roles/iap.egressor` 권한을 차등 부여합니다.
+
+1. **`legacy-dms` 및 `income-verification`**: 모든 도구 호출 허용 (조건 없음)
+2. **`corporate-email`**: **조건부 CEL 정책(`ReadOnlyToolsOnly`)**을 적용하여 읽기 전용 도구(`isReadOnly == true`: `search_emails`, `read_email`)와 MCP 초기화/목록 조회(`toolName == ''`)만 허용하고, 쓰기 도구인 `send_email`(`isReadOnly == false`)은 거부합니다.
+
+```bash
+cd ~/agent-gateway-governance
+
+export AGENT_ID=$(gcloud beta ai reasoning-engines list \
+  --project="${PROJECT_ID}" \
+  --region="${REGION}" \
+  --filter='displayName="Mortgage Assistant Agent"' \
+  --format='value(name)' | head -n 1 | awk -F'/' '{print $NF}')
+echo "AGENT_ID: ${AGENT_ID}"
+
+# 1. legacy-dms 및 income-verification에 대해 무조건부 Egress 허용
+./scripts/grant_agent_mcp_egress.sh \
+  --mcp \
+  --agent-id "${AGENT_ID}" \
+  --mcp-filter "legacy-dms income-verification"
+
+# 2. corporate-email에 대해 읽기 전용 도구만 허용하는 조건부 CEL(ReadOnlyToolsOnly) 바인딩
+./scripts/grant_agent_mcp_egress.sh \
+  --mcp \
+  --agent-id "${AGENT_ID}" \
+  --mcp-filter "corporate-email" \
+  --condition-expression "api.getAttribute('iap.googleapis.com/mcp.tool.isReadOnly', false) == true || api.getAttribute('iap.googleapis.com/mcp.toolName', '') == ''" \
+  --condition-title "ReadOnlyToolsOnly" \
+  --condition-description "Restrict ${AGENT_ID} to read-only tools on corporate-email"
 ```
 
 > **참고**: IAM 정책 변경 사항이 Google Cloud 전역에 전파되는 데 약 60초가 소요될 수 있습니다.
 
 <ql-activity-tracking step=3>
-Vertex AI Agent Engine 배포 및 Egress IAM 권한 설정 확인하기
+Vertex AI Agent Engine 배포 및 조건부 IAP CEL 권한 설정 확인하기
 </ql-activity-tracking>
 
 ---
@@ -289,15 +327,15 @@ Vertex AI Agent Engine 배포 및 Egress IAM 권한 설정 확인하기
 이제 Google Cloud 콘솔의 Agent Engine Playground에서 에이펙스 금융그룹의 주택담보대출 심사 시나리오를 실행하여 두 가지를 동시에 검증합니다.
 
 1. **Model Armor + Cloud DLP** (`CONTENT_AUTHZ`): `legacy-dms`와 `income-verification`이 반환한 김민준·이서연 부부의 주민등록번호(`850315-1234566`, `870822-2345673`)와 SSN(`323-45-6789`, `321-54-9876`)이 `[KOREA_RRN]` 및 `[US_SOCIAL_SECURITY_NUMBER]`로 마스킹되는지 확인합니다.
-2. **IAP** (`REQUEST_AUTHZ` - `DRY_RUN` 모드): `corporate-email`의 `send_email` 도구가 현재 `DRY_RUN` 상태이므로 차단되지 않고 실행되는지 확인합니다.
+2. **IAP** (`REQUEST_AUTHZ` - `DRY_RUN` 모드): `corporate-email`의 `send_email` 도구가 `ReadOnlyToolsOnly` CEL 조건을 위반함에도 현재 `agent-gateway-iap-authz`가 `DRY_RUN` 상태이므로 차단되지 않고 실행되는지 확인합니다.
 
 ![DRY_RUN 모드와 ENFORCED 모드의 동작 차이 및 관측성 대시보드](img/03-dryrun-vs-enforced-flow.png)
 
 ### 1. Vertex AI Agent Engine Playground 열기
 
-1. Google Cloud 콘솔 상단 검색창에 Agent Engine을 입력하고 Vertex AI > Agent Engine으로 이동합니다.
-2. 리전이 `us-central1` 로 선택되어 있는지 확인한 후, 배포된 `mortgage_agent` 를 클릭합니다.
-3. 상단 탭에서 Playground를 클릭합니다.
+1. Google Cloud 콘솔 상단 검색창에 **Agent Engine**을 입력하고 **Vertex AI > Agent Engine**으로 이동합니다.
+2. 리전이 `us-central1`로 선택되어 있는지 확인한 후, 배포된 **`Mortgage Assistant Agent`**를 클릭합니다.
+3. 상단 탭에서 **Playground**를 클릭합니다.
 
 ### 2. 주택담보대출 심사 및 이메일 발송 프롬프트 실행
 
@@ -316,11 +354,11 @@ Playground 채팅창에 다음 프롬프트(한국어 또는 영문)를 입력�
 에이전트가 3개 MCP 서버의 도구를 차례대로 호출한 뒤 다음과 같은 결과를 반환하는지 확인합니다.
 
 * **개인정보 마스킹 확인** (Model Armor + Cloud DLP 작동):
-  * 원본 데이터에 저장된 김민준의 주민등록번호 `850315-1234566`과 이서연의 주민등록번호 `870822-2345673`이 `[KOREA_RRN]` 으로 마스킹되어 표시됩니다.
-  * 미국 SSN `323-45-6789`, `321-54-9876` 역시 `[US_SOCIAL_SECURITY_NUMBER]` 로 마스킹되어 LLM 컨텍스트와 화면 어디에도 원본 번호가 노출되지 않습니다.
+  * 원본 데이터에 저장된 김민준의 주민등록번호 `850315-1234566`과 이서연의 주민등록번호 `870822-2345673`이 `[KOREA_RRN]`으로 마스킹되어 표시됩니다.
+  * 미국 SSN `323-45-6789`, `321-54-9876` 역시 `[US_SOCIAL_SECURITY_NUMBER]`로 마스킹되어 LLM 컨텍스트와 화면 어디에도 원본 번호가 노출되지 않습니다.
 * **2026년 DTI 심사 및 이메일 발송 확인** (IAP `DRY_RUN` 모드):
   * 사내 이메일(`msg-002`)에 명시된 2026년 신규 주택담보대출 최대 DTI 한도(45.0%) 대비 김민준·이서연 부부의 추정 합산 DTI(28.4%, 합산 연소득 $237,000)가 기준 이하이므로 적격(Eligible) 판정이 내려집니다.
-  * 현재 IAP 정책이 `DRY_RUN` 모드이므로 `send_email` 도구 호출이 차단되지 않고 성공(`status: sent`)합니다.
+  * 현재 IAP 확장(`agent-gateway-iap-authz`)이 `DRY_RUN` 모드이므로 `send_email` 도구 호출이 차단되지 않고 성공(`status: sent`)합니다.
 
 ---
 
@@ -330,17 +368,16 @@ Agent Gateway는 통과하는 모든 MCP 트래픽에 대해 표준 메트릭, �
 
 ### 1. Cloud Monitoring 거버넌스 대시보드 확인
 
-1. Google Cloud 콘솔에서 Monitoring > Dashboards(대시보드) 로 이동합니다.
-2. Terraform이 생성한 `Agent Gateway Governance Overview` 대시보드를 클릭합니다.
+1. Google Cloud 콘솔에서 **Monitoring > Dashboards(대시보드)**로 이동합니다.
+2. Terraform이 생성한 **`Agent Gateway Governance`** 대시보드를 클릭합니다.
 
 ![Agent Gateway Governance Overview 대시보드](img/05-observability-dashboard.png)
 
-대시보드에서 다음 4가지 핵심 지표를 확인할 수 있습니다.
+대시보드에서 다음 핵심 지표를 확인할 수 있습니다.
 
-* **MCP Request Rate by Tool**: `search_tax_returns`, `get_document_metadata`, `verify_income`, `search_emails`, `read_email`, `send_email` 등 도구별 초당 호출 빈도
+* **MCP Request Rate by Tool**: `search_tax_returns`, `get_document_metadata`, `verify_income`, `search_emails`, `read_email`, `send_email` 등 도구별 호출 빈도
 * **Agent Gateway Latency** (p50 / p95): 게이트웨이 및 Service Extensions(IAP, Model Armor) 처리 지연 시간
-* **Model Armor Verdict Breakdown**: `CONTENT_AUTHZ` 단계에서 PII 탐지·마스킹이 수행된 요청 비율
-* **Active MCP Sessions**: 현재 활성화된 에이전트-게이트웨이 세션 수
+* **Model Armor & IAP Verdicts**: `REQUEST_AUTHZ` 및 `CONTENT_AUTHZ` 단계에서 PII 탐지·마스킹 또는 정책 평가가 수행된 요청 현황
 
 ### 2. Cloud Logging에서 Agent Gateway 및 Model Armor 로그 조회
 
@@ -358,44 +395,25 @@ gcloud logging read \
 
 ## 작업 7. 2단계 검증: IAP `ENFORCED` 모드 전환 및 `send_email` 실시간 차단 확인
 
-`DRY_RUN` 테스트와 관측성 대시보드를 통해 정상적인 조회 도구(`search_emails`, `read_email`)는 허용되고 `send_email`만 정책 위반으로 탐지되는 것을 확인했습니다. 이제 `agw-corporate-email` 게이트웨이의 IAP 정책을 강제 적용(`ENFORCED`, `enforcement_mode = null`) 으로 전환하여 에이전트의 무단 외부 이메일 발송을 실시간 차단합니다.
+`DRY_RUN` 테스트와 관측성 대시보드를 통해 정상적인 조회 도구(`search_emails`, `read_email`)는 `ReadOnlyToolsOnly` CEL 조건을 통과하고 `send_email`만 정책 위반으로 탐지되는 것을 확인했습니다. 이제 IAP 확장(`agent-gateway-iap-authz`)을 **강제 적용 모드(`agent_gateway_iap_iam_enforcement_mode = null`)**로 전환하여 에이전트의 무단 외부 이메일 발송을 실시간 차단합니다.
 
-### 1. IAP CEL 정책 구조 확인
+### 1. Terraform으로 `agent_gateway_iap_iam_enforcement_mode = null` (Enforced 모드) 적용
 
-`terraform/main.tf`에 정의된 `agw-corporate-email`의 CEL 표현식을 확인합니다.
-
-```hcl
-expression = <<-EOT
-  request.mcp.method in ["initialize", "notifications/initialized", "tools/list", "ResourceList", "PromptList"] ||
-  (request.mcp.method == "tools/call" && request.mcp.tool.name != "send_email")
-EOT
-```
-
-* MCP 세션 초기화(`initialize`) 및 도구 목록 조회(`tools/list`)는 허용합니다.
-* 도구 실행(`tools/call`)의 경우 도구 이름이 `send_email`이 아닌 경우(`search_emails`, `read_email`)에만 통과시키고, `send_email` 호출은 즉시 `403 Permission Denied`로 거부합니다.
-
-### 2. Terraform으로 `enforcement_mode = null` (Enforced 모드) 적용
-
-Cloud Shell에서 `terraform.tfvars`의 `enforcement_mode`를 `null`로 변경하고 `terraform apply`를 실행합니다.
+Cloud Shell에서 `terraform/terraform.tfvars`의 `agent_gateway_iap_iam_enforcement_mode`를 `"DRY_RUN"`에서 `null`로 변경하고 `terraform apply`를 실행합니다.
 
 ```bash
-cd ~/agent-gateway-governance/terraform
+cd ~/agent-gateway-governance
 
-cat <<EOF > terraform.tfvars
-project_id                = "${PROJECT_ID}"
-region                    = "${REGION}"
-enable_private_networking = false
-enforcement_mode          = null
-EOF
+sed -i 's|agent_gateway_iap_iam_enforcement_mode = "DRY_RUN"|agent_gateway_iap_iam_enforcement_mode = null|g' terraform/terraform.tfvars
 
-terraform apply -auto-approve
+terraform -chdir=terraform apply -auto-approve
 ```
 
-> **참고**: IAP 설정 변경 사항이 Agent Gateway 데이터 플레인에 반영되는 데 약 60~90초가 소요됩니다.
+> **참고**: IAP 설정 변경 사항이 Agent Gateway 데이터 플레인에 반영되는 데 약 60초가 소요됩니다.
 
-### 3. Playground에서 `send_email` 실시간 차단 확인
+### 2. Playground에서 `send_email` 실시간 차단 확인
 
-60초 후 Vertex AI > Agent Engine > `mortgage_agent` > Playground로 돌아가서 새로운 세션을 열고 동일한 프롬프트를 다시 입력합니다.
+60초 후 **Vertex AI > Agent Engine > `Mortgage Assistant Agent` > Playground**로 돌아가서 새로운 세션을 열고 동일한 프롬프트를 다시 입력합니다.
 
 ```text
 김민준(Minjun Kim)과 이서연(Seoyeon Lee) 부부의 2026년 주택담보대출 적격 여부를 다시 심사하고, 결과를 underwriting-team@apex-financial.kr 로 이메일 발송(send_email)해 주세요.
@@ -404,8 +422,8 @@ terraform apply -auto-approve
 이번에는 다음과 같은 거버넌스 동작을 확인할 수 있습니다.
 
 1. **조회 및 PII 마스킹 정상 수행**: `legacy-dms`(`search_tax_returns`), `income-verification`(`verify_income`), `corporate-email`(`search_emails`, `read_email`) 호출은 모두 정상 허용되며, 주민등록번호(`[KOREA_RRN]`)와 SSN(`[US_SOCIAL_SECURITY_NUMBER]`)은 계속 안전하게 마스킹됩니다.
-2. **`send_email` 호출 즉시 차단**: 에이전트가 마지막 단계에서 `send_email` 도구를 호출하는 순간, `agw-corporate-email` Agent Gateway의 IAP(`REQUEST_AUTHZ`)가 요청을 `403 Forbidden / Permission Denied`로 즉시 차단합니다.
-3. **에이전트의 우아한 폴백**(Graceful Degradation): 에이전트는 심사 결과 보고서를 화면에는 정상 출력하되, *"보안 정책(접근 제어 제한)으로 인해 `send_email` 도구 호출이 거부되어 이메일을 발송할 수 없습니다"* 라고 안내합니다.
+2. **`send_email` 호출 즉시 차단**: 에이전트가 마지막 단계에서 `send_email` 도구를 호출하는 순간, Agent Gateway의 IAP(`REQUEST_AUTHZ`)가 `ReadOnlyToolsOnly` CEL 조건(`isReadOnly == false`)을 평가하여 요청을 `403 PermissionDenied`로 즉시 차단합니다.
+3. **에이전트의 우아한 폴백**(Graceful Degradation): 에이전트는 심사 결과 보고서를 화면에는 정상 출력하되, 보안 정책(접근 제어 제한)으로 인해 `send_email` 도구 호출이 거부되어 이메일을 발송할 수 없다고 안내합니다.
 
 <ql-activity-tracking step=4>
 IAP Enforced 모드 전환 및 send_email 차단 검증 확인하기

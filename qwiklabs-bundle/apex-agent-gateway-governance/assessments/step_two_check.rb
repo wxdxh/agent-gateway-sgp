@@ -14,22 +14,25 @@ def step_two_check(handles:, maximum_score:, resources:)
                  (logging.project rescue nil) ||
                  (compute.project rescue nil)
 
-    agw_found = false
+    mcp_found = false
     if auth_handle && project_id
       [
-        "https://networkservices.googleapis.com/v1/projects/#{project_id}/locations/-/agentGateways",
-        "https://networkservices.googleapis.com/v1beta1/projects/#{project_id}/locations/-/agentGateways",
-        "https://dlp.googleapis.com/v2/projects/#{project_id}/locations/us-central1/inspectTemplates",
-        "https://dlp.googleapis.com/v2/projects/#{project_id}/inspectTemplates"
+        "https://run.googleapis.com/v2/projects/#{project_id}/locations/-/services",
+        "https://artifactregistry.googleapis.com/v1/projects/#{project_id}/locations/-/repositories/gateway-docker/dockerImages"
       ].each do |url|
-        break if agw_found
+        break if mcp_found
         begin
           uri = URI(url)
           req = Net::HTTP::Get.new(uri)
           auth_handle.authorization.apply!(req)
           resp = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |http| http.request(req) }
-          if resp.is_a?(Net::HTTPSuccess) && (resp.body.include?('agw-legacy-dms') || resp.body.include?('agw-income-verification') || resp.body.include?('agw-corporate-email') || resp.body.include?('agw-ssn-inspect-template'))
-            agw_found = true
+          if resp.is_a?(Net::HTTPSuccess)
+            body = resp.body.to_s
+            if url.include?('dockerImages') && (body.include?('legacy-dms') || body.include?('income-verification') || body.include?('corporate-email'))
+              mcp_found = true
+            elsif body.include?('legacy-dms') && body.include?('income-verification') && body.include?('corporate-email') && body.include?('gateway-docker')
+              mcp_found = true
+            end
           end
         rescue
           nil
@@ -39,11 +42,12 @@ def step_two_check(handles:, maximum_score:, resources:)
 
     log_found = false
     begin
-      if !agw_found && logging && project_id
+      if !mcp_found && logging && project_id
         lab_start_time = Time.at(Time.now.to_i - 86400)
         log_filters = [
           'timestamp>"' + lab_start_time.utc.iso8601 + '"',
-          '(protoPayload.resourceName:"agw-legacy-dms" OR protoPayload.resourceName:"agw-income-verification" OR protoPayload.resourceName:"agw-corporate-email" OR protoPayload.resourceName:"agw-ma-template")'
+          'protoPayload.serviceName="run.googleapis.com"',
+          '(protoPayload.resourceName:"legacy-dms" OR protoPayload.resourceName:"income-verification" OR protoPayload.resourceName:"corporate-email")'
         ]
         req = Google::Apis::LoggingV2::ListLogEntriesRequest.new
         req.resource_names = ['projects/' + project_id]
@@ -55,7 +59,7 @@ def step_two_check(handles:, maximum_score:, resources:)
       nil
     end
 
-    if agw_found || log_found
+    if mcp_found || log_found
       ret_hash = {
         :done => true,
         :score => maximum_score,
@@ -63,12 +67,12 @@ def step_two_check(handles:, maximum_score:, resources:)
         :student_message => 'success'
       }
     else
-      ret_hash[:message] = 'agw_missing'
-      ret_hash[:student_message] = 'agw_missing'
+      ret_hash[:message] = 'mcp_missing'
+      ret_hash[:student_message] = 'mcp_missing'
     end
   rescue => e
     ret_hash[:message] = e.message
-    ret_hash[:student_message] = 'agw_missing'
+    ret_hash[:student_message] = 'mcp_missing'
   end
 
   return ret_hash

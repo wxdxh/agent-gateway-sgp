@@ -38,36 +38,49 @@ agent-gateway-governance/
 ```bash
 export PROJECT_ID=$(gcloud config get-value project)
 export PROJECT_NUMBER=$(gcloud projects describe "${PROJECT_ID}" --format="value(projectNumber)")
+export ORG_ID=$(gcloud projects get-ancestors "${PROJECT_ID}" --format='value(id)' | tail -n 1)
+if [ "${ORG_ID}" = "${PROJECT_ID}" ] || [ "${ORG_ID}" = "${PROJECT_NUMBER}" ]; then export ORG_ID=""; fi
 export REGION="us-central1"
+USER_EMAIL=$(gcloud config get-value account)
 
-# 1. Artifact Registry 저장소 생성 및 3종 MCP 컨테이너 이미지 빌드
-cd terraform
-terraform init
-terraform apply \
-  -target=google_project_service.apis \
-  -target=google_artifact_registry_repository.mcp_servers \
-  -var="project_id=${PROJECT_ID}" \
-  -var="region=${REGION}" \
-  -auto-approve
-
-cd ..
-export REPO="${REGION}-docker.pkg.dev/${PROJECT_ID}/mcp-servers"
-skaffold build --default-repo="${REPO}"
-
-# 2. Agent Gateway 3종, IAP(DRY_RUN), Model Armor(KOREA_RRN/SSN), 대시보드 프로비저닝
-cd terraform
-cat <<EOF > terraform.tfvars
-project_id                = "${PROJECT_ID}"
-region                    = "${REGION}"
-enable_private_networking = false
-enforcement_mode          = "DRY_RUN"
+# 1. GCS 상태 버킷 생성 및 Terraform으로 Agent Gateway, IAP(DRY_RUN), Model Armor(KOREA_RRN/SSN) 프로비저닝
+gcloud storage buckets create "gs://${PROJECT_ID}-tfstate" --location="${REGION}" --uniform-bucket-level-access 2>/dev/null || true
+cat <<EOF > terraform/backend.conf
+bucket = "${PROJECT_ID}-tfstate"
+prefix = "terraform/state"
 EOF
-terraform apply -auto-approve
 
-# 3. Vertex AI Agent Engine에 mortgage-agent 배포 및 Egress IAM 권한 부여
-cd ../src/mortgage-agent
-uv run deploy_agent.py
+cp terraform/example.tfvars terraform/terraform.tfvars
+sed -i "s|YOUR_PROJECT_ID|${PROJECT_ID}|g" terraform/terraform.tfvars
+sed -i "s|YOUR_ORG_ID|${ORG_ID}|g" terraform/terraform.tfvars
+sed -i "s|YOUR_ADMIN_EMAIL|${USER_EMAIL}|g" terraform/terraform.tfvars
 
-cd ../..
-./scripts/grant_agent_mcp_egress.sh
+terraform -chdir=terraform init -backend-config=backend.conf
+terraform -chdir=terraform apply -auto-approve
+
+# 2. Skaffold로 3종 MCP 서버(legacy-dms, income-verification, corporate-email) 빌드 및 Cloud Run 배포
+export MCP_INGRESS="all"
+envsubst '${PROJECT_ID} ${REGION} ${MCP_INGRESS}' < skaffold.yaml.tmpl > skaffold.yaml
+for tmpl in cloudrun/*.yaml.tmpl; do
+  envsubst '${PROJECT_ID} ${REGION} ${MCP_INGRESS}' < "${tmpl}" > "${tmpl%.tmpl}"
+done
+skaffold run
+
+# 3. Vertex AI Agent Engine에 mortgage-agent 배포 및 조건부 IAP CEL Egress 권한 부여
+./scripts/grant_agent_mcp_egress.sh --bind-all-agents --endpoints
+(cd src/mortgage-agent && uv sync && uv run python deploy_agent.py \
+  --project="${PROJECT_ID}" \
+  --region="${REGION}" \
+  --enable-agent-identity \
+  --agent-name=mortgage-agent \
+  --agent-gateway="projects/${PROJECT_ID}/locations/${REGION}/agentGateways/agent-gateway" \
+  --mcp-invoker-sa="$(terraform -chdir=../../terraform output -raw agent_mcp_invoker_email)" \
+  --model-endpoint-location=global)
+
+export AGENT_ID=$(gcloud beta ai reasoning-engines list --project="${PROJECT_ID}" --region="${REGION}" --filter='displayName="Mortgage Assistant Agent"' --format='value(name)' | head -n 1 | awk -F'/' '{print $NF}')
+./scripts/grant_agent_mcp_egress.sh --mcp --agent-id "${AGENT_ID}" --mcp-filter "legacy-dms income-verification"
+./scripts/grant_agent_mcp_egress.sh --mcp --agent-id "${AGENT_ID}" --mcp-filter "corporate-email" \
+  --condition-expression "api.getAttribute('iap.googleapis.com/mcp.tool.isReadOnly', false) == true || api.getAttribute('iap.googleapis.com/mcp.toolName', '') == ''" \
+  --condition-title "ReadOnlyToolsOnly" \
+  --condition-description "Restrict ${AGENT_ID} to read-only tools on corporate-email"
 ```

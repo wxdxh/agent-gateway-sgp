@@ -17,8 +17,8 @@ def step_four_check(handles:, maximum_score:, resources:)
     enforced_found = false
     if auth_handle && project_id
       [
-        "https://iap.googleapis.com/v1/projects/#{project_id}/iap_web/networkservices-us-central1/services/agw-corporate-email:iapSettings",
-        "https://networkservices.googleapis.com/v1beta1/projects/#{project_id}/locations/us-central1/agentGateways/agw-corporate-email"
+        "https://networkservices.googleapis.com/v1beta1/projects/#{project_id}/locations/us-central1/authzExtensions/agent-gateway-iap-authz",
+        "https://networkservices.googleapis.com/v1/projects/#{project_id}/locations/us-central1/authzExtensions/agent-gateway-iap-authz"
       ].each do |url|
         break if enforced_found
         begin
@@ -27,9 +27,8 @@ def step_four_check(handles:, maximum_score:, resources:)
           auth_handle.authorization.apply!(req)
           resp = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |http| http.request(req) }
           if resp.is_a?(Net::HTTPSuccess)
-            if url.include?(':iapSettings')
-              enforced_found = true unless resp.body.include?('DRY_RUN')
-            elsif resp.body.include?('agw-corporate-email')
+            body = resp.body.to_s
+            if body.include?('agent-gateway-iap-authz') && !body.include?('DRY_RUN')
               enforced_found = true
             end
           end
@@ -45,7 +44,7 @@ def step_four_check(handles:, maximum_score:, resources:)
         lab_start_time = Time.at(Time.now.to_i - 86400)
         log_filters = [
           'timestamp>"' + lab_start_time.utc.iso8601 + '"',
-          '(protoPayload.methodName:"UpdateIapSettings" OR protoPayload.resourceName:"agw-corporate-email")'
+          '(protoPayload.methodName:"UpdateAuthzExtension" OR protoPayload.resourceName:"agent-gateway-iap-authz")'
         ]
         req = Google::Apis::LoggingV2::ListLogEntriesRequest.new
         req.resource_names = ['projects/' + project_id]

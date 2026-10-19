@@ -14,20 +14,26 @@ locals {
     "cloudbuild.googleapis.com",
     "networkservices.googleapis.com",
     "networksecurity.googleapis.com",
-    "serviceextensions.googleapis.com",
+    "networkmanagement.googleapis.com",
+    "certificatemanager.googleapis.com",
     "iap.googleapis.com",
     "modelarmor.googleapis.com",
     "dlp.googleapis.com",
     "aiplatform.googleapis.com",
     "iam.googleapis.com",
+    "iamcredentials.googleapis.com",
+    "sts.googleapis.com",
     "cloudresourcemanager.googleapis.com",
+    "serviceusage.googleapis.com",
     "dns.googleapis.com",
     "servicenetworking.googleapis.com",
     "storage.googleapis.com",
     "telemetry.googleapis.com",
     "cloudtrace.googleapis.com",
     "logging.googleapis.com",
-    "monitoring.googleapis.com"
+    "monitoring.googleapis.com",
+    "apphub.googleapis.com",
+    "agentregistry.googleapis.com"
   ]
 }
 
@@ -38,10 +44,24 @@ resource "google_project_service" "required_apis" {
   disable_on_destroy = false
 }
 
+resource "google_project_service_identity" "network_services_sa" {
+  provider   = google-beta
+  project    = var.gcp_project_id
+  service    = "networkservices.googleapis.com"
+  depends_on = [google_project_service.required_apis]
+}
+
 resource "google_project_service_identity" "aiplatform_sa" {
   provider   = google-beta
   project    = var.gcp_project_id
   service    = "aiplatform.googleapis.com"
+  depends_on = [google_project_service.required_apis]
+}
+
+resource "google_project_service_identity" "modelarmor_sa" {
+  provider   = google-beta
+  project    = var.gcp_project_id
+  service    = "modelarmor.googleapis.com"
   depends_on = [google_project_service.required_apis]
 }
 
